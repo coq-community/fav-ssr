@@ -1,0 +1,5 @@
+-Q . favssr
+-arg -w -arg -notation-overridden
+-arg -w -arg -redundant-canonical-projection
+
+src/sorting.v
