@@ -1,3 +1,4 @@
+From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
 From mathcomp Require Import ssrnat eqtype seq path order.
 
@@ -12,7 +13,7 @@ Context {disp : unit} {T : orderType disp}.
 
 Fixpoint insort (x : T) xs :=
   if xs is y :: xs' then
-    if  x <= y then x :: y :: xs' else y :: insort x xs'
+    if x <= y then x :: y :: xs' else y :: insort x xs'
     else [:: x].
 
 Fixpoint isort xs :=
@@ -101,7 +102,7 @@ Section InsertionSortNat.
 Lemma uphalf_addn n m : uphalf n + uphalf m = odd n && odd m + uphalf (n + m).
 Proof.
 rewrite !uphalf_half halfD oddD.
-by case: (odd n); case: (odd m)=>//=; rewrite addnCA -addnA ?(add1n, add0n).
+by case: (odd n); case: (odd m)=>//=; rewrite addnCA.
 Qed.
 
 (* Exercise 2.2.2 *)
@@ -110,3 +111,44 @@ Proof.
 Admitted.
 
 End InsertionSortNat.
+
+Section QuickSort.
+Context {disp : unit} {T : orderType disp}.
+
+(* Definition *)
+
+Equations? quicksort (xs : seq T) : seq T by wf (size xs) lt :=
+quicksort [::] := [::];
+quicksort (x::xs) := quicksort (filter (< x) xs) ++ [:: x] ++
+                     quicksort (filter (>= x) xs).
+Proof.
+- by rewrite size_filter /=; apply/ssrnat.ltP/count_size.
+by rewrite size_filter /=; apply/ssrnat.ltP/count_size.
+Defined.
+
+(* Functional Correctness *)
+
+Lemma perm_quicksort xs : perm_eq (quicksort xs) xs.
+Proof.
+funelim (quicksort xs)=>//=.
+rewrite perm_catC cat_cons perm_cons perm_sym -(perm_filterC (>= x)) perm_sym.
+apply: perm_cat=>//.
+rewrite (eq_in_filter (a1:=predC (>=x)) (a2:=(<x))) // =>?? /=.
+by rewrite ltNge.
+Qed.
+
+Lemma sorted_quicksort xs : sorted <=%O (quicksort xs).
+Proof.
+funelim (quicksort xs)=>//=.
+have Hx : sorted <=%O [:: x] by [].
+move: (merge_sorted le_total Hx H0)=>/=.
+rewrite allrel_merge; last first.
+- by rewrite allrel1l (perm_all _ (perm_quicksort _)) filter_all.
+rewrite {1}[_ ++ _]/= => /(merge_sorted le_total H).
+rewrite allrel_merge //; apply/allrelP=>y z.
+rewrite (perm_mem (perm_quicksort _) y) inE
+  (perm_mem (perm_quicksort _) z) !mem_filter /=.
+case/andP=>Hy _; rewrite (le_eqVlt y); case/orP.
+- by move/eqP=>->; rewrite Hy orbT.
+by case/andP=>Hz _; rewrite (lt_le_trans Hy Hz) orbT.
+Qed.
