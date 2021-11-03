@@ -1,6 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import ssrnat eqtype seq path order.
+From mathcomp Require Import ssrnat eqtype seq path order bigop.
 
 Import Order.POrderTheory.
 Import Order.TotalTheory.
@@ -196,6 +196,37 @@ Admitted.
 
 (* Exercise 2.5.1 *)
 
+Fixpoint T_filter {A : Type} (ta : A -> nat) (s : seq A) : nat :=
+  if s is x :: s' then ta x + T_filter ta s' + 1 else 1.
+
+Lemma T_filter_size {A : Type} (xs : seq A) ta :
+  T_filter ta xs = \sum_(x<-xs) (ta x) + size xs + 1.
+Proof.
+elim: xs=>/=; first by rewrite big_nil.
+by move=>x xs ->; rewrite big_cons -(addn1 (size _)) !addnA.
+Qed.
+
+Equations? T_quicksort (xs : seq T) : nat by wf (size xs) lt :=
+T_quicksort [::] := 1;
+T_quicksort (x::xs) := T_quicksort (filter (< x) xs) +
+                       T_quicksort (filter (>= x) xs) +
+                       2 * T_filter (fun => 1%nat) xs + 1.
+Proof.
+- by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
+by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
+Qed.
+
+(* FIXME replace these with concrete numbers *)
+Parameters (a b c : nat).
+
+Lemma quicksort_quadratic xs : sorted <=%O xs -> T_quicksort xs = a * size xs ^ 2 + b * size xs + c.
+Proof.
+Admitted.
+
 (* Exercise 2.5.2 *)
+
+Lemma quicksort_worst xs : T_quicksort xs <= a * size xs ^ 2 + b * size xs + c.
+Proof.
+Admitted.
 
 End QuickSort.
