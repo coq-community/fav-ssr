@@ -124,31 +124,78 @@ quicksort (x::xs) := quicksort (filter (< x) xs) ++ [:: x] ++
 Proof.
 - by rewrite size_filter /=; apply/ssrnat.ltP/count_size.
 by rewrite size_filter /=; apply/ssrnat.ltP/count_size.
-Defined.
+Qed.
 
 (* Functional Correctness *)
 
 Lemma perm_quicksort xs : perm_eq (quicksort xs) xs.
 Proof.
-funelim (quicksort xs)=>//=.
+apply_funelim (quicksort xs)=>//=x {}xs Hl Hg.
 rewrite perm_catC cat_cons perm_cons perm_sym -(perm_filterC (>= x)) perm_sym.
 apply: perm_cat=>//.
-rewrite (eq_in_filter (a1:=predC (>=x)) (a2:=(<x))) // =>?? /=.
+rewrite (eq_in_filter (a2 := < x)) //= =>y _.
 by rewrite ltNge.
 Qed.
 
 Lemma sorted_quicksort xs : sorted <=%O (quicksort xs).
 Proof.
-funelim (quicksort xs)=>//=.
+apply_funelim (quicksort xs)=>//= x {}xs Hl Hg.
 have Hx : sorted <=%O [:: x] by [].
-move: (merge_sorted le_total Hx H0)=>/=.
+move: (merge_sorted le_total Hx Hg)=>{Hx}/=.
 rewrite allrel_merge; last first.
 - by rewrite allrel1l (perm_all _ (perm_quicksort _)) filter_all.
-rewrite {1}[_ ++ _]/= => /(merge_sorted le_total H).
-rewrite allrel_merge //; apply/allrelP=>y z.
+move/(merge_sorted le_total Hl); rewrite allrel_merge //=.
+apply/allrelP=>y z.
 rewrite (perm_mem (perm_quicksort _) y) inE
   (perm_mem (perm_quicksort _) z) !mem_filter /=.
-case/andP=>Hy _; rewrite (le_eqVlt y); case/orP.
-- by move/eqP=>->; rewrite Hy orbT.
-by case/andP=>Hz _; rewrite (lt_le_trans Hy Hz) orbT.
+case/andP=>Hy _; case/orP=>[/eqP ->|/andP [Hz _]];
+rewrite le_eqVlt; apply/orP; right=>//.
+by apply/lt_le_trans/Hz.
 Qed.
+
+(* Exercise 2.3 *)
+
+Equations? quicksort2 (xs ys : seq T) : seq T by wf (size xs) lt :=
+quicksort2 xs ys := ys. (* FIXME *)
+Proof.
+Qed.
+
+Lemma quick2_quick xs ys : quicksort2 xs ys = quicksort xs ++ ys.
+Proof.
+Admitted.
+
+(* Exercise 2.4 *)
+
+(* inspect idiom so we can expand let-bound vars in proofs *)
+Definition inspect {A} (a : A) : {b | a = b} :=
+  exist _ a erefl.
+
+Notation "x 'eqn:' p" := (exist _ x p) (only parsing, at level 20).
+
+Definition partition3 (x : T) (xs : seq T) : seq T * seq T * seq T :=
+  (filter (< x) xs, filter (fun y => y == x) xs, filter (> x) xs).
+
+Equations? quicksort3 (xs : seq T) : seq T by wf (size xs) lt :=
+quicksort3 [::] := [::];
+quicksort3 (x::xs) with inspect (partition3 x xs) := {
+  | (ls, es, gs) eqn: eq => quicksort3 ls ++ x :: es ++ quicksort3 gs
+}.
+Proof.
+- by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
+by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
+Qed.
+
+(* this is the main part *)
+Lemma quick_filter_ge x xs : quicksort (filter (>= x) xs) = filter (fun y => y == x) xs ++ quicksort (filter (> x) xs).
+Proof.
+Admitted.
+
+Lemma quick3_quick xs : quicksort3 xs = quicksort xs.
+Proof.
+Admitted.
+
+(* Exercise 2.5.1 *)
+
+(* Exercise 2.5.2 *)
+
+End QuickSort.
