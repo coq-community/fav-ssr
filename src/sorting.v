@@ -173,7 +173,7 @@ Definition inspect {A} (a : A) : {b | a = b} :=
 Notation "x 'eqn:' p" := (exist _ x p) (only parsing, at level 20).
 
 Definition partition3 (x : T) (xs : seq T) : seq T * seq T * seq T :=
-  (filter (< x) xs, filter (fun y => y == x) xs, filter (> x) xs).
+  (filter (< x) xs, filter (pred1 x) xs, filter (> x) xs).
 
 Equations? quicksort3 (xs : seq T) : seq T by wf (size xs) lt :=
 quicksort3 [::] := [::];
@@ -186,7 +186,8 @@ by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
 Qed.
 
 (* this is the main part *)
-Lemma quick_filter_ge x xs : quicksort (filter (>= x) xs) = filter (fun y => y == x) xs ++ quicksort (filter (> x) xs).
+Lemma quick_filter_ge x xs :
+  quicksort (filter (>= x) xs) = filter (pred1 x) xs ++ quicksort (filter (> x) xs).
 Proof.
 Admitted.
 
@@ -196,10 +197,10 @@ Admitted.
 
 (* Exercise 2.5.1 *)
 
-Fixpoint T_filter {A : Type} (ta : A -> nat) (s : seq A) : nat :=
+Fixpoint T_filter {A} (ta : A -> nat) (s : seq A) : nat :=
   if s is x :: s' then ta x + T_filter ta s' + 1 else 1.
 
-Lemma T_filter_size {A : Type} (xs : seq A) ta :
+Lemma T_filter_size {A} (xs : seq A) ta :
   T_filter ta xs = \sum_(x<-xs) (ta x) + size xs + 1.
 Proof.
 elim: xs=>/=; first by rewrite big_nil.
@@ -210,7 +211,7 @@ Equations? T_quicksort (xs : seq T) : nat by wf (size xs) lt :=
 T_quicksort [::] := 1;
 T_quicksort (x::xs) := T_quicksort (filter (< x) xs) +
                        T_quicksort (filter (>= x) xs) +
-                       2 * T_filter (fun => 1%nat) xs + 1.
+                       2 * T_filter (fun => 1%N) xs + 1.
 Proof.
 - by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
 by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
@@ -230,3 +231,40 @@ Proof.
 Admitted.
 
 End QuickSort.
+
+Section TopDownMergeSort.
+Context {disp : unit} {T : orderType disp}.
+
+(* reusing `merge` from mathcomp.path *)
+
+Lemma half_le n : (n./2 <= n)%N.
+Proof.
+elim: n=>//= n IH; rewrite uphalf_half -addn1 (addnC _ 1%N).
+by apply: leq_add=>//; apply: leq_b1.
+Qed.
+
+Equations? msort (xs : seq T) : seq T by wf (size xs) lt :=
+msort [::] := [::];
+msort [::x] := [::x];
+msort (x::y::xs) := let n := (size xs).+2 in
+                    merge <=%O (msort (take n./2 (x::y::xs))) (msort (drop n./2 (x::y::xs))).
+Proof.
+- by apply/ssrnat.ltP; rewrite size_take /= !ltnS !half_le.
+by apply/ssrnat.ltP; rewrite size_drop /= /leq subSS subnAC subnn.
+Qed.
+
+(* Functional Correctness *)
+
+Lemma perm_msort xs : perm_eq (msort xs) xs.
+Proof.
+funelim (msort xs)=>//=.
+rewrite perm_merge -{3}(cat_take_drop (size xs)./2 (y::xs)) -cat_cons.
+by apply: perm_cat.
+Qed.
+
+Lemma sorted_msort xs : sorted <=%O (msort xs).
+Proof. by funelim (msort xs)=>//=; apply: merge_sorted. Qed.
+
+(* Running Time Analysis *)
+
+End TopDownMergeSort.
