@@ -6,6 +6,13 @@ Import Order.POrderTheory.
 Import Order.TotalTheory.
 Open Scope order_scope.
 
+(* inspect idiom so we can expand let-bound vars in proofs *)
+
+Definition inspect {A} (a : A) : {b | a = b} :=
+  exist _ a erefl.
+
+Notation "x 'eqn:' p" := (exist _ x p) (only parsing, at level 20).
+
 Section InsertionSort.
 Context {disp : unit} {T : orderType disp}.
 
@@ -118,8 +125,8 @@ Context {disp : unit} {T : orderType disp}.
 (* Definition *)
 
 Equations? quicksort (xs : seq T) : seq T by wf (size xs) lt :=
-quicksort [::] := [::];
-quicksort (x::xs) := quicksort (filter (< x) xs) ++ [:: x] ++
+quicksort [::]    => [::];
+quicksort (x::xs) => quicksort (filter (< x) xs) ++ [:: x] ++
                      quicksort (filter (>= x) xs).
 Proof.
 - by rewrite size_filter /=; apply/ssrnat.ltP/count_size.
@@ -156,7 +163,7 @@ Qed.
 (* Exercise 2.3 *)
 
 Equations? quicksort2 (xs ys : seq T) : seq T by wf (size xs) lt :=
-quicksort2 xs ys := ys. (* FIXME *)
+quicksort2 xs ys => ys. (* FIXME *)
 Proof.
 Qed.
 
@@ -166,18 +173,12 @@ Admitted.
 
 (* Exercise 2.4 *)
 
-(* inspect idiom so we can expand let-bound vars in proofs *)
-Definition inspect {A} (a : A) : {b | a = b} :=
-  exist _ a erefl.
-
-Notation "x 'eqn:' p" := (exist _ x p) (only parsing, at level 20).
-
 Definition partition3 (x : T) (xs : seq T) : seq T * seq T * seq T :=
   (filter (< x) xs, filter (pred1 x) xs, filter (> x) xs).
 
 Equations? quicksort3 (xs : seq T) : seq T by wf (size xs) lt :=
-quicksort3 [::] := [::];
-quicksort3 (x::xs) with inspect (partition3 x xs) := {
+quicksort3 [::]    => [::];
+quicksort3 (x::xs) with inspect (partition3 x xs) => {
   | (ls, es, gs) eqn: eq => quicksort3 ls ++ x :: es ++ quicksort3 gs
 }.
 Proof.
@@ -208,8 +209,8 @@ by move=>x xs ->; rewrite big_cons -(addn1 (size _)) !addnA.
 Qed.
 
 Equations? T_quicksort (xs : seq T) : nat by wf (size xs) lt :=
-T_quicksort [::] := 1;
-T_quicksort (x::xs) := T_quicksort (filter (< x) xs) +
+T_quicksort [::]    => 1;
+T_quicksort (x::xs) => T_quicksort (filter (< x) xs) +
                        T_quicksort (filter (>= x) xs) +
                        2 * T_filter (fun => 1%N) xs + 1.
 Proof.
@@ -244,10 +245,11 @@ by apply: leq_add=>//; apply: leq_b1.
 Qed.
 
 Equations? msort (xs : seq T) : seq T by wf (size xs) lt :=
-msort [::] := [::];
-msort [::x] := [::x];
-msort (x::y::xs) := let n := (size xs).+2 in
-                    merge <=%O (msort (take n./2 (x::y::xs))) (msort (drop n./2 (x::y::xs))).
+msort [::]  => [::];
+msort [::x] => [::x];
+msort xs    => let n := size xs in
+               merge <=%O (msort (take n./2 xs))
+                          (msort (drop n./2 xs)).
 Proof.
 - by apply/ssrnat.ltP; rewrite size_take /= !ltnS !half_le.
 by apply/ssrnat.ltP; rewrite size_drop /= /leq subSS subnAC subnn.
@@ -258,7 +260,7 @@ Qed.
 Lemma perm_msort xs : perm_eq (msort xs) xs.
 Proof.
 funelim (msort xs)=>//=.
-rewrite perm_merge -{3}(cat_take_drop (size xs)./2 (y::xs)) -cat_cons.
+rewrite perm_merge -{3}(cat_take_drop (size l)./2 (s0::l)) -cat_cons.
 by apply: perm_cat.
 Qed.
 
@@ -266,5 +268,94 @@ Lemma sorted_msort xs : sorted <=%O (msort xs).
 Proof. by funelim (msort xs)=>//=; apply: merge_sorted. Qed.
 
 (* Running Time Analysis *)
+
+Fixpoint C_merge (s1 : seq T) :=
+  if s1 is x1 :: s1' then
+    let fix C_merge_s1 (s2 : seq T) :=
+      if s2 is x2 :: s2' then
+        (if x1 <= x2 then C_merge s1' s2 else C_merge_s1 s2').+1
+      else 0 in
+    C_merge_s1
+  else fun => 0.
+
+Equations? C_msort (xs : seq T) : nat by wf (size xs) lt :=
+C_msort [::]  => 0;
+C_msort [::x] => 0;
+C_msort xs    => let n := (size xs) in
+                 let ys := take n./2 xs in
+                 let zs := drop n./2 xs in
+                 C_msort ys + C_msort zs + C_merge (msort ys) (msort zs).
+Proof.
+- by apply/ssrnat.ltP; rewrite size_take /= !ltnS !half_le.
+by apply/ssrnat.ltP; rewrite size_drop /= /leq subSS subnAC subnn.
+Qed.
+
+Lemma C_merge_leq xs ys : (C_merge xs ys <= size xs + size ys)%N.
+Proof.
+elim: xs ys=>//= x xs IH1; elim=>//= y ys IH2.
+case: ifP=>_.
+- rewrite -addn1 -!(addn1 (size _)) addnA leq_add2r addnAC.
+  apply: leq_trans; first by apply: IH1.
+  by rewrite addn1 addnS.
+by rewrite addnS ltnS; apply: IH2.
+Qed.
+
+Lemma size1 {A} (xs : seq A) : size xs = 1%N -> {x : A | xs = [::x]}.
+Proof. by case: xs=>// x; case=>//= _; exists x. Qed.
+
+Lemma size_gt {A} (xs : seq A) : (size xs > 1)%N -> {x : A & {y : A & {ys : seq A & xs = [:: x, y & ys]}}}.
+Proof. by case: xs=>// x; case=>//= y ys _; exists x,y,ys. Qed.
+
+Lemma half_subn n : n - n./2 = uphalf n.
+Proof.
+have {1}-> : n = n./2 + uphalf n by rewrite uphalf_half addnCA addnn odd_double_half.
+by rewrite -addnBAC // subnn.
+Qed.
+
+Lemma C_msort_leq xs k: size xs = 2^k -> (C_msort xs <= k * 2^k)%N.
+Proof.
+elim: k xs=>/=.
+- by move=>xs; rewrite expn0 =>/size1 [x] ->; simp C_msort.
+move=>k IH xs H.
+have Hs1 : (size xs > 1)%N by rewrite H -{1}(expn0 2); apply: ltn_exp2l.
+case: (size_gt _ Hs1)=> x[y][ys] He; rewrite He /= in H *; simp C_msort=>/=.
+have Hp : (size ys)./2.+1 = ((size ys).+2)./2 by rewrite -addn2 halfD andbF /= addn1.
+have Ht : size (x :: take (size ys)./2 (y :: ys)) = 2^k.
+- by rewrite /= size_take /= ltnS half_le Hp H expnS mul2n half_double.
+have Hd : size (drop (size ys)./2 (y :: ys)) = 2^k.
+- rewrite size_drop /= subSn; last by apply: half_le.
+  rewrite half_subn uphalf_half -addnS Hp H expnS mul2n half_double.
+  have -> : odd (size ys) = odd (size ys).+2 by rewrite -addn2 oddD addbF.
+  by rewrite H oddX.
+apply: leq_trans;
+  first by exact: (leq_add (leq_add (IH _ Ht) (IH _ Hd)) (C_merge_leq _ _)).
+rewrite !(perm_size (perm_msort _)) Ht Hd.
+by rewrite !addnn -!muln2 -mulnA -!expnSr -{3}(addn1 k) mulnDl mul1n.
+Qed.
+
+(* Exercise 2.6 *)
+
+Fixpoint halve {A: Type} (xs ys zs : seq A) : seq A * seq A :=
+  ([::],[::]). (* FIXME *)
+
+Equations? msort2 (xs : seq T) : seq T by wf (size xs) lt :=
+msort2 [::]  => [::];
+msort2 [::x] => [::x];
+msort2 xs with inspect (halve xs [::] [::]) := {
+  | (ys1, ys2) eqn: eq => merge <=%O (msort2 ys1) (msort2 ys2)
+}.
+Proof.
+(* FIXME *)
+- by apply/ssrnat.ltP.
+by apply/ssrnat.ltP.
+Qed.
+
+Lemma perm_msort2 xs : perm_eq (msort2 xs) xs.
+Proof.
+Admitted.
+
+Lemma sorted_msort2 xs : sorted <=%O (msort2 xs).
+Proof.
+Admitted.
 
 End TopDownMergeSort.
