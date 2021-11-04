@@ -359,3 +359,75 @@ Proof.
 Admitted.
 
 End TopDownMergeSort.
+
+Section BottomUpMergeSort.
+Context {disp : unit} {T : orderType disp}.
+
+Equations merge_adj (xss : seq (seq T)) : seq (seq T) :=
+merge_adj [::]          => [::];
+merge_adj [::xs]        => [::xs];
+merge_adj (xs::ys::zss) => merge <=%O xs ys :: merge_adj zss.
+
+Lemma size_merge_adj xss : size (merge_adj xss) = uphalf (size xss).
+Proof. by funelim (merge_adj xss)=>//=; congr S. Qed.
+
+Lemma uphalf_le n : (uphalf n <= n)%N.
+Proof. by case: n=>//= n; rewrite ltnS; apply: half_le. Qed.
+
+Equations? merge_all (xss : seq (seq T)) : seq T by wf (size xss) lt :=
+merge_all [::]   => [::];
+merge_all [::xs] => xs;
+merge_all xss    => merge_all (merge_adj xss).
+Proof.
+by apply/ssrnat.ltP; rewrite size_merge_adj /= !ltnS; apply: uphalf_le.
+Qed.
+
+Definition msort_bu (xs : seq T) : seq T :=
+  merge_all (map (fun x => [::x]) xs).
+
+(* Functional Correctness *)
+
+Lemma perm_merge_adj xss : perm_eq (flatten (merge_adj xss)) (flatten xss).
+Proof.
+funelim (merge_adj xss)=>//=.
+rewrite catA; apply: perm_cat=>//.
+by rewrite perm_merge.
+Qed.
+
+Lemma perm_merge_all xss : perm_eq (merge_all xss) (flatten xss).
+Proof.
+funelim (merge_all xss)=>//=; first by rewrite cats0.
+by apply/(perm_trans H)/perm_merge_adj.
+Qed.
+
+Lemma perm_msort_bu xs : perm_eq (msort_bu xs) xs.
+Proof.
+rewrite /msort_bu; apply: (perm_trans (perm_merge_all _)).
+by rewrite flatten_map1 map_id.
+Qed.
+
+Lemma sorted_merge_adj xss :
+  all (sorted <=%O) xss -> all (sorted <=%O) (merge_adj xss).
+Proof.
+funelim (merge_adj xss)=>//= /and3P [Hs1 Hs2] /H ->; rewrite andbT.
+by apply: merge_sorted.
+Qed.
+
+Lemma sorted_merge_all xss :
+  all (sorted <=%O) xss -> sorted <=%O (merge_all xss).
+Proof.
+funelim (merge_all xss)=>//=; first by rewrite andbT.
+move: H; simp merge_adj=>/= H.
+case/and3P=>Hs1 Hs2 Hs; apply/H/andP.
+by split; [apply: merge_sorted | apply: sorted_merge_adj].
+Qed.
+
+Lemma sorted_msort_bu xs : sorted <=%O (msort_bu xs).
+Proof.
+rewrite /msort_bu; apply: sorted_merge_all; rewrite all_map.
+by elim: xs.
+Qed.
+
+(* Running Time Analysis *)
+
+End BottomUpMergeSort.
