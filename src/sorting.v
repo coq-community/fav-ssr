@@ -312,6 +312,10 @@ have {1}-> : n = n./2 + uphalf n by rewrite uphalf_half addnCA addnn odd_double_
 by rewrite -addnBAC // subnn.
 Qed.
 
+Lemma odd2 n : odd n = odd n.+2.
+Proof. by rewrite -addn2 oddD addbF. Qed.
+
+
 Lemma C_msort_leq xs k: size xs = 2^k -> (C_msort xs <= k * 2^k)%N.
 Proof.
 elim: k xs=>/=.
@@ -324,9 +328,7 @@ have Ht : size (x :: take (size ys)./2 (y :: ys)) = 2^k.
 - by rewrite /= size_take /= ltnS half_le Hp H expnS mul2n half_double.
 have Hd : size (drop (size ys)./2 (y :: ys)) = 2^k.
 - rewrite size_drop /= subSn; last by apply: half_le.
-  rewrite half_subn uphalf_half -addnS Hp H expnS mul2n half_double.
-  have -> : odd (size ys) = odd (size ys).+2 by rewrite -addn2 oddD addbF.
-  by rewrite H oddX.
+  by rewrite half_subn uphalf_half -addnS Hp H expnS mul2n half_double odd2 H oddX.
 apply: leq_trans;
   first by exact: (leq_add (leq_add (IH _ Ht) (IH _ Hd)) (C_merge_leq _ _)).
 rewrite !(perm_size (perm_msort _)) Ht Hd.
@@ -363,7 +365,7 @@ End TopDownMergeSort.
 Section BottomUpMergeSort.
 Context {disp : unit} {T : orderType disp}.
 
-Equations merge_adj (xss : seq (seq T)) : seq (seq T) :=
+Equations merge_adj : seq (seq T) -> seq (seq T) :=
 merge_adj [::]          => [::];
 merge_adj [::xs]        => [::xs];
 merge_adj (xs::ys::zss) => merge <=%O xs ys :: merge_adj zss.
@@ -429,5 +431,66 @@ by elim: xs.
 Qed.
 
 (* Running Time Analysis *)
+
+Equations C_merge_adj : seq (seq T) -> nat :=
+C_merge_adj [::]          => 0;
+C_merge_adj [::xs]        => 0;
+C_merge_adj (xs::ys::zss) => C_merge xs ys + C_merge_adj zss.
+
+Equations? C_merge_all (xss : seq (seq T)) : nat by wf (size xss) lt :=
+C_merge_all [::]   => 0;
+C_merge_all [::xs] => 0;
+C_merge_all xss    => C_merge_adj xss + C_merge_all (merge_adj xss).
+Proof.
+by apply/ssrnat.ltP; rewrite size_merge_adj /= !ltnS; apply: uphalf_le.
+Qed.
+
+Definition C_msort_bu (xs : seq T) : nat :=
+  C_merge_all (map (fun x => [::x]) xs).
+
+Lemma merge_adj_sizes xss m :
+  ~~ odd (size xss) -> all (fun xs => size xs == m) xss ->
+  all (fun xs => size xs == m.*2) (merge_adj xss).
+Proof.
+funelim (merge_adj xss)=>//=; rewrite negbK=>Ho /and3P [/eqP Hx /eqP Hy Ha]; apply/andP.
+split; last by rewrite (H _ Ho Ha).
+by rewrite size_merge size_cat Hx Hy addnn.
+Qed.
+
+Lemma C_merge_adj_leq xss m :
+  all (fun xs => size xs == m) xss -> C_merge_adj xss <= m * size xss.
+Proof.
+funelim (C_merge_adj xss)=>//= /and3P [/eqP Hx /eqP Hy Ha].
+rewrite -add2n mulnDr muln2 -addnn; apply/leq_add/H=>//.
+by rewrite -{1}Hx -Hy; apply: C_merge_leq.
+Qed.
+
+Lemma C_merge_all_leq xss m k :
+  all (fun xs => size xs == m) xss -> size xss = 2 ^ k ->
+  C_merge_all xss <= m * k * 2^k.
+Proof.
+funelim (C_merge_all xss)=>//= /and3P [/eqP Hx /eqP Hy Ha] Hs.
+move: H; simp merge_adj C_merge_adj=>/= H. (* slow for some reason *)
+have [k0 Hk] : { k0 | k = k0.+1 } by move: Hs; case: k=>//=k0 _; exists k0.
+have Hsm : size (merge <=%O l l0) == m.*2 by rewrite size_merge size_cat Hx Hy addnn.
+have He : ~~ odd (size l1) by rewrite odd2 Hs oddX Hk.
+have Hsam : all (fun xs => size xs == m.*2) (merge_adj l1) by apply: merge_adj_sizes.
+have /eqP Hsma : (size (merge_adj l1)).+1 == 2 ^ k0.
+- rewrite size_merge_adj -addn1 -(eqn_pmul2r (m:=2)) // mulnDl muln2.
+  have -> : (uphalf (size l1)).*2 = size l1 by rewrite -[in RHS](odd_double_half (size l1)) uphalf_half (negbTE He).
+  by rewrite addn2 Hs Hk expnS mulnC.
+rewrite Hk expnS mulnS mulnDl; apply: leq_add; last first.
+- by rewrite mulnCA !mulnA mul2n; apply: H=>//; apply/andP.
+rewrite Hk expnS in Hs; rewrite -Hs -addn2 mulnDr addnC.
+apply: leq_add; first by apply: C_merge_adj_leq.
+by rewrite muln2 -addnn -{1}Hx -Hy; apply: C_merge_leq.
+Qed.
+
+Lemma C_msort_bu_leq xs k : size xs = 2^k -> C_msort_bu xs <= k * 2^k.
+Proof.
+move=>H; rewrite -(mul1n (_ * _)) mulnA; apply: C_merge_all_leq.
+- by rewrite all_map; elim: {H}xs.
+by rewrite size_map.
+Qed.
 
 End BottomUpMergeSort.
