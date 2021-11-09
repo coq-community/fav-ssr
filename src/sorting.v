@@ -604,4 +604,91 @@ funelim (merge_adj xss)=>//=.
 by rewrite catA !size_cat H size_merge size_cat.
 Qed.
 
+Lemma C_merge_adj_log2 (xss : seq (seq T)) : C_merge_all xss <= size (flatten xss) * log2n (size xss).
+Proof.
+funelim (C_merge_all xss)=>//=; move: H; simp C_merge_adj merge_adj.
+rewrite /= !size_cat merge_adj_flat size_merge_adj size_merge size_cat =>IH.
+rewrite log2n_half //= mulnS !addnA; apply: leq_add=>//.
+by apply/leq_add/C_merge_adj_flat/C_merge_leq.
+Qed.
+
+Lemma size_runs_asc_desc x xs ys f :
+      size (flatten (runs_fix x ys)) = (size ys).+1
+  /\  size (flatten (desc x xs ys)) = (size xs + size ys).+1
+  /\ (is_dlist f ->
+      size (flatten (asc x f ys)) = (size (f [::]) + size ys).+1).
+Proof.
+elim: ys x xs f=>/=.
+- move=>x xs f; do!split; first by rewrite cats0 addn0.
+  by move=>H; move: (H [::] [::x])=>/=; rewrite !cats0=>->; rewrite size_cat addn0 /= addn1.
+move=>b bs IH x xs f; do!split.
+- case: ifP=>_.
+  - by case: (IH b [::x] id)=>_ [+ _]; rewrite /= addnC addn1.
+  case: (IH b [::x] (cons x))=>_ [_] /=; rewrite /= addnC addn1; apply.
+  by move=>??; rewrite cat_cons.
+- case: ifP=>_ /=.
+  - by case: (IH b (x::xs) id)=>_ [+ _]; rewrite /= addSnnS.
+  by case: (IH b xs f)=>+ _; rewrite size_cat=>->.
+move=>H; case: ifP=>_ /=.
+- case: (IH b xs (f \o cons x))=>_ [_] /=.
+  move: (H [::] [::x])=>/=->; rewrite size_cat /= addnAC -addnA addn1; apply.
+  by move=>?? /=; rewrite -cat_cons; apply: H.
+move: (H [::] [::x])=>/=->; rewrite !size_cat /=.
+by case: (IH b xs f)=>+ _; rewrite addnAC addn1=>->.
+Qed.
+
+Lemma size_runs xs : size (flatten (runs xs)) = size xs.
+Proof. by case: xs=>//=x xs; case: (size_runs_asc_desc x [::] xs id). Qed.
+
+Lemma size_runs_asc_desc_leq x xs ys f :
+      (size (runs_fix x ys) <= (size ys).+1)%N
+  /\  (size (desc x xs ys) <= (size ys).+1)%N
+  /\ (is_dlist f ->
+      (size (asc x f ys) <= (size ys).+1)%N).
+Proof.
+elim: ys x xs f=>//= b bs IH x xs f; do!split.
+- case: ifP=>_.
+  - by apply: leqW; case: (IH b [::x] id)=>_ [+ _].
+  apply: leqW; case: (IH b [::x] (cons x))=>_ [_]; apply.
+  by move=>??; rewrite cat_cons.
+- case: ifP=>_ /=.
+  - by apply: leqW; case: (IH b (x::xs) id)=>_ [+ _].
+  by rewrite ltnS; case: (IH b xs f)=>+ _ /=.
+move=>H; case: ifP=>_ /=.
+- apply: leqW; case: (IH b xs (f \o cons x))=>_ [_] /=; apply.
+  by move=>?? /=; rewrite -cat_cons; apply: H.
+by rewrite ltnS; case: (IH b xs f)=>+ _.
+Qed.
+
+Lemma size_runs_leq xs : (size (runs xs) <= size xs)%N.
+Proof. by case: xs=>//=x xs; case: (size_runs_asc_desc_leq x [::] xs id). Qed.
+
+Lemma C_size_runs_asc_desc_leq x ys :
+     (C_runs_fix x ys <= size ys)%N
+  /\ (C_desc x ys <= size ys)%N
+  /\ (C_asc x ys <= size ys)%N.
+Proof.
+elim: ys x=>//=b bs IH x.
+by do!split; case: ifP=>_; rewrite ltnS; case: (IH b)=>+ [].
+Qed.
+
+Lemma C_size_runs_leq xs : (C_runs xs <= (size xs).-1)%N.
+Proof. by case: xs=>//=x xs; case: (C_size_runs_asc_desc_leq x xs). Qed.
+
+Lemma C_merge_runs_leq xs n : size xs = n -> (C_merge_all (runs xs) <= n * log2n n)%N.
+Proof.
+move=>H; apply: leq_trans; first by apply: C_merge_adj_log2.
+rewrite size_runs H leq_mul2l; apply/orP.
+case: n H=>[H|n H]; first by left.
+right; apply: leq_log2n; rewrite -H.
+by apply: size_runs_leq.
+Qed.
+
+Lemma C_nmsort_leq xs n : size xs = n -> (C_nmsort xs <= n + n * log2n n)%N.
+Proof.
+move=>H; rewrite /C_nmsort; apply/leq_add/C_merge_runs_leq=>//.
+apply: leq_trans; first by apply: C_size_runs_leq.
+by rewrite H; exact: leq_pred.
+Qed.
+
 End NaturalMergeSort.
