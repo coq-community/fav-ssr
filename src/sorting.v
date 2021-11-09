@@ -1,17 +1,11 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
 From mathcomp Require Import ssrnat eqtype seq path order bigop.
+From favssr Require Import prelude.
 
 Import Order.POrderTheory.
 Import Order.TotalTheory.
 Open Scope order_scope.
-
-(* inspect idiom so we can expand let-bound vars in proofs *)
-
-Definition inspect {A} (a : A) : {b | a = b} :=
-  exist _ a erefl.
-
-Notation "x 'eqn:' p" := (exist _ x p) (only parsing, at level 20).
 
 Section InsertionSort.
 Context {disp : unit} {T : orderType disp}.
@@ -105,13 +99,7 @@ End InsertionSort.
 
 Section InsertionSortNat.
 
-(* this might come in handy *)
-Lemma uphalf_addn n m : uphalf n + uphalf m = odd n && odd m + uphalf (n + m).
-Proof.
-rewrite !uphalf_half halfD oddD.
-by case: (odd n); case: (odd m)=>//=; rewrite addnCA.
-Qed.
-
+(* uphalf_addn from prelude might come in handy here *)
 (* Exercise 2.2.2 *)
 Lemma T_isort_worst n : T_isort (rev (iota 0 n)) = uphalf ((n.+1)*(n.+2)).
 Proof.
@@ -238,12 +226,6 @@ Context {disp : unit} {T : orderType disp}.
 
 (* reusing `merge` from mathcomp.path *)
 
-Lemma half_le n : (n./2 <= n)%N.
-Proof.
-elim: n=>//= n IH; rewrite uphalf_half -addn1 (addnC _ 1%N).
-by apply: leq_add=>//; apply: leq_b1.
-Qed.
-
 Equations? msort (xs : seq T) : seq T by wf (size xs) lt :=
 msort [::]  => [::];
 msort [::x] => [::x];
@@ -300,29 +282,13 @@ case: ifP=>_.
 by rewrite addnS ltnS; apply: IH2.
 Qed.
 
-Lemma size1 {A} (xs : seq A) : size xs = 1%N -> {x : A | xs = [::x]}.
-Proof. by case: xs=>// x; case=>//= _; exists x. Qed.
-
-Lemma size_gt {A} (xs : seq A) : (size xs > 1)%N -> {x : A & {y : A & {ys : seq A & xs = [:: x, y & ys]}}}.
-Proof. by case: xs=>// x; case=>//= y ys _; exists x,y,ys. Qed.
-
-Lemma half_subn n : n - n./2 = uphalf n.
-Proof.
-have {1}-> : n = n./2 + uphalf n by rewrite uphalf_half addnCA addnn odd_double_half.
-by rewrite -addnBAC // subnn.
-Qed.
-
-Lemma odd2 n : odd n = odd n.+2.
-Proof. by rewrite -addn2 oddD addbF. Qed.
-
-
 Lemma C_msort_leq xs k: size xs = 2^k -> (C_msort xs <= k * 2^k)%N.
 Proof.
 elim: k xs=>/=.
 - by move=>xs; rewrite expn0 =>/size1 [x] ->; simp C_msort.
 move=>k IH xs H.
 have Hs1 : (size xs > 1)%N by rewrite H -{1}(expn0 2); apply: ltn_exp2l.
-case: (size_gt _ Hs1)=> x[y][ys] He; rewrite He /= in H *; simp C_msort=>/=.
+case: (size2 _ Hs1)=> x[y][ys] He; rewrite He /= in H *; simp C_msort=>/=.
 have Hp : (size ys)./2.+1 = ((size ys).+2)./2 by rewrite -addn2 halfD andbF /= addn1.
 have Ht : size (x :: take (size ys)./2 (y :: ys)) = 2^k.
 - by rewrite /= size_take /= ltnS half_le Hp H expnS mul2n half_double.
@@ -372,9 +338,6 @@ merge_adj (xs::ys::zss) => merge <=%O xs ys :: merge_adj zss.
 
 Lemma size_merge_adj xss : size (merge_adj xss) = uphalf (size xss).
 Proof. by funelim (merge_adj xss)=>//=; congr S. Qed.
-
-Lemma uphalf_le n : (uphalf n <= n)%N.
-Proof. by case: n=>//= n; rewrite ltnS; apply: half_le. Qed.
 
 Equations? merge_all (xss : seq (seq T)) : seq T by wf (size xss) lt :=
 merge_all [::]   => [::];
@@ -472,18 +435,18 @@ Proof.
 funelim (C_merge_all xss)=>//= /and3P [/eqP Hx /eqP Hy Ha] Hs.
 move: H; simp merge_adj C_merge_adj=>/= H. (* slow for some reason *)
 have [k0 Hk] : { k0 | k = k0.+1 } by move: Hs; case: k=>//=k0 _; exists k0.
-have Hsm : size (merge <=%O l l0) == m.*2 by rewrite size_merge size_cat Hx Hy addnn.
 have He : ~~ odd (size l1) by rewrite odd2 Hs oddX Hk.
-have Hsam : all (fun xs => size xs == m.*2) (merge_adj l1) by apply: merge_adj_sizes.
-have /eqP Hsma : (size (merge_adj l1)).+1 == 2 ^ k0.
-- rewrite size_merge_adj -addn1 -(eqn_pmul2r (m:=2)) // mulnDl muln2.
-  have -> : (uphalf (size l1)).*2 = size l1 by rewrite -[in RHS](odd_double_half (size l1)) uphalf_half (negbTE He).
-  by rewrite addn2 Hs Hk expnS mulnC.
-rewrite Hk expnS mulnS mulnDl; apply: leq_add; last first.
-- by rewrite mulnCA !mulnA mul2n; apply: H=>//; apply/andP.
-rewrite Hk expnS in Hs; rewrite -Hs -addn2 mulnDr addnC.
-apply: leq_add; first by apply: C_merge_adj_leq.
-by rewrite muln2 -addnn -{1}Hx -Hy; apply: C_merge_leq.
+rewrite Hk expnS mulnS mulnDl in Hs *; apply: leq_add.
+- rewrite -Hs -addn2 mulnDr addnC.
+  apply: leq_add; first by apply: C_merge_adj_leq.
+  by rewrite muln2 -addnn -{1}Hx -Hy; apply: C_merge_leq.
+rewrite mulnCA !mulnA mul2n; apply: H.
+- apply/andP; split; last by apply: merge_adj_sizes.
+  by rewrite size_merge size_cat Hx Hy addnn.
+apply/eqP; rewrite size_merge_adj -addn1 -(eqn_pmul2r (m:=2)) // mulnDl muln2.
+have -> : (uphalf (size l1)).*2 = size l1
+  by rewrite -[in RHS](odd_double_half (size l1)) uphalf_half (negbTE He).
+by rewrite addn2 mulnC Hs.
 Qed.
 
 Lemma C_msort_bu_leq xs k : size xs = 2^k -> C_msort_bu xs <= k * 2^k.
@@ -494,3 +457,151 @@ by rewrite size_map.
 Qed.
 
 End BottomUpMergeSort.
+
+Section NaturalMergeSort.
+Context {disp : unit} {T : orderType disp}.
+
+Fixpoint runs_fix (a : T) (xs : seq T) : seq (seq T) :=
+  if xs is b::bs
+    then if b < a then desc b [:: a] bs else asc b (cons a) bs
+    else [::[::a]]
+with asc (x : T) (xs : seq T -> seq T) (ys : seq T) : seq (seq T) :=
+  if ys is y::ys'
+    then if x <= y then asc y (xs \o cons x) ys' else xs [::x] :: runs_fix y ys'
+    else [:: xs [::x]]
+with desc (x : T) (xs : seq T) (ys : seq T) : seq (seq T) :=
+  if ys is y::ys'
+     then if y < x then desc y (x :: xs) ys' else (x :: xs) :: runs_fix y ys'
+     else [:: (x :: xs)].
+
+Definition runs (xs : seq T) : seq (seq T) :=
+  if xs is x::xs' then runs_fix x xs' else [::].
+
+Definition nmsort xs := merge_all (runs xs).
+
+(* Functional Correctness *)
+
+Definition is_dlist (f : seq T -> seq T) := forall ps qs, f (ps ++ qs) = f ps ++ qs.
+
+Lemma perm_runs_asc_desc x xs ys f :
+     perm_eq (flatten (runs_fix x ys)) (x :: ys)
+  /\ perm_eq (flatten (desc x xs ys)) (x::xs ++ ys)
+  /\ (is_dlist f ->
+       perm_eq (flatten (asc x f ys)) (x :: f [::] ++ ys)).
+Proof.
+elim: ys x xs f=>/=.
+- move=>x xs f; do!split=>//.
+  by move=>H; move: (H [::] [::x])=>/=; rewrite !cats0=>->; rewrite perm_catC.
+move=>b bs IH x xs f; do!split.
+- case: ifP=>_.
+  - apply: perm_trans; first by case: (IH b [::x] f)=>_ [+ _]; apply.
+    by move: (perm_catCA [::b] [::x] bs)=>/=->.
+  apply: perm_trans; first by case: (IH b [::x] (cons x))=>_ [_] /=; apply.
+  by move: (perm_catCA [::b] [::x] bs)=>/=->.
+- case: ifP=>_.
+  - apply: perm_trans; first by case: (IH b (x::xs) f)=>_ [+ _]; apply.
+    by move: (perm_catCA [::b] (x::xs) bs)=>/=->.
+  rewrite /= -!cat_cons perm_cat2l.
+  by case: (IH b xs f)=>+ _; apply.
+move=>H; case: ifP=>_.
+- apply: perm_trans.
+  - case: (IH b xs (f \o cons x))=>_ [_] /=; apply=>ps qs.
+    by rewrite /= -cat_cons; apply: H.
+  move: (H [::] [::x])=>/=->; move: (perm_catCA [::b] (f [::] ++ [::x]) bs)=>/=->.
+  by rewrite -cat_cons perm_cat2r perm_catC.
+move: (H [::] [::x])=>/=->; rewrite -cat_cons.
+apply: perm_cat; first by rewrite perm_catC.
+by case: (IH b xs f)=>+ _; apply.
+Qed.
+
+Lemma perm_runs xs : perm_eq (flatten (runs xs)) xs.
+Proof.
+case: xs=>//=x xs.
+by case: (perm_runs_asc_desc x [::] xs id).
+Qed.
+
+Lemma perm_nmsort xs : perm_eq (nmsort xs) xs.
+Proof.
+rewrite /nmsort; apply/perm_trans/perm_runs.
+by apply: perm_merge_all.
+Qed.
+
+Lemma sorted_runs_asc_desc x xs ys f :
+     all (sorted <=%O) (runs_fix x ys)
+  /\ (sorted <=%O xs -> all (>= x) xs -> all (sorted <=%O) (desc x xs ys))
+  /\ (is_dlist f -> sorted <=%O (f [::]) -> all (<= x) (f [::]) ->
+      all (sorted <=%O) (asc x f ys)).
+Proof.
+elim: ys x xs f=>/=.
+- move=>x xs f; do!split.
+  - by move=>Hs Ha; rewrite andbT (path_sortedE le_trans); apply/andP.
+  move=>Hd Hs Ha; rewrite andbT; move: (Hd [::] [::x])=>/=->.
+  by rewrite cats1; apply: sorted_rcons=>//; exact: le_trans.
+move=>b ys IH x xs f; do!split.
+- case: ifP=>Ho.
+  - case: (IH b [::x] id)=>_ [+ _]; apply=>//.
+    by rewrite all_seq1 le_eqVlt Ho orbT.
+  case: (IH b xs (cons x))=>_ [_]; apply=>//.
+  by rewrite all_seq1 /= leNgt; apply/negbT.
+- move=>Hs Ha; case: ifP=>Ho /=.
+  - case: (IH b (x::xs) id)=>_ [+ _]; apply=>/=.
+    - by rewrite (path_sortedE le_trans); apply/andP.
+    rewrite le_eqVlt Ho orbT /=; apply/sub_all/Ha=>z.
+    by apply/le_trans; rewrite le_eqVlt Ho orbT.
+  apply/andP; split; first by rewrite (path_sortedE le_trans); apply/andP.
+  by case: (IH b xs f)=>+ _; apply.
+move=>Hd Hs Ha; case: ifP=>Ho /=.
+- case: (IH b xs (f \o cons x))=>_ [_] /=; apply.
+  - by move=>ps qs /=; rewrite -cat_cons; apply: Hd.
+  - move: (Hd [::] [::x])=>/=->.
+    by rewrite cats1; apply: sorted_rcons=>//; exact: le_trans.
+  move: (Hd [::] [::x])=>/=->.
+  rewrite cats1 all_rcons /= Ho /=.
+  by apply/sub_all/Ha=>z /= Hx; apply/le_trans/Ho.
+apply/andP; split.
+- move: (Hd [::] [::x])=>/=->.
+  by rewrite cats1; apply: sorted_rcons=>//; exact: le_trans.
+by case: (IH b xs id)=>+ _; apply.
+Qed.
+
+Lemma sorted_runs xs : all (sorted <=%O) (runs xs).
+Proof. by case: xs=>//=x xs; case: (sorted_runs_asc_desc x [::] xs id). Qed.
+
+Lemma sorted_nmsort xs : sorted <=%O (nmsort xs).
+Proof. by rewrite /nmsort; apply/sorted_merge_all/sorted_runs. Qed.
+
+(* Running Time Analysis *)
+
+Fixpoint C_runs_fix a xs : nat :=
+  if xs is b::bs
+    then (if b < a then C_desc b bs else C_asc b bs).+1
+    else 0
+with C_asc (a : T) (xs : seq T) : nat :=
+  if xs is b::bs
+    then (if a <= b then C_asc b bs else C_runs_fix b bs).+1
+    else 0
+with C_desc (a : T) (xs : seq T) : nat :=
+  if xs is b::bs
+     then (if b < a then C_desc b bs else C_runs_fix b bs).+1
+     else 0.
+
+Definition C_runs (xs : seq T) : nat :=
+  if xs is x::xs' then C_runs_fix x xs' else 0.
+
+Definition C_nmsort (xs : seq T) : nat :=
+  C_runs xs + C_merge_all (runs xs).
+
+Lemma C_merge_adj_flat (xss : seq (seq T)) : C_merge_adj xss <= size (flatten xss).
+Proof.
+funelim (C_merge_adj xss)=>//=; rewrite catA !size_cat.
+by apply: leq_add=>//; apply: C_merge_leq.
+Qed.
+
+Lemma merge_adj_flat (xss : seq (seq T)) :
+  size (flatten (merge_adj xss)) = size (flatten xss).
+Proof.
+funelim (merge_adj xss)=>//=.
+by rewrite catA !size_cat H size_merge size_cat.
+Qed.
+
+End NaturalMergeSort.
