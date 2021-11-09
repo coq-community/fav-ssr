@@ -10,7 +10,8 @@ Notation "x 'eqn:' p" := (exist _ x p) (only parsing, at level 20).
 
 Section Arith.
 
-Lemma uphalf_addn n m : uphalf n + uphalf m = odd n && odd m + uphalf (n + m).
+Lemma uphalf_addn n m :
+  uphalf n + uphalf m = odd n && odd m + uphalf (n + m).
 Proof.
 rewrite !uphalf_half halfD oddD.
 by case: (odd n); case: (odd m)=>//=; rewrite addnCA.
@@ -27,7 +28,8 @@ Proof. by case: n=>//= n; rewrite ltnS; apply: half_le. Qed.
 
 Lemma half_subn n : n - n./2 = uphalf n.
 Proof.
-have {1}-> : n = n./2 + uphalf n by rewrite uphalf_half addnCA addnn odd_double_half.
+have {1}-> : n = n./2 + uphalf n
+  by rewrite uphalf_half addnCA addnn odd_double_half.
 by rewrite -addnBAC // subnn.
 Qed.
 
@@ -52,7 +54,8 @@ Section Sorted.
 Variable (T : Type) (leT : rel T).
 Hypothesis (leT_tr : transitive leT).
 
-Lemma sorted_rcons (xs : seq T) x : sorted leT xs -> all (leT^~ x) xs -> sorted leT (rcons xs x).
+Lemma sorted_rcons (xs : seq T) x :
+  sorted leT xs -> all (leT^~ x) xs -> sorted leT (rcons xs x).
 Proof.
 move=>Hs Ha.
 rewrite -(revK (rcons _ _)) rev_rcons rev_sorted /= path_sortedE; last first.

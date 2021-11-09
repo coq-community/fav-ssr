@@ -44,7 +44,7 @@ case H: (_ <= _)=>/=; first by rewrite H.
 rewrite !path_sortedE; try by exact: le_trans.
 rewrite (perm_all _ (perm_insort _ _)) /= IH.
 suff: x <= a by move=>->.
-by case/orP: (le_total a x)=>//; rewrite H.
+by rewrite leNgt lt_neqAle H andbF.
 Qed.
 
 Lemma sorted_isort xs : sorted <=%O (isort xs).
@@ -692,3 +692,84 @@ by rewrite H; exact: leq_pred.
 Qed.
 
 End NaturalMergeSort.
+
+Section Stability.
+Context {disp : unit} {A : eqType} {K : orderType disp}.
+
+(* Definition *)
+
+Fixpoint insort_key (f : A -> K) (x : A) xs : seq A :=
+  if xs is y :: xs' then
+    if f x <= f y then x :: y :: xs' else y :: insort_key f x xs'
+    else [:: x].
+
+Fixpoint isort_key f xs :=
+  if xs is x :: xs' then insort_key f x (isort_key f xs') else [::].
+
+Lemma perm_insort_key f x xs : perm_eq (insort_key f x xs) (x :: xs).
+Proof.
+elim: xs=>//= y xs IH; case: (_ <= _)=>//.
+rewrite -(perm_cons y) in IH.
+apply: perm_trans; first by exact: IH.
+by apply/permP=>/=?; rewrite addnCA.
+Qed.
+
+Lemma perm_isort_key f xs : perm_eq (isort_key f xs) xs.
+Proof.
+elim: xs=>//= x xs IH.
+apply: perm_trans; first by apply: perm_insort_key.
+by rewrite perm_cons.
+Qed.
+
+Lemma sorted_insort_key f a xs :
+  sorted <=%O (map f (insort_key f a xs)) = sorted <=%O (map f xs).
+Proof.
+elim: xs=>//= x xs IH.
+case H: (_ <= _)=>/=; first by rewrite H.
+rewrite !path_sortedE; try by exact: le_trans.
+rewrite !all_map (perm_all _ (perm_insort_key _ _ _)) /= IH.
+suff: f x <= f a by move=>->.
+by rewrite leNgt lt_neqAle H andbF.
+Qed.
+
+Lemma sorted_isort_key f xs : sorted <=%O (map f (isort_key f xs)).
+Proof. by elim: xs=>//=x xs; rewrite sorted_insort_key. Qed.
+
+Lemma insort_key_cons f a xs :
+  all (fun x => f a <= f x) xs -> insort_key f a xs = a :: xs.
+Proof. by case: xs=>//=x xs /andP [-> _]. Qed.
+
+Lemma filter_not_insort_key (p : pred A) f x xs :
+  ~~ p x -> filter p (insort_key f x xs) = filter p xs.
+Proof.
+move/negbTE=>Hp; elim: xs=>/=; first by rewrite Hp.
+move=>y xs IH; case: ifP=>_ /=; first by rewrite Hp.
+by rewrite IH.
+Qed.
+
+Lemma filter_insort_key (p : pred A) f x xs :
+  sorted <=%O (map f xs) -> p x ->
+  filter p (insort_key f x xs) = insort_key f x (filter p xs).
+Proof.
+move/[swap]=>Hp; elim: xs=>/=; first by rewrite Hp.
+move=>y xs IH; rewrite (path_sortedE le_trans)=>/andP [Ha Hs].
+case: ifP=>Hf /=.
+- rewrite Hp; case: ifP=>/=; first by rewrite Hf.
+  rewrite insort_key_cons //.
+  rewrite all_map in Ha; rewrite all_filter; apply/sub_all/Ha.
+  by move=>z /= Hf2; apply/implyP=>_; apply/le_trans/Hf2.
+case: ifP=>/=; rewrite (IH Hs) //.
+by rewrite Hf.
+Qed.
+
+Lemma isort_key_stable f k xs :
+  filter (fun y => f y == k) (isort_key f xs) = filter (fun y => f y == k) xs.
+Proof.
+elim: xs=>//=x xs IH; case: ifP; last first.
+- by move/negbT=>Hk; rewrite filter_not_insort_key.
+move=>Hk; rewrite filter_insort_key //; last by apply: sorted_isort_key.
+rewrite IH insort_key_cons // all_filter (eq_in_all (a2:=predT)) ?all_predT //.
+by move=>z _ /=; apply/implyP; move/eqP: Hk=>->/eqP->.
+Qed.
+
+End Stability.
