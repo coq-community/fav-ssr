@@ -67,31 +67,31 @@ Lemma kthOrd_unique k xs x y :
 Proof.
 case heq: (x == y); move: heq => /eqP; first done.
 wlog: x y / x < y.
-- case: (ltgtP x y) => Hcmp H neq hk xk yk.
+- case: (ltgtP x y) => Hcmp H neq hk xk yk //.
   + by rewrite (H x y Hcmp _ hk xk yk).
-  + rewrite (H y x Hcmp _ hk yk xk) //.
-    move => Hcontra; by apply neq.
-  done.
+  rewrite (H y x Hcmp _ hk yk xk) //.
+  move => Hcontra; by apply neq.
 move => y_le_x _ ksz Hx Hy.
-move: (Hx ksz) (Hy ksz) => /andP [H1 H2] /andP [H3 H4] {Hx Hy}.
-have G: subseq [seq x' <- xs | x' <= x] [seq x <- xs | x < y].
+move: (Hx ksz) (Hy ksz) => /andP [lex gtx] /andP [ley gty] {Hx Hy}.
+have lex_subs_ley: subseq [seq x' <- xs | x' <= x] [seq x' <- xs | x' < y].
   apply subset_filter_impl => t tleqx.
   by apply (le_lt_trans tleqx y_le_x).
-move: (size_subseq G) => Gsz.
-rewrite -(leq_add2r (size [seq x0 <- xs | x < x0])) in Gsz.
-have Gszsx: size [seq x' <- xs | x' <= x] + size [seq x0 <- xs | x < x0] = size xs.
+move: (size_subseq lex_subs_ley).
+rewrite -(leq_add2r (size [seq x0 <- xs | x < x0])).
+have sizexs_eq: size [seq x' <- xs | x' <= x] + size [seq x0 <- xs | x < x0] = size xs.
   apply filter_size_neg_pred.
   move => a. 
   by apply (leNgt a x).
-rewrite Gszsx in Gsz.
-have t: size [seq x <- xs | x < y] + size [seq x0 <- xs | x < x0] < k + (size xs - k).
-  by apply leq_le_add; [apply H3 | apply H2].
-have szeq: k + (size xs - k) = size xs.
+rewrite sizexs_eq.
+have sizexs_le: size [seq x <- xs | x < y] + size [seq x0 <- xs | x < x0] < k + (size xs - k).
+  by apply leq_le_add; [apply ley | apply gtx].
+have sizexs_le_eq: k + (size xs - k) = size xs.
   by rewrite addnC subnK //; apply (ltW ksz).
-rewrite {}szeq in t.
-have Contra: size xs < size xs.
-  by apply (@le_lt_trans _ _ _ (size xs) _ Gsz t).
-by rewrite ltxx in Contra.
+rewrite {}sizexs_le_eq in sizexs_le.
+move => sizexs_leq.
+have contra: size xs < size xs.
+  by apply (@le_lt_trans _ _ _ (size xs) _ sizexs_leq sizexs_le).
+by rewrite ltxx in contra.
 Qed.
 
 End Selection.
