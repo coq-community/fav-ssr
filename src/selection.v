@@ -12,7 +12,7 @@ Context {disp : unit} {T : orderType disp}.
 Implicit Types (xs ys zs: seq T) (k : nat).
 
 Definition kthOrd k xs v :=
-  k < size xs -> 
+  k < size xs ->
   (size [seq x <- xs | x < v ] <= k) &&
   (size [seq x <- xs | x > v ] <  size xs - k).
 
@@ -62,14 +62,16 @@ Qed.
 
 Lemma leq_le_add (a b x y: nat) : (a <= x -> b < y -> a + b < x + y)%N.
 Proof.
-move => H.
-rewrite -(subnKC H) -addnA => H'.
+move => a_leq_x.
+rewrite -(subnKC a_leq_x) -addnA => b_le_y.
 rewrite (ltn_add2l a) ltn_addl //.
 Qed.
 
 Lemma kthOrd_unique k xs x y :
   k < size xs -> 
-  kthOrd k xs x -> kthOrd k xs y -> x = y.
+  kthOrd k xs x -> 
+  kthOrd k xs y -> 
+  x = y.
 Proof.
 case heq: (x == y); move: heq => /eqP; first done.
 wlog: x y / x < y.
@@ -79,7 +81,7 @@ wlog: x y / x < y.
     move => Hcontra; by apply neq.
   done.
 move => y_le_x _ ksz Hx Hy.
-move: (Hx ksz) (Hy ksz) => /andP [H1 H2] /andP [H3 H4].
+move: (Hx ksz) (Hy ksz) => /andP [H1 H2] /andP [H3 H4] {Hx Hy}.
 have G: subseq [seq x' <- xs | x' <= x] [seq x <- xs | x < y].
   apply subset_filter_impl => t tleqx.
   apply (le_lt_trans tleqx y_le_x).
