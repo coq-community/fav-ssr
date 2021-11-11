@@ -3,5 +3,6 @@
 -arg -w -arg -redundant-canonical-projection
 
 src/prelude.v
-src/sorting.v
 src/basics.v
+src/sorting.v
+src/selection.v
