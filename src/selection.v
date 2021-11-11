@@ -84,22 +84,22 @@ move => y_le_x _ ksz Hx Hy.
 move: (Hx ksz) (Hy ksz) => /andP [H1 H2] /andP [H3 H4] {Hx Hy}.
 have G: subseq [seq x' <- xs | x' <= x] [seq x <- xs | x < y].
   apply subset_filter_impl => t tleqx.
-  apply (le_lt_trans tleqx y_le_x).
+  by apply (le_lt_trans tleqx y_le_x).
 move: (size_subseq G) => Gsz.
 rewrite -(leq_add2r (size [seq x0 <- xs | x < x0])) in Gsz.
 have Gszsx: size [seq x' <- xs | x' <= x] + size [seq x0 <- xs | x < x0] = size xs.
   apply filter_size_neg_pred.
-  move => a. apply (leNgt a x).
-  rewrite Gszsx in Gsz.
+  move => a. 
+  by apply (leNgt a x).
+rewrite Gszsx in Gsz.
 have t: size [seq x <- xs | x < y] + size [seq x0 <- xs | x < x0] < k + (size xs - k).
-  apply leq_le_add.
-  apply H3. apply H2.
+  by apply leq_le_add; [apply H3 | apply H2].
 have szeq: k + (size xs - k) = size xs.
-  rewrite addnC subnK //.
-  by apply (ltW ksz).
+  by rewrite addnC subnK //; apply (ltW ksz).
 rewrite {}szeq in t.
 have Contra: size xs < size xs.
-  apply (@le_lt_trans _ _ _ (size xs) _ Gsz t).
-rewrite ltxx in Contra.
-done.
+  by apply (@le_lt_trans _ _ _ (size xs) _ Gsz t).
+by rewrite ltxx in Contra.
 Qed.
+
+End Selection.
