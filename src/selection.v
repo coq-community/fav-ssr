@@ -11,7 +11,6 @@ Section Selection.
 Context {disp : unit} {T : orderType disp}.
 Implicit Types (xs ys zs: seq T) (k : nat).
 
-
 Definition kthOrd k xs v :=
   k < size xs -> 
   (size [seq x <- xs | x < v ] <= k) &&
@@ -61,29 +60,25 @@ case (q a) => /= ->.
 by rewrite addSn IH.
 Qed.
 
-Lemma leq_le_add a b x y : a <= x -> b < y -> a + b < x + y.
-Proof. Admitted.
-
-Search (?x < ?x).
+Lemma leq_le_add (a b x y: nat) : (a <= x -> b < y -> a + b < x + y)%N.
+Proof.
+move => H.
+rewrite -(subnKC H) -addnA => H'.
+rewrite (ltn_add2l a) ltn_addl //.
+Qed.
 
 Lemma kthOrd_unique k xs x y :
   k < size xs -> 
-  x \in xs ->
-  y \in xs ->
   kthOrd k xs x -> kthOrd k xs y -> x = y.
 Proof.
 case heq: (x == y); move: heq => /eqP; first done.
 wlog: x y / x < y.
-- move => H neq hk xin yin xk yk.
-  case xgty: (x > y).
-    rewrite (H y x xgty _ hk yin xin yk xk).
-    done.
+- case: (ltgtP x y) => Hcmp H neq hk xk yk.
+  + by rewrite (H x y Hcmp _ hk xk yk).
+  + rewrite (H y x Hcmp _ hk yk xk) //.
     move => Hcontra; by apply neq.
-    have xley: (x < y). admit.
-    rewrite (H x y xley _ hk xin yin xk yk).
-    done.
-    by apply neq.
-move => y_le_x _ ksz xin yin Hx Hy.
+  done.
+move => y_le_x _ ksz Hx Hy.
 move: (Hx ksz) (Hy ksz) => /andP [H1 H2] /andP [H3 H4].
 have G: subseq [seq x' <- xs | x' <= x] [seq x <- xs | x < y].
   apply subset_filter_impl => t tleqx.
@@ -98,7 +93,8 @@ have t: size [seq x <- xs | x < y] + size [seq x0 <- xs | x < x0] < k + (size xs
   apply leq_le_add.
   apply H3. apply H2.
 have szeq: k + (size xs - k) = size xs.
-  admit.
+  rewrite addnC subnK //.
+  by apply (ltW ksz).
 rewrite {}szeq in t.
 have Contra: size xs < size xs.
   apply (@le_lt_trans _ _ _ (size xs) _ Gsz t).
