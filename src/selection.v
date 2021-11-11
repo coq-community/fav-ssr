@@ -19,19 +19,11 @@ Definition kthOrd k xs v :=
 Definition selection (select : nat -> seq T -> T) := 
   forall k xs, kthOrd k xs (select k xs).
 
-Lemma true_impl P: (true -> P) -> P.
-Proof. by apply. Qed.
-
 Lemma subseq_consr (s1 s2 : seq T) a : 
   subseq s1 s2 -> subseq s1 (a :: s2).
 Proof.
-move => H.
-have: s1 = [::] ++ s1. done.
-have: a :: s2 = [::a] ++ s2. done.
-move => -> ->.
-apply cat_subseq.
-  done.
-by apply H.
+rewrite -{2}[s1]/([::] ++ s1) -[a :: s2]/([::a] ++ s2).
+by apply cat_subseq.
 Qed.
 
 Lemma subset_filter_impl xs (p q : pred T) :
@@ -41,7 +33,7 @@ Proof.
 elim: xs => // a xs IH pi /=.
 move: (pi a).
 case pa: (p a).
-  move => /true_impl -> /=.
+  move => -> //=.
   rewrite eq_refl.
   by apply (IH pi).
 case qa: (q a) => _.
@@ -62,9 +54,9 @@ Qed.
 
 Lemma leq_le_add (a b x y: nat) : (a <= x -> b < y -> a + b < x + y)%N.
 Proof.
-move => a_leq_x.
-rewrite -(subnKC a_leq_x) -addnA => b_le_y.
-rewrite (ltn_add2l a) ltn_addl //.
+move => /subnKC <-.
+rewrite -addnA (ltn_add2l a) => b_le_y.
+by rewrite ltn_addl.
 Qed.
 
 Lemma kthOrd_unique k xs x y :
