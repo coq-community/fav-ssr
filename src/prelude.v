@@ -36,6 +36,11 @@ Qed.
 Lemma odd2 n : odd n = odd n.+2.
 Proof. by rewrite -addn2 oddD addbF. Qed.
 
+Lemma leq_ltn_add m1 m2 n1 n2 : m1 <= n1 -> m2 < n2 -> m1 + m2 < n1 + n2.
+Proof.
+by move=>H1 H2; apply: (leq_ltn_trans (n:=n1 + m2)); rewrite ?ltn_add2l ?leq_add2r.
+Qed.
+
 End Arith.
 
 Section Size.
