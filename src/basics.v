@@ -58,8 +58,6 @@ Fixpoint T_rev xs : nat :=
 Lemma T_app_complexity xs ys : T_app xs ys = (size xs).+1.
 Proof. by elim: xs=>//= x xs ->. Qed.
 
-(* Exercise 1.5.1: exact complexity for T_rev *)
-
 Lemma T_rev_bound xs : T_rev xs <= (size xs).+1 ^2.
 Proof.
 elim: xs=>//=x xs IH.
@@ -68,6 +66,11 @@ rewrite T_app_complexity rev'_size -[in _.+2]addn1
 apply: leq_ltn_add=>//.
 by rewrite addnC addn1 ltnS; apply: leq_addr.
 Qed.
+
+(* Exercise 1.5.1: exact complexity for T_rev *)
+Lemma T_rev_complexity xs : T_rev xs = (size xs).+1 ^2. (* FIXME *)
+Proof.
+Admitted.
 
 (* itrev is called catrev in the lib *)
 

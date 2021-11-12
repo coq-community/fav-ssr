@@ -9,10 +9,11 @@ Open Scope order_scope.
 
 Section InsertionSort.
 Context {disp : unit} {T : orderType disp}.
+Implicit Types (xs ys : seq T).
 
 (* Definition *)
 
-Fixpoint insort (x : T) xs :=
+Fixpoint insort x xs :=
   if xs is y :: xs' then
     if x <= y then x :: y :: xs' else y :: insort x xs'
     else [:: x].
@@ -52,7 +53,7 @@ Proof. by elim: xs=>//= x xs; rewrite sorted_insort. Qed.
 
 (* Time complexity *)
 
-Fixpoint T_insort (x : T) (xs : seq T) : nat :=
+Fixpoint T_insort x xs : nat :=
   if xs is y :: xs' then
     (if x <= y then 0 else T_insort x xs').+1
     else 1.
@@ -67,7 +68,7 @@ by case: (x <= y).
 Qed.
 
 (* This seems to be unused *)
-Lemma size_insort x xs: size (insort x xs) = (size xs).+1.
+Lemma size_insort x xs : size (insort x xs) = (size xs).+1.
 Proof. by move/perm_size: (perm_insort x xs). Qed.
 
 Lemma size_isort xs : size (isort xs) = size xs.
@@ -109,10 +110,11 @@ End InsertionSortNat.
 
 Section QuickSort.
 Context {disp : unit} {T : orderType disp}.
+Implicit Types (xs ys : seq T).
 
 (* Definition *)
 
-Equations? quicksort (xs : seq T) : seq T by wf (size xs) lt :=
+Equations? quicksort xs : seq T by wf (size xs) lt :=
 quicksort [::]    => [::];
 quicksort (x::xs) => quicksort (filter (< x) xs) ++ [:: x] ++
                      quicksort (filter (>= x) xs).
@@ -150,7 +152,7 @@ Qed.
 
 (* Exercise 2.3 *)
 
-Equations? quicksort2 (xs ys : seq T) : seq T by wf (size xs) lt :=
+Equations? quicksort2 xs ys : seq T by wf (size xs) lt :=
 quicksort2 xs ys => ys. (* FIXME *)
 Proof.
 Qed.
@@ -161,10 +163,10 @@ Admitted.
 
 (* Exercise 2.4 *)
 
-Definition partition3 (x : T) (xs : seq T) : seq T * seq T * seq T :=
+Definition partition3 x xs : seq T * seq T * seq T :=
   (filter (< x) xs, filter (pred1 x) xs, filter (> x) xs).
 
-Equations? quicksort3 (xs : seq T) : seq T by wf (size xs) lt :=
+Equations? quicksort3 xs : seq T by wf (size xs) lt :=
 quicksort3 [::]    => [::];
 quicksort3 (x::xs) with inspect (partition3 x xs) => {
   | (ls, es, gs) eqn: eq => quicksort3 ls ++ x :: es ++ quicksort3 gs
@@ -186,6 +188,7 @@ Admitted.
 
 (* Exercise 2.5.1 *)
 
+(* TODO move to basics? *)
 Fixpoint T_filter {A} (ta : A -> nat) (s : seq A) : nat :=
   if s is x :: s' then ta x + T_filter ta s' + 1 else 1.
 
@@ -196,7 +199,7 @@ elim: xs=>/=; first by rewrite big_nil.
 by move=>x xs ->; rewrite big_cons -(addn1 (size _)) !addnA.
 Qed.
 
-Equations? T_quicksort (xs : seq T) : nat by wf (size xs) lt :=
+Equations? T_quicksort xs : nat by wf (size xs) lt :=
 T_quicksort [::]    => 1;
 T_quicksort (x::xs) => T_quicksort (filter (< x) xs) +
                        T_quicksort (filter (>= x) xs) +
@@ -209,13 +212,15 @@ Qed.
 (* FIXME replace these with concrete numbers *)
 Parameters (a b c : nat).
 
-Lemma quicksort_quadratic xs : sorted <=%O xs -> T_quicksort xs = a * size xs ^ 2 + b * size xs + c.
+Lemma quicksort_quadratic xs :
+  sorted <=%O xs -> T_quicksort xs = a * size xs ^ 2 + b * size xs + c.
 Proof.
 Admitted.
 
 (* Exercise 2.5.2 *)
 
-Lemma quicksort_worst xs : T_quicksort xs <= a * size xs ^ 2 + b * size xs + c.
+Lemma quicksort_worst xs :
+  T_quicksort xs <= a * size xs ^ 2 + b * size xs + c.
 Proof.
 Admitted.
 
@@ -223,10 +228,11 @@ End QuickSort.
 
 Section TopDownMergeSort.
 Context {disp : unit} {T : orderType disp}.
+Implicit Types (xs ys : seq T).
 
 (* reusing `merge` from mathcomp.path *)
 
-Equations? msort (xs : seq T) : seq T by wf (size xs) lt :=
+Equations? msort xs : seq T by wf (size xs) lt :=
 msort [::]  => [::];
 msort [::x] => [::x];
 msort xs    => let n := size xs in
@@ -251,16 +257,16 @@ Proof. by funelim (msort xs)=>//=; apply: merge_sorted. Qed.
 
 (* Running Time Analysis *)
 
-Fixpoint C_merge (s1 : seq T) :=
-  if s1 is x1 :: s1' then
-    let fix C_merge_s1 (s2 : seq T) :=
-      if s2 is x2 :: s2' then
-        (if x1 <= x2 then C_merge s1' s2 else C_merge_s1 s2').+1
+Fixpoint C_merge xs :=
+  if xs is x :: xs' then
+    let fix C_merge_xs ys :=
+      if ys is y :: ys' then
+        (if x <= y then C_merge xs' ys else C_merge_xs ys').+1
       else 0 in
-    C_merge_s1
+    C_merge_xs
   else fun => 0.
 
-Equations? C_msort (xs : seq T) : nat by wf (size xs) lt :=
+Equations? C_msort xs : nat by wf (size xs) lt :=
 C_msort [::]  => 0;
 C_msort [::x] => 0;
 C_msort xs    => let n := (size xs) in
@@ -306,7 +312,7 @@ Qed.
 Fixpoint halve {A: Type} (xs ys zs : seq A) : seq A * seq A :=
   ([::],[::]). (* FIXME *)
 
-Equations? msort2 (xs : seq T) : seq T by wf (size xs) lt :=
+Equations? msort2 xs : seq T by wf (size xs) lt :=
 msort2 [::]  => [::];
 msort2 [::x] => [::x];
 msort2 xs with inspect (halve xs [::] [::]) := {
@@ -330,6 +336,7 @@ End TopDownMergeSort.
 
 Section BottomUpMergeSort.
 Context {disp : unit} {T : orderType disp}.
+Implicit Types (xs ys : seq T).
 
 Equations merge_adj : seq (seq T) -> seq (seq T) :=
 merge_adj [::]          => [::];
@@ -347,7 +354,7 @@ Proof.
 by apply/ssrnat.ltP; rewrite size_merge_adj /= !ltnS; apply: uphalf_le.
 Qed.
 
-Definition msort_bu (xs : seq T) : seq T :=
+Definition msort_bu xs : seq T :=
   merge_all (map (fun x => [::x]) xs).
 
 (* Functional Correctness *)
@@ -408,7 +415,7 @@ Proof.
 by apply/ssrnat.ltP; rewrite size_merge_adj /= !ltnS; apply: uphalf_le.
 Qed.
 
-Definition C_msort_bu (xs : seq T) : nat :=
+Definition C_msort_bu xs : nat :=
   C_merge_all (map (fun x => [::x]) xs).
 
 Lemma merge_adj_sizes xss m :
@@ -460,58 +467,60 @@ End BottomUpMergeSort.
 
 Section NaturalMergeSort.
 Context {disp : unit} {T : orderType disp}.
+Implicit Types (xs ys : seq T) (xss : seq (seq T)).
 
-Fixpoint runs_fix (a : T) (xs : seq T) : seq (seq T) :=
+Fixpoint runs_fix a xs : seq (seq T) :=
   if xs is b::bs
     then if b < a then desc b [:: a] bs else asc b (cons a) bs
     else [::[::a]]
-with asc (x : T) (xs : seq T -> seq T) (ys : seq T) : seq (seq T) :=
+with asc x (xd : seq T -> seq T) ys : seq (seq T) :=
   if ys is y::ys'
-    then if x <= y then asc y (xs \o cons x) ys' else xs [::x] :: runs_fix y ys'
-    else [:: xs [::x]]
-with desc (x : T) (xs : seq T) (ys : seq T) : seq (seq T) :=
+    then if x <= y then asc y (xd \o cons x) ys' else xd [::x] :: runs_fix y ys'
+    else [:: xd [::x]]
+with desc x xs ys : seq (seq T) :=
   if ys is y::ys'
      then if y < x then desc y (x :: xs) ys' else (x :: xs) :: runs_fix y ys'
      else [:: (x :: xs)].
 
-Definition runs (xs : seq T) : seq (seq T) :=
+Definition runs xs : seq (seq T) :=
   if xs is x::xs' then runs_fix x xs' else [::].
 
 Definition nmsort xs := merge_all (runs xs).
 
 (* Functional Correctness *)
 
-Definition is_dlist (f : seq T -> seq T) := forall ps qs, f (ps ++ qs) = f ps ++ qs.
+Definition is_dlist (f : seq T -> seq T) :=
+  forall ps qs, f (ps ++ qs) = f ps ++ qs.
 
-Lemma perm_runs_asc_desc x xs ys f :
+Lemma perm_runs_asc_desc x xs ys xd :
      perm_eq (flatten (runs_fix x ys)) (x :: ys)
   /\ perm_eq (flatten (desc x xs ys)) (x::xs ++ ys)
-  /\ (is_dlist f ->
-       perm_eq (flatten (asc x f ys)) (x :: f [::] ++ ys)).
+  /\ (is_dlist xd ->
+       perm_eq (flatten (asc x xd ys)) (x :: xd [::] ++ ys)).
 Proof.
-elim: ys x xs f=>/=.
-- move=>x xs f; do!split=>//.
+elim: ys x xs xd=>/=.
+- move=>x xs xd; do!split=>//.
   by move=>H; move: (H [::] [::x])=>/=; rewrite !cats0=>->; rewrite perm_catC.
-move=>b bs IH x xs f; do!split.
+move=>b bs IH x xs xd; do!split.
 - case: ifP=>_.
-  - apply: perm_trans; first by case: (IH b [::x] f)=>_ [+ _]; apply.
+  - apply: perm_trans; first by case: (IH b [::x] xd)=>_ [+ _]; apply.
     by move: (perm_catCA [::b] [::x] bs)=>/=->.
   apply: perm_trans; first by case: (IH b [::x] (cons x))=>_ [_] /=; apply.
   by move: (perm_catCA [::b] [::x] bs)=>/=->.
 - case: ifP=>_.
-  - apply: perm_trans; first by case: (IH b (x::xs) f)=>_ [+ _]; apply.
+  - apply: perm_trans; first by case: (IH b (x::xs) xd)=>_ [+ _]; apply.
     by move: (perm_catCA [::b] (x::xs) bs)=>/=->.
   rewrite /= -!cat_cons perm_cat2l.
-  by case: (IH b xs f)=>+ _; apply.
+  by case: (IH b xs xd)=>+ _; apply.
 move=>H; case: ifP=>_.
 - apply: perm_trans.
-  - case: (IH b xs (f \o cons x))=>_ [_] /=; apply=>ps qs.
+  - case: (IH b xs (xd \o cons x))=>_ [_] /=; apply=>ps qs.
     by rewrite /= -cat_cons; apply: H.
-  move: (H [::] [::x])=>/=->; move: (perm_catCA [::b] (f [::] ++ [::x]) bs)=>/=->.
+  move: (H [::] [::x])=>/=->; move: (perm_catCA [::b] (xd [::] ++ [::x]) bs)=>/=->.
   by rewrite -cat_cons perm_cat2r perm_catC.
 move: (H [::] [::x])=>/=->; rewrite -cat_cons.
 apply: perm_cat; first by rewrite perm_catC.
-by case: (IH b xs f)=>+ _; apply.
+by case: (IH b xs xd)=>+ _; apply.
 Qed.
 
 Lemma perm_runs xs : perm_eq (flatten (runs xs)) xs.
@@ -526,18 +535,18 @@ rewrite /nmsort; apply/perm_trans/perm_runs.
 by apply: perm_merge_all.
 Qed.
 
-Lemma sorted_runs_asc_desc x xs ys f :
+Lemma sorted_runs_asc_desc x xs ys xd :
      all (sorted <=%O) (runs_fix x ys)
   /\ (sorted <=%O xs -> all (>= x) xs -> all (sorted <=%O) (desc x xs ys))
-  /\ (is_dlist f -> sorted <=%O (f [::]) -> all (<= x) (f [::]) ->
-      all (sorted <=%O) (asc x f ys)).
+  /\ (is_dlist xd -> sorted <=%O (xd [::]) -> all (<= x) (xd [::]) ->
+      all (sorted <=%O) (asc x xd ys)).
 Proof.
-elim: ys x xs f=>/=.
-- move=>x xs f; do!split.
+elim: ys x xs xd=>/=.
+- move=>x xs xd; do!split.
   - by move=>Hs Ha; rewrite andbT (path_sortedE le_trans); apply/andP.
   move=>Hd Hs Ha; rewrite andbT; move: (Hd [::] [::x])=>/=->.
   by rewrite cats1; apply: sorted_rcons=>//; exact: le_trans.
-move=>b ys IH x xs f; do!split.
+move=>b ys IH x xs xd; do!split.
 - case: ifP=>Ho.
   - case: (IH b [::x] id)=>_ [+ _]; apply=>//.
     by rewrite all_seq1 le_eqVlt Ho orbT.
@@ -549,9 +558,9 @@ move=>b ys IH x xs f; do!split.
     rewrite le_eqVlt Ho orbT /=; apply/sub_all/Ha=>z.
     by apply/le_trans; rewrite le_eqVlt Ho orbT.
   apply/andP; split; first by rewrite (path_sortedE le_trans); apply/andP.
-  by case: (IH b xs f)=>+ _; apply.
+  by case: (IH b xs xd)=>+ _; apply.
 move=>Hd Hs Ha; case: ifP=>Ho /=.
-- case: (IH b xs (f \o cons x))=>_ [_] /=; apply.
+- case: (IH b xs (xd \o cons x))=>_ [_] /=; apply.
   - by move=>ps qs /=; rewrite -cat_cons; apply: Hd.
   - move: (Hd [::] [::x])=>/=->.
     by rewrite cats1; apply: sorted_rcons=>//; exact: le_trans.
@@ -576,35 +585,36 @@ Fixpoint C_runs_fix a xs : nat :=
   if xs is b::bs
     then (if b < a then C_desc b bs else C_asc b bs).+1
     else 0
-with C_asc (a : T) (xs : seq T) : nat :=
+with C_asc a xs : nat :=
   if xs is b::bs
     then (if a <= b then C_asc b bs else C_runs_fix b bs).+1
     else 0
-with C_desc (a : T) (xs : seq T) : nat :=
+with C_desc a xs : nat :=
   if xs is b::bs
      then (if b < a then C_desc b bs else C_runs_fix b bs).+1
      else 0.
 
-Definition C_runs (xs : seq T) : nat :=
+Definition C_runs xs : nat :=
   if xs is x::xs' then C_runs_fix x xs' else 0.
 
-Definition C_nmsort (xs : seq T) : nat :=
+Definition C_nmsort xs : nat :=
   C_runs xs + C_merge_all (runs xs).
 
-Lemma C_merge_adj_flat (xss : seq (seq T)) : C_merge_adj xss <= size (flatten xss).
+Lemma C_merge_adj_flat xss : C_merge_adj xss <= size (flatten xss).
 Proof.
 funelim (C_merge_adj xss)=>//=; rewrite catA !size_cat.
 by apply: leq_add=>//; apply: C_merge_leq.
 Qed.
 
-Lemma merge_adj_flat (xss : seq (seq T)) :
+Lemma merge_adj_flat xss :
   size (flatten (merge_adj xss)) = size (flatten xss).
 Proof.
 funelim (merge_adj xss)=>//=.
 by rewrite catA !size_cat H size_merge size_cat.
 Qed.
 
-Lemma C_merge_adj_log2 (xss : seq (seq T)) : C_merge_all xss <= size (flatten xss) * log2n (size xss).
+Lemma C_merge_adj_log2 xss :
+  C_merge_all xss <= size (flatten xss) * log2n (size xss).
 Proof.
 funelim (C_merge_all xss)=>//=; move: H; simp C_merge_adj merge_adj.
 rewrite /= !size_cat merge_adj_flat size_merge_adj size_merge size_cat =>IH.
@@ -612,52 +622,52 @@ rewrite log2n_half //= mulnS !addnA; apply: leq_add=>//.
 by apply/leq_add/C_merge_adj_flat/C_merge_leq.
 Qed.
 
-Lemma size_runs_asc_desc x xs ys f :
+Lemma size_runs_asc_desc x xs ys xd :
       size (flatten (runs_fix x ys)) = (size ys).+1
   /\  size (flatten (desc x xs ys)) = (size xs + size ys).+1
-  /\ (is_dlist f ->
-      size (flatten (asc x f ys)) = (size (f [::]) + size ys).+1).
+  /\ (is_dlist xd ->
+      size (flatten (asc x xd ys)) = (size (xd [::]) + size ys).+1).
 Proof.
-elim: ys x xs f=>/=.
-- move=>x xs f; do!split; first by rewrite cats0 addn0.
+elim: ys x xs xd=>/=.
+- move=>x xs xd; do!split; first by rewrite cats0 addn0.
   by move=>H; move: (H [::] [::x])=>/=; rewrite !cats0=>->; rewrite size_cat addn0 /= addn1.
-move=>b bs IH x xs f; do!split.
+move=>b bs IH x xs xd; do!split.
 - case: ifP=>_.
   - by case: (IH b [::x] id)=>_ [+ _]; rewrite /= addnC addn1.
   case: (IH b [::x] (cons x))=>_ [_] /=; rewrite /= addnC addn1; apply.
   by move=>??; rewrite cat_cons.
 - case: ifP=>_ /=.
   - by case: (IH b (x::xs) id)=>_ [+ _]; rewrite /= addSnnS.
-  by case: (IH b xs f)=>+ _; rewrite size_cat=>->.
+  by case: (IH b xs xd)=>+ _; rewrite size_cat=>->.
 move=>H; case: ifP=>_ /=.
-- case: (IH b xs (f \o cons x))=>_ [_] /=.
+- case: (IH b xs (xd \o cons x))=>_ [_] /=.
   move: (H [::] [::x])=>/=->; rewrite size_cat /= addnAC -addnA addn1; apply.
   by move=>?? /=; rewrite -cat_cons; apply: H.
 move: (H [::] [::x])=>/=->; rewrite !size_cat /=.
-by case: (IH b xs f)=>+ _; rewrite addnAC addn1=>->.
+by case: (IH b xs xd)=>+ _; rewrite addnAC addn1=>->.
 Qed.
 
 Lemma size_runs xs : size (flatten (runs xs)) = size xs.
 Proof. by case: xs=>//=x xs; case: (size_runs_asc_desc x [::] xs id). Qed.
 
-Lemma size_runs_asc_desc_leq x xs ys f :
+Lemma size_runs_asc_desc_leq x xs ys xd :
       (size (runs_fix x ys) <= (size ys).+1)%N
   /\  (size (desc x xs ys) <= (size ys).+1)%N
-  /\ (is_dlist f ->
-      (size (asc x f ys) <= (size ys).+1)%N).
+  /\ (is_dlist xd ->
+      (size (asc x xd ys) <= (size ys).+1)%N).
 Proof.
-elim: ys x xs f=>//= b bs IH x xs f; do!split.
+elim: ys x xs xd=>//= b bs IH x xs xd; do!split.
 - case: ifP=>_.
   - by apply: leqW; case: (IH b [::x] id)=>_ [+ _].
   apply: leqW; case: (IH b [::x] (cons x))=>_ [_]; apply.
   by move=>??; rewrite cat_cons.
 - case: ifP=>_ /=.
   - by apply: leqW; case: (IH b (x::xs) id)=>_ [+ _].
-  by rewrite ltnS; case: (IH b xs f)=>+ _ /=.
+  by rewrite ltnS; case: (IH b xs xd)=>+ _ /=.
 move=>H; case: ifP=>_ /=.
-- apply: leqW; case: (IH b xs (f \o cons x))=>_ [_] /=; apply.
+- apply: leqW; case: (IH b xs (xd \o cons x))=>_ [_] /=; apply.
   by move=>?? /=; rewrite -cat_cons; apply: H.
-by rewrite ltnS; case: (IH b xs f)=>+ _.
+by rewrite ltnS; case: (IH b xs xd)=>+ _.
 Qed.
 
 Lemma size_runs_leq xs : (size (runs xs) <= size xs)%N.
@@ -675,7 +685,8 @@ Qed.
 Lemma C_size_runs_leq xs : (C_runs xs <= (size xs).-1)%N.
 Proof. by case: xs=>//=x xs; case: (C_size_runs_asc_desc_leq x xs). Qed.
 
-Lemma C_merge_runs_leq xs n : size xs = n -> (C_merge_all (runs xs) <= n * log2n n)%N.
+Lemma C_merge_runs_leq xs n :
+  size xs = n -> (C_merge_all (runs xs) <= n * log2n n)%N.
 Proof.
 move=>H; apply: leq_trans; first by apply: C_merge_adj_log2.
 rewrite size_runs H leq_mul2l; apply/orP.
@@ -684,7 +695,8 @@ right; apply: leq_log2n; rewrite -H.
 by apply: size_runs_leq.
 Qed.
 
-Lemma C_nmsort_leq xs n : size xs = n -> (C_nmsort xs <= n + n * log2n n)%N.
+Lemma C_nmsort_leq xs n :
+  size xs = n -> (C_nmsort xs <= n + n * log2n n)%N.
 Proof.
 move=>H; rewrite /C_nmsort; apply/leq_add/C_merge_runs_leq=>//.
 apply: leq_trans; first by apply: C_size_runs_leq.
@@ -694,11 +706,12 @@ Qed.
 End NaturalMergeSort.
 
 Section Stability.
-Context {disp : unit} {A : eqType} {K : orderType disp}.
+Context {disp : unit} {T : eqType} {K : orderType disp}.
+Implicit Types (xs ys : seq T).
 
 (* Definition *)
 
-Fixpoint insort_key (f : A -> K) (x : A) xs : seq A :=
+Fixpoint insort_key (f : T -> K) x xs : seq T :=
   if xs is y :: xs' then
     if f x <= f y then x :: y :: xs' else y :: insort_key f x xs'
     else [:: x].
@@ -739,7 +752,7 @@ Lemma insort_key_cons f a xs :
   all (fun x => f a <= f x) xs -> insort_key f a xs = a :: xs.
 Proof. by case: xs=>//=x xs /andP [-> _]. Qed.
 
-Lemma filter_not_insort_key (p : pred A) f x xs :
+Lemma filter_not_insort_key (p : pred T) f x xs :
   ~~ p x -> filter p (insort_key f x xs) = filter p xs.
 Proof.
 move/negbTE=>Hp; elim: xs=>/=; first by rewrite Hp.
@@ -747,7 +760,7 @@ move=>y xs IH; case: ifP=>_ /=; first by rewrite Hp.
 by rewrite IH.
 Qed.
 
-Lemma filter_insort_key (p : pred A) f x xs :
+Lemma filter_insort_key (p : pred T) f x xs :
   sorted <=%O (map f xs) -> p x ->
   filter p (insort_key f x xs) = insort_key f x (filter p xs).
 Proof.

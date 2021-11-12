@@ -1,97 +1,68 @@
-From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import ssrnat eqtype seq path order bigop.
+From mathcomp Require Import ssrnat eqtype seq path order.
 From favssr Require Import prelude.
 
 Import Order.POrderTheory.
 Import Order.TotalTheory.
 Open Scope order_scope.
 
-Section Selection.
+Section Intro.
 Context {disp : unit} {T : orderType disp}.
-Implicit Types (xs ys zs: seq T) (k : nat).
+Implicit Types (xs ys : seq T) (k : nat).
+Variable x0 : T.
 
-Definition kthOrd k xs v :=
+Definition is_selection x k xs :=
+  ((count (< x) xs <= k) && (count (> x) xs < size xs - k))%N.
+
+Lemma selection_uniq k xs x y :
   k < size xs ->
-  (size [seq x <- xs | x < v ] <= k) &&
-  (size [seq x <- xs | x > v ] <  size xs - k).
-
-Definition selection (select : nat -> seq T -> T) := 
-  forall k xs, kthOrd k xs (select k xs).
-
-Lemma subseq_consr (s1 s2 : seq T) a : 
-  subseq s1 s2 -> subseq s1 (a :: s2).
+  is_selection x k xs -> is_selection y k xs -> x = y.
 Proof.
-rewrite -{2}[s1]/([::] ++ s1) -[a :: s2]/([::a] ++ s2).
-by apply cat_subseq.
+move=>Hk /andP [Hxl Hxg] /andP [Hyl Hyg]; apply/eqP; case/boolP: (_ == _) =>// Hn.
+rewrite -(ltnn (size xs)) -{2}(subnKC (n:=size _) (m:=k)); last by apply: ltnW.
+case/orP: (lt_total Hn)=>Hxy.
+- rewrite -{1}(count_predC (<= x)).
+  apply: leq_ltn_add; last by rewrite (eq_count (a2 := >x)) // =>z /=; rewrite ltNge.
+  by apply/leq_trans/Hyl/sub_count=>z /= Hz; apply/le_lt_trans/Hxy.
+rewrite -{1}(count_predC (<= y)).
+apply: leq_ltn_add; last by rewrite (eq_count (a2 := >y)) // =>z /=; rewrite ltNge.
+by apply/leq_trans/Hxl/sub_count=>z /= Hz; apply/le_lt_trans/Hxy.
 Qed.
 
-Lemma subset_filter_impl xs (p q : pred T) :
-  (forall x, p x -> q x) ->
-  subseq [seq x <- xs | p x] [seq x <- xs | q x].
+Definition select k xs : T := nth x0 (sort <=%O xs) k.
+
+Lemma is_selection_sorted_nth xs k :
+  (k < size xs)%N ->
+  sorted <=%O xs ->
+  is_selection (nth x0 xs k) k xs.
 Proof.
-elim: xs => // a xs IH pi /=.
-move: (pi a).
-case pa: (p a).
-  move => -> //=.
-  rewrite eq_refl.
-  by apply (IH pi).
-case qa: (q a) => _.
-  apply subseq_consr. by apply (IH pi).
-by apply (IH pi).
+elim: xs k=>//=x xs IH k Hk Hp; rewrite /is_selection; case: k Hk=>/= [_|k].
+- rewrite ltxx !add0n subn0 leqn0 ltnS count_size andbT.
+  rewrite -size_filter -all_pred0 all_filter (eq_all (a2 := >= x)).
+  - by move: (order_path_min le_trans Hp).
+  by move=>z /=; rewrite implybF leNgt.
+rewrite ltnS=>Hk.
+move: Hp; rewrite (path_sortedE le_trans)=>/andP [Ha Hs].
+case/andP: (IH _ Hk Hs)=> {IH} H1 H2; apply/andP; split.
+- by rewrite -addn1 addnC; apply: leq_add=>//; case: (_ < _).
+rewrite subSS ltNge.
+suff : x <= nth x0 xs k by move=>->.
+by move/all_nthP: Ha; apply.
 Qed.
 
-Lemma filter_size_neg_pred p q xs :
-  (forall a, p a = ~~ (q a)) ->
-  size [seq x <- xs | p x] + size [seq x <- xs | q x ] = size xs.
+Lemma is_selection_select k xs :
+  k < size xs -> is_selection (select k xs) k xs.
 Proof.
-elim: xs => // a sx IH Hpq //=.
-move: (Hpq a).
-case (q a) => /= ->.
-  by rewrite addnS IH.
-by rewrite addSn IH.
+move=>Hk; rewrite /select /is_selection.
+move/permPl: (perm_sort <=%O xs)=>/[dup] Hp /permP Hc.
+rewrite -!Hc -(perm_size Hp) in Hk *.
+by apply: is_selection_sorted_nth.
 Qed.
 
-Lemma leq_le_add (a b x y: nat) : (a <= x -> b < y -> a + b < x + y)%N.
-Proof.
-move => /subnKC <-.
-rewrite -addnA (ltn_add2l a) => b_le_y.
-by rewrite ltn_addl.
-Qed.
+Lemma perm_sort_eq xs ys : perm_eq xs ys -> sort <=%O xs = sort <=%O ys.
+Proof. by apply: (perm_sortP le_total le_trans le_anti). Qed.
 
-Lemma kthOrd_unique k xs x y :
-  k < size xs -> 
-  kthOrd k xs x -> 
-  kthOrd k xs y -> 
-  x = y.
-Proof.
-case heq: (x == y); move: heq => /eqP; first done.
-wlog: x y / x < y.
-- case: (ltgtP x y) => Hcmp H neq hk xk yk //.
-  + by rewrite (H x y Hcmp _ hk xk yk).
-  rewrite (H y x Hcmp _ hk yk xk) //.
-  move => Hcontra; by apply neq.
-move => y_le_x _ ksz Hx Hy.
-move: (Hx ksz) (Hy ksz) => /andP [lex gtx] /andP [ley gty] {Hx Hy}.
-have lex_subs_ley: subseq [seq x' <- xs | x' <= x] [seq x' <- xs | x' < y].
-  apply subset_filter_impl => t tleqx.
-  by apply (le_lt_trans tleqx y_le_x).
-move: (size_subseq lex_subs_ley).
-rewrite -(leq_add2r (size [seq x0 <- xs | x < x0])).
-have sizexs_eq: size [seq x' <- xs | x' <= x] + size [seq x0 <- xs | x < x0] = size xs.
-  apply filter_size_neg_pred.
-  move => a. 
-  by apply (leNgt a x).
-rewrite sizexs_eq.
-have sizexs_le: size [seq x <- xs | x < y] + size [seq x0 <- xs | x < x0] < k + (size xs - k).
-  by apply leq_le_add; [apply ley | apply gtx].
-have sizexs_le_eq: k + (size xs - k) = size xs.
-  by rewrite addnC subnK //; apply (ltW ksz).
-rewrite {}sizexs_le_eq in sizexs_le.
-move => sizexs_leq.
-have contra: size xs < size xs.
-  by apply (@le_lt_trans _ _ _ (size xs) _ sizexs_leq sizexs_le).
-by rewrite ltxx in contra.
-Qed.
+Lemma perm_select_eq xs ys k : perm_eq xs ys -> select k xs = select k ys.
+Proof. by move=>H; rewrite /select (perm_sort_eq _ ys). Qed.
 
-End Selection.
+End Intro.
