@@ -42,8 +42,7 @@ Lemma sorted_insort a xs : sorted <=%O (insort a xs) = sorted <=%O xs.
 Proof.
 elim: xs=>//= x xs IH.
 case H: (_ <= _)=>/=; first by rewrite H.
-rewrite !path_sortedE; try by exact: le_trans.
-rewrite (perm_all _ (perm_insort _ _)) /= IH.
+rewrite !le_path_sortedE (perm_all _ (perm_insort _ _)) /= IH.
 suff: x <= a by move=>->.
 by rewrite leNgt lt_neqAle H andbF.
 Qed.
@@ -489,8 +488,8 @@ Definition nmsort xs := merge_all (runs xs).
 
 (* Functional Correctness *)
 
-Definition is_dlist (f : seq T -> seq T) :=
-  forall ps qs, f (ps ++ qs) = f ps ++ qs.
+Definition is_dlist (xd : seq T -> seq T) :=
+  forall ps qs, xd (ps ++ qs) = xd ps ++ qs.
 
 Lemma perm_runs_asc_desc x xs ys xd :
      perm_eq (flatten (runs_fix x ys)) (x :: ys)
@@ -543,9 +542,9 @@ Lemma sorted_runs_asc_desc x xs ys xd :
 Proof.
 elim: ys x xs xd=>/=.
 - move=>x xs xd; do!split.
-  - by move=>Hs Ha; rewrite andbT (path_sortedE le_trans); apply/andP.
+  - by move=>Hs Ha; rewrite andbT le_path_sortedE; apply/andP.
   move=>Hd Hs Ha; rewrite andbT; move: (Hd [::] [::x])=>/=->.
-  by rewrite cats1; apply: sorted_rcons=>//; exact: le_trans.
+  rewrite cats1; apply: sorted_rcons=>//; exact: le_trans.
 move=>b ys IH x xs xd; do!split.
 - case: ifP=>Ho.
   - case: (IH b [::x] id)=>_ [+ _]; apply=>//.
@@ -554,10 +553,10 @@ move=>b ys IH x xs xd; do!split.
   by rewrite all_seq1 /= leNgt; apply/negbT.
 - move=>Hs Ha; case: ifP=>Ho /=.
   - case: (IH b (x::xs) id)=>_ [+ _]; apply=>/=.
-    - by rewrite (path_sortedE le_trans); apply/andP.
+    - by rewrite le_path_sortedE; apply/andP.
     rewrite le_eqVlt Ho orbT /=; apply/sub_all/Ha=>z.
     by apply/le_trans; rewrite le_eqVlt Ho orbT.
-  apply/andP; split; first by rewrite (path_sortedE le_trans); apply/andP.
+  rewrite le_path_sortedE Ha Hs /=.
   by case: (IH b xs xd)=>+ _; apply.
 move=>Hd Hs Ha; case: ifP=>Ho /=.
 - case: (IH b xs (xd \o cons x))=>_ [_] /=; apply.
@@ -739,8 +738,7 @@ Lemma sorted_insort_key f a xs :
 Proof.
 elim: xs=>//= x xs IH.
 case H: (_ <= _)=>/=; first by rewrite H.
-rewrite !path_sortedE; try by exact: le_trans.
-rewrite !all_map (perm_all _ (perm_insort_key _ _ _)) /= IH.
+rewrite !le_path_sortedE !all_map (perm_all _ (perm_insort_key _ _ _)) /= IH.
 suff: f x <= f a by move=>->.
 by rewrite leNgt lt_neqAle H andbF.
 Qed.
@@ -765,7 +763,7 @@ Lemma filter_insort_key (p : pred T) f x xs :
   filter p (insort_key f x xs) = insort_key f x (filter p xs).
 Proof.
 move/[swap]=>Hp; elim: xs=>/=; first by rewrite Hp.
-move=>y xs IH; rewrite (path_sortedE le_trans)=>/andP [Ha Hs].
+move=>y xs IH; rewrite le_path_sortedE =>/andP [Ha Hs].
 case: ifP=>Hf /=.
 - rewrite Hp; case: ifP=>/=; first by rewrite Hf.
   rewrite insort_key_cons //.
