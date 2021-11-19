@@ -36,9 +36,39 @@ Qed.
 Lemma odd2 n : odd n = odd n.+2.
 Proof. by rewrite -addn2 oddD addbF. Qed.
 
+Lemma ltn_leq_trans y x z : x < y -> y <= z -> x < z.
+Proof.
+rewrite !ltn_neqAle => /andP [nexy lexy leyz]; rewrite (leq_trans lexy) // andbT.
+by apply: contraNneq nexy => eqxz; rewrite eqxz eqn_leq leyz andbT in lexy *.
+Qed.
+
 Lemma leq_ltn_add m1 m2 n1 n2 : m1 <= n1 -> m2 < n2 -> m1 + m2 < n1 + n2.
 Proof.
 by move=>H1 H2; apply: (leq_ltn_trans (n:=n1 + m2)); rewrite ?ltn_add2l ?leq_add2r.
+Qed.
+
+Lemma ex_exp b k : 1 < b -> 0 < k -> {n | b^n <= k < b^n.+1}.
+Proof.
+move=>Hb; elim: k=>// k IH _.
+case/boolP: (k==0).
+- by move/eqP=>->; exists 0; rewrite expn1.
+rewrite -lt0n => /IH [n Hn].
+case/boolP: (k==(b^n.+1).-1).
+- move/eqP=>->; exists n.+1; case/andP: Hn=>_ Hn.
+  by rewrite (ltn_predK Hn); apply/andP; split=>//; rewrite ltn_exp2l.
+move=>Hk; exists n.
+case/andP: Hn=>Hn1 Hn2; apply/andP; split; first by apply: leqW.
+by rewrite -ltn_predRL ltn_neqAle Hk /= -ltnS (ltn_predK Hn2).
+Qed.
+
+Lemma ex_exp2 b k : 1 < b -> 1 < k -> {n | b^n < k <= b^n.+1}.
+Proof.
+move=>Hb Hk; rewrite -ltn_predRL in Hk.
+have H0 : 0 < k by rewrite lt0n; apply/negP=>/eqP; move: Hk=>/[swap]->.
+case: (ex_exp b k.-1)=>// n /andP [H1 H2].
+exists n; apply/andP; split.
+- by apply: (leq_ltn_trans H1); rewrite ltn_predL.
+by rewrite -ltnS -(prednK H0).
 Qed.
 
 End Arith.
@@ -126,56 +156,30 @@ Proof.
 case/andP=>H1 H2; apply/eqP; rewrite eqn_leq.
 apply/andP; split; first by apply: log2n_max.
 rewrite -(ltn_exp2l (m:=2)) //.
-move: (log2nP k) H1; rewrite leq_eqVlt=>/orP; case.
-- by move/eqP=>{1}->.
-by move/[swap]; apply/ltn_trans.
+by move: (log2nP k); apply: ltn_leq_trans.
 Qed.
 
-Lemma ex_exp b k : 1 < b -> 0 < k -> {n | b^n <= k < b^n.+1}.
-Proof.
-move=>Hb; elim: k=>// k IH _.
-case/boolP: (k==0).
-- by move/eqP=>->; exists 0; rewrite expn1.
-rewrite -lt0n => /IH [n Hn].
-case/boolP: (k==(b^n.+1).-1).
-- move/eqP=>->; exists n.+1; case/andP: Hn=>_ Hn.
-  by rewrite (ltn_predK Hn); apply/andP; split=>//; rewrite ltn_exp2l.
-move=>Hk; exists n.
-case/andP: Hn=>Hn1 Hn2; apply/andP; split; first by apply: leqW.
-by rewrite -ltn_predRL ltn_neqAle Hk /= -ltnS (ltn_predK Hn2).
-Qed.
-
-Lemma ex_exp2 b k : 1 < b -> 1 < k -> {n | b^n < k <= b^n.+1}.
-Proof.
-move=>Hb Hk; rewrite -ltn_predRL in Hk.
-have H0 : 0 < k by rewrite lt0n; apply/negP=>/eqP; move: Hk=>/[swap]->.
-case: (ex_exp b k.-1)=>// n /andP [H1 H2].
-exists n; apply/andP; split.
-- by apply: (leq_ltn_trans H1); rewrite ltn_predL.
-by rewrite -ltnS -(prednK H0).
-Qed.
+Lemma exp2nK n : log2n (2 ^ n) = n.
+Proof. by case: n=>//= n; apply: log2n_eq; rewrite leqnn andbT ltn_exp2l. Qed.
 
 Lemma log2n_half n : 2 <= n -> log2n n = (log2n ((n.-1)./2.+1)).+1.
 Proof.
-case: n=>//=; case=>//; case=>//= n _.
-set n0 := n.+3.
-set m := (n0.-1)./2.+1.
+case: n=>[|[|[|n _]]] //=.
+set n0 := n.+3; set m := (n0.-1)./2.+1.
 case: (ex_exp2 2 m)=>// i Hi.
-have H : n0 <= 2*m.
-- rewrite /n0 /m -(addn2 _./2) mulnDr mul2n -(leq_add2l (odd n))
-    addnA odd_double_half addnC -addn3.
-  by case: (odd n)=>/=; rewrite -addnA // leq_add2l.
-have H2 : 2*m <= 2^(i.+2).
-- by rewrite expnS leq_mul2l /=; case/andP: Hi.
-have H3 : 2^(i.+1) < n0.
+rewrite (log2n_eq (i.+1)); first by rewrite (log2n_eq i).
+apply/andP; split.
 - case/andP: Hi=>Hi1 _.
   rewrite expnS; apply: leq_ltn_trans.
-  move: Hi1; rewrite /m ltnS -(leq_pmul2l (m:=2)); [apply | move=>//].
+  - by move: Hi1; rewrite /m ltnS -(leq_pmul2l (m:=2)); [apply | move=>//].
   rewrite mul2n -(ltn_add2l (odd (n0.-1))) odd_double_half.
   apply: ltn_addl; rewrite ltn_predL lt0n; apply/negP=>/eqP.
   by move: Hi1=>/[swap]; rewrite /m=>->/=; rewrite ltnS leqn0 expn_eq0.
-rewrite (log2n_eq (i.+1)); last by rewrite H3 /=; apply/leq_trans/H2.
-by rewrite (log2n_eq i).
+apply: (leq_trans (n := 2*m)); last first.
+- by rewrite expnS leq_mul2l /=; case/andP: Hi.
+rewrite /n0 /m -(addn2 _./2) mulnDr mul2n -(leq_add2l (odd n))
+  addnA odd_double_half addnC -addn3.
+by case: (odd n)=>/=; rewrite -addnA // leq_add2l.
 Qed.
 
 End Log2.
