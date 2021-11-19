@@ -162,9 +162,9 @@ Qed.
 Lemma exp2nK n : log2n (2 ^ n) = n.
 Proof. by case: n=>//= n; apply: log2n_eq; rewrite leqnn andbT ltn_exp2l. Qed.
 
-Lemma log2n_half n : 2 <= n -> log2n n = (log2n ((n.-1)./2.+1)).+1.
+Lemma log2nS n : 1 <= n -> log2n n.+1 = (log2n (n./2.+1)).+1.
 Proof.
-case: n=>[|[|[|n _]]] //=.
+case: n=>[|[|n _]] //=.
 set n0 := n.+3; set m := (n0.-1)./2.+1.
 case: (ex_exp2 2 m)=>// i Hi.
 rewrite (log2n_eq (i.+1)); first by rewrite (log2n_eq i).

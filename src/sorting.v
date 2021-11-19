@@ -617,7 +617,7 @@ Lemma C_merge_adj_log2 xss :
 Proof.
 funelim (C_merge_all xss)=>//=; move: H; simp C_merge_adj merge_adj.
 rewrite /= !size_cat merge_adj_flat size_merge_adj size_merge size_cat =>IH.
-rewrite log2n_half //= mulnS !addnA; apply: leq_add=>//.
+rewrite log2nS //= mulnS !addnA; apply: leq_add=>//.
 by apply/leq_add/C_merge_adj_flat/C_merge_leq.
 Qed.
 
