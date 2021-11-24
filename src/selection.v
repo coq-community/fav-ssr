@@ -1,5 +1,5 @@
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import ssrnat eqtype seq path order.
+From mathcomp Require Import ssrnat eqtype seq path order ssrnum ssralg ssrint.
 From favssr Require Import prelude.
 
 Import Order.POrderTheory.
@@ -93,4 +93,36 @@ Lemma select1_fixed xs : select1 xs = select_fixed 1 xs.
 Proof.
 Admitted.
 
+(* Exercise 3.3.3 *)
+
+Definition T_select_fixed k xs : nat := 1%N. (* FIXME *)
+
+(* FIXME replace these with concrete numbers *)
+Parameters (c1 c2 c3 c4 : nat).
+
+Lemma T_select_fixed_kn k xs :
+  T_select_fixed k xs <= c1*k*size xs + c2*size xs + c3*k + c4.
+Proof.
+Admitted.
+
 End Intro.
+
+Section IntroInt.
+
+Open Scope ring_scope.
+Import intZmod.
+Import Num.Theory.
+Import GRing.Theory.
+
+Variable x0 : int.
+
+(* Exercise 3.4 *)
+
+Lemma select_uniq k i (xs : seq int) :
+  (k < size xs)%N -> (i < size xs)%N -> uniq xs ->
+  { z | let xs' := set_nth x0 xs i z in
+        uniq xs' /\ select x0 k xs' != select x0 k xs }.
+Proof.
+Admitted.
+
+End IntroInt.
