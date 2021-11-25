@@ -1,5 +1,8 @@
 From Coq Require Import ssreflect ssrbool ssrfun.
 From mathcomp Require Import ssrnat eqtype seq path prime.
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
 
 (* inspect idiom so we can expand let-bound vars in proofs *)
 
@@ -65,7 +68,7 @@ Lemma ex_exp2 b k : 1 < b -> 1 < k -> {n | b^n < k <= b^n.+1}.
 Proof.
 move=>Hb Hk; rewrite -ltn_predRL in Hk.
 have H0 : 0 < k by rewrite lt0n; apply/negP=>/eqP; move: Hk=>/[swap]->.
-case: (ex_exp b k.-1)=>// n /andP [H1 H2].
+case: (ex_exp Hb Hk)=>// n /andP [H1 H2].
 exists n; apply/andP; split.
 - by apply: (leq_ltn_trans H1); rewrite ltn_predL.
 by rewrite -ltnS -(prednK H0).
@@ -110,7 +113,7 @@ Lemma log2n_eq0 n : (log2n n == 0) = (n <= 1).
 Proof.
 case: n => [|[|n]]; rewrite /log2n //.
 have /= := trunc_log_bounds (isT : 1 < 2) (isT : 0 < n.+2).
-by case: (leqP (2 ^ trunc_log 2 n.+2) n.+1).
+by case: (leqP _ n.+1).
 Qed.
 
 Lemma log2n_gt0 n : (0 < log2n n) = (1 < n).
@@ -122,41 +125,38 @@ Proof.
 move=> /= n_gt1.
 have n_gt0 : 0 < n by apply: leq_trans n_gt1.
 rewrite /log2n.
-have /= := trunc_log_bounds (isT : 1 < 2) n_gt0.
-case: (leqP n (2 ^ trunc_log 2 n)) => [] H1 /andP[H2 H3].
- rewrite H1 (leq_trans _ H2) // ltn_exp2l // prednK ?leqnn //.
- by case: trunc_log (leq_trans n_gt1 H1).
-by rewrite H1 ltnW.
+have /= /andP[t2Ln nLt2S] := trunc_log_bounds (isT : 1 < 2) n_gt0.
+have [nLn2|n2Ln] := leqP n (2 ^ trunc_log 2 n); last by rewrite n2Ln ltnW.
+rewrite nLn2 (leq_trans _ t2Ln) // ltn_exp2l // prednK ?leqnn //.
+by case: trunc_log (leq_trans n_gt1 nLn2).
 Qed.
 
-Lemma log2nP n : n <= 2 ^ log2n n.
+Lemma log2n_geq n : n <= 2 ^ log2n n.
 Proof.
-case: n => [|[|n]] //.
-by have /andP[] := log2n_bounds _ (isT: 1 < n.+2).
+by case: n => [|[|n]] //; have /andP[] := log2n_bounds (isT: 1 < n.+2).
 Qed.
 
 Lemma log2n_ltn n : 1 < n -> 2 ^ (log2n n).-1 < n.
 Proof.
-case: n => [|[|n]] _ //.
-by have /andP[] := log2n_bounds _ (isT: 1 < n.+2).
+by case: n => [|[|n]] _ //; have /andP[] := log2n_bounds (isT: 1 < n.+2).
 Qed.
 
-Lemma log2n_max k j : k <= 2 ^ j -> log2n k <= j.
+Lemma log2n_exp k j : k <= 2 ^ j -> log2n k <= j.
 Proof.
 case: k => [|[|k]] // kLj.
 rewrite -[log2n _]prednK ?log2n_gt0 // -(@ltn_exp2l 2) //.
-by apply: leq_trans (log2n_ltn _ (isT : 1 < k.+2)) _.
+by apply: leq_trans (log2n_ltn (isT : 1 < k.+2)) _.
 Qed.
 
 Lemma leq_log2n m n : m <= n -> log2n m <= log2n n.
-Proof. by move=> mLn; apply/log2n_max/(leq_trans _ (log2nP _)). Qed.
+Proof. by move=> mLn; apply/log2n_exp/(leq_trans _ (log2n_geq _)). Qed.
 
-Lemma log2n_eq n k : 2^n < k <= 2^n.+1 -> log2n k = n.+1.
+Lemma log2n_eq n k : 2 ^ n < k <= 2 ^ n.+1 -> log2n k = n.+1.
 Proof.
-case/andP=>H1 H2; apply/eqP; rewrite eqn_leq.
-apply/andP; split; first by apply: log2n_max.
-rewrite -(ltn_exp2l (m:=2)) //.
-by move: (log2nP k); apply: ltn_leq_trans.
+case/andP=>n2Lk kL2n; apply/eqP; rewrite eqn_leq.
+apply/andP; split; first by apply: log2n_exp.
+rewrite -(ltn_exp2l _ _ (_ : 1 < 2)) //.
+by apply: leq_trans n2Lk (log2n_geq k).
 Qed.
 
 Lemma exp2nK n : log2n (2 ^ n) = n.
@@ -164,22 +164,18 @@ Proof. by case: n=>//= n; apply: log2n_eq; rewrite leqnn andbT ltn_exp2l. Qed.
 
 Lemma log2nS n : 1 <= n -> log2n n.+1 = (log2n (n./2.+1)).+1.
 Proof.
-case: n=>[|[|n _]] //=.
-set n0 := n.+3; set m := (n0.-1)./2.+1.
-case: (ex_exp2 2 m)=>// i Hi.
-rewrite (log2n_eq (i.+1)); first by rewrite (log2n_eq i).
-apply/andP; split.
-- case/andP: Hi=>Hi1 _.
-  rewrite expnS; apply: leq_ltn_trans.
-  - by move: Hi1; rewrite /m ltnS -(leq_pmul2l (m:=2)); [apply | move=>//].
-  rewrite mul2n -(ltn_add2l (odd (n0.-1))) odd_double_half.
-  apply: ltn_addl; rewrite ltn_predL lt0n; apply/negP=>/eqP.
-  by move: Hi1=>/[swap]; rewrite /m=>->/=; rewrite ltnS leqn0 expn_eq0.
-apply: (leq_trans (n := 2*m)); last first.
-- by rewrite expnS leq_mul2l /=; case/andP: Hi.
-rewrite /n0 /m -(addn2 _./2) mulnDr mul2n -(leq_add2l (odd n))
-  addnA odd_double_half addnC -addn3.
-by case: (odd n)=>/=; rewrite -addnA // leq_add2l.
+case: n=> // [] [|n] // _.
+apply/log2n_eq/andP; split.
+- apply: leq_trans (_ : n./2.+1.*2 < n.+3); last first.
+  by rewrite doubleS !ltnS -[X in _ <= X]odd_double_half leq_addl.
+- have /= /andP[H1n _] := log2n_bounds (isT : 1 < n./2.+2).
+  by rewrite ltnS -leq_double -mul2n -expnS prednK ?log2n_gt0 // in H1n.
+rewrite -[_./2.+1]/(n./2.+2).
+have /= /andP[_ H2n] := log2n_bounds (isT : 1 < n./2.+2).
+rewrite -leq_double -!mul2n -expnS in H2n.
+apply: leq_trans H2n.
+rewrite mul2n !doubleS !ltnS.
+by rewrite -[X in X <= _]odd_double_half -add1n leq_add2r; case: odd.
 Qed.
 
 End Log2.

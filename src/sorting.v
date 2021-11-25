@@ -2,6 +2,9 @@ From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
 From mathcomp Require Import ssrnat eqtype seq path order bigop.
 From favssr Require Import prelude.
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
 
 Import Order.POrderTheory.
 Import Order.TotalTheory.
@@ -293,7 +296,7 @@ elim: k xs=>/=.
 - by move=>xs; rewrite expn0 =>/size1 [x] ->; simp C_msort.
 move=>k IH xs H.
 have Hs1 : (size xs > 1)%N by rewrite H -{1}(expn0 2); apply: ltn_exp2l.
-case: (size2 _ Hs1)=> x[y][ys] He; rewrite He /= in H *; simp C_msort=>/=.
+case: (size2 Hs1)=> x[y][ys] He; rewrite He /= in H *; simp C_msort=>/=.
 have Hp : (size ys)./2.+1 = ((size ys).+2)./2 by rewrite -addn2 halfD andbF /= addn1.
 have Ht : size (x :: take (size ys)./2 (y :: ys)) = 2^k.
 - by rewrite /= size_take /= ltnS half_le Hp H expnS mul2n half_double.

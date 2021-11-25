@@ -2,6 +2,9 @@ From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
 From mathcomp Require Import ssrnat eqtype seq div.
 From favssr Require Import prelude.
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
 
 Section Basics.
 Context {T : Type}.

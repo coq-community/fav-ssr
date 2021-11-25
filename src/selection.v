@@ -1,6 +1,9 @@
 From Coq Require Import ssreflect ssrbool ssrfun.
 From mathcomp Require Import ssrnat eqtype seq path order ssrnum ssralg ssrint.
 From favssr Require Import prelude.
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
 
 Import Order.POrderTheory.
 Import Order.TotalTheory.
@@ -63,7 +66,7 @@ Lemma perm_sort_eq xs ys : perm_eq xs ys -> sort <=%O xs = sort <=%O ys.
 Proof. by apply: perm_sort_leP. Qed.
 
 Lemma perm_select_eq xs ys k : perm_eq xs ys -> select k xs = select k ys.
-Proof. by move=>H; rewrite /select (perm_sort_eq _ ys). Qed.
+Proof. by rewrite /select => /perm_sort_eq ->. Qed.
 
 (* Exercise 3.1 *)
 
