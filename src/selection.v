@@ -1,6 +1,6 @@
 From Coq Require Import ssreflect ssrbool ssrfun.
 From mathcomp Require Import ssrnat eqtype seq path order ssrnum ssralg ssrint.
-From favssr Require Import prelude.
+From favssr Require Import prelude sorting.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -66,7 +66,7 @@ Lemma perm_sort_eq xs ys : perm_eq xs ys -> sort <=%O xs = sort <=%O ys.
 Proof. by apply: perm_sort_leP. Qed.
 
 Lemma perm_select_eq xs ys k : perm_eq xs ys -> select k xs = select k ys.
-Proof. by rewrite /select => /perm_sort_eq ->. Qed.
+Proof. by rewrite /select=>/perm_sort_eq ->. Qed.
 
 (* Exercise 3.1 *)
 
@@ -129,3 +129,65 @@ Proof.
 Admitted.
 
 End IntroInt.
+
+Section DivideAndConquer.
+
+Context {disp : unit} {T : orderType disp}.
+Implicit Types (xs ys zs : seq T) (k : nat).
+Variable x0 : T.
+
+Lemma select_cat k ys zs :
+  (* k < size ys + size zs -> *)  (* unnecessary *)
+  allrel <=%O ys zs ->
+  select x0 k (ys ++ zs) = (if k < size ys then select x0 k ys else select x0 (k - size ys) zs).
+Proof.
+move=>Ha; rewrite /select.
+have -> : sort <=%O (ys ++ zs) = sort <=%O ys ++ sort <=%O zs.
+- apply: le_sorted_eq=>//; last first.
+  - by rewrite perm_sort; apply: perm_cat; rewrite perm_sym perm_sort.
+  rewrite -(allrel_merge (leT := <=%O)).
+  - by apply: (merge_sorted le_total); exact: sort_le_sorted.
+  by apply/allrelP=>y z; rewrite !mem_sort=>Hy Hz; move/allrelP: Ha; apply.
+by rewrite nth_cat size_sort.
+Qed.
+
+Lemma select_recurrence k x xs :
+  (*k < size xs ->*)  (* unnecessary *)
+  select x0 k xs =
+    let '(ls, es, gs) := partition3 x xs in
+    if k < size ls then select x0 k ls
+      else if k < size ls + size es then x
+        else select x0 (k - size ls - size es) gs.
+Proof.
+move H: (partition3 x xs)=>[[ls es] gs].
+rewrite /partition3 in H; case: H=>Hl He Hg.
+have H3p : perm_eq xs (ls ++ es ++ gs).
+- rewrite -Hl -He -Hg -(perm_filterC (<x)) perm_cat2l -(perm_filterC (>x)) perm_catC.
+  apply: perm_cat; apply/permP=>p; rewrite !count_filter; apply: eq_count=>a /=.
+  - by rewrite -!leNgt -andbA -eq_le.
+  by case: (p a)=>//=; rewrite -leNgt le_eqVlt; case: leP=>//= _; rewrite orbT.
+rewrite (perm_select_eq _ _ H3p) !select_cat; first last.
+- apply/allrelP=>y z; rewrite -Hl -He -Hg mem_cat !mem_filter /= =>/andP [Hyx _] /orP; case; case/andP.
+  - by move/eqP=>-> _; apply: ltW.
+  by move=>Hxz _; apply/ltW/lt_trans/Hxz.
+- apply/allrelP=>y z; rewrite -He -Hg !mem_filter /= =>/andP [/eqP -> _] /andP [Hxz _].
+  by apply: ltW.
+case: ifP=>// /negbT; rewrite -leNgt=>Hlk.
+have Hkm : (k - size ls < size es) = (k < size ls + size es).
+- rewrite ltEnat /= -[in LHS](ltn_add2r (size ls)) -addnBn.
+  suff : size ls - k = 0 by move=>->; rewrite addn0 addnC.
+  by apply/eqP; rewrite subn_eq0.
+rewrite Hkm; case: ifP=>// Hkle; rewrite /select.
+have Hx : all (pred1 x) (sort <=%O es).
+- rewrite (perm_all (s2:=es)); last by rewrite (perm_sort <=%O es).
+  by rewrite -He all_filter; apply/allP=>y _ /=; apply/implyP.
+move/all_pred1P: Hx=>->; rewrite nth_nseq size_sort.
+by rewrite ltEnat /= in Hkm Hkle; rewrite Hkm Hkle.
+Qed.
+
+Definition median (xs : seq T) : T :=
+  select x0 (size xs - 1)./2 xs.
+
+(* Exercise 3.5 *)
+
+End DivideAndConquer.
