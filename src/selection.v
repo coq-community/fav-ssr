@@ -280,7 +280,6 @@ Definition chop_eq xs :=
 
 Lemma chops_eq xs : perm_eq (chop 5 xs) (chop_lt xs ++ chop_eq xs ++ chop_gt xs).
 Proof.
-rewrite /chop_lt /chop_eq /chop_gt.
 rewrite -(perm_filterC (fun ys => median x0 ys < mom xs)) perm_cat2l
   -(perm_filterC (fun ys => median x0 ys == mom xs)).
 apply: perm_cat; apply/permP=>a; rewrite !count_filter; apply: eq_count=>z /=.
@@ -291,9 +290,9 @@ Qed.
 
 Lemma chop_ltgt_bound xs : (0 < size xs)%N ->
   ((size (chop_lt xs) <= (div_up (size xs) 5).-1./2) &&
-  (size (chop_gt xs) <= uphalf (div_up (size xs) 5).-1))%N.
+   (size (chop_gt xs) <= uphalf (div_up (size xs) 5).-1))%N.
 Proof.
-move=>Hs; rewrite -chop_size // /chop_lt /chop_gt !size_filter /mom.
+move=>Hs; rewrite -chop_size // !size_filter /mom.
 have : (0 < size (chop 5 xs))%N.
 - by rewrite chop_size //; apply: div_up_gt0.
 move: (median_bound (xs:=map (median x0) (chop 5 xs))).
@@ -302,7 +301,7 @@ Qed.
 
 Lemma chop_ge_mom_lt xs x : x \in chop_eq xs ++ chop_gt xs -> (count (< mom xs) x <= 2)%N.
 Proof.
-rewrite /chop_eq /chop_gt mem_cat !mem_filter -andb_orl =>/andP [Hm Hx].
+rewrite mem_cat !mem_filter -andb_orl =>/andP [Hm Hx].
 have/andP [H1 H2] : 0 < size x <= 5 by apply: (chop_mem_size _ Hx).
 apply (leq_trans (n:=count (< median x0 x) x)).
 - apply: sub_count=>y /= /lt_le_trans; apply.
@@ -313,7 +312,7 @@ Qed.
 
 Lemma chop_le_mom_gt xs x : x \in chop_lt xs ++ chop_eq xs -> (count (> mom xs) x <= 2)%N.
 Proof.
-rewrite /chop_eq /chop_gt mem_cat !mem_filter -andb_orl =>/andP [Hm Hx].
+rewrite mem_cat !mem_filter -andb_orl =>/andP [Hm Hx].
 have/andP [H1 H2] : 0 < size x <= 5 by apply: (chop_mem_size _ Hx).
 apply (leq_trans (n:=count (> median x0 x) x)).
 - apply: sub_count=>y /= /le_lt_trans; apply.
@@ -376,14 +375,14 @@ apply: (leq_trans (n:=5*size (chop_lt xs) + 2*size (chop_eq xs ++ chop_gt xs))).
   rewrite -iter_addn_0 -count_predT -big_const_seq
   big_seq_cond [X in (_ <= X)%N]big_seq_cond;
   apply: leq_sum=>i; rewrite andbT; last by apply: chop_ge_mom_lt.
-  by rewrite /chop_lt mem_filter =>/andP [_] /chop_count_le; apply.
+  by rewrite mem_filter =>/andP [_] /chop_count_le; apply.
 rewrite {1}(_ : 5 = 3 + 2) // mulnDl -addnA -mulnDr size_cat addnA.
 rewrite -!size_cat -catA; rewrite (perm_size Hc) chop_size //.
 case/boolP: (size xs == 0); first by move/eqP/size0nil=>->.
-rewrite -lt0n =>/[dup] Hs /chop_ltgt_bound /andP [+ _].
+rewrite -lt0n =>/[dup] Hs /chop_ltgt_bound/andP [+ _].
 set n := size xs in Hs *.
-have: (0 < 3)%N by []; move/leq_pmul2l=><-.
-rewrite -(@leq_add2r (2 * div_up n 5)) => /leq_trans; apply.
+rewrite -(leq_pmul2l (isT : 0 < 3))
+  -(@leq_add2r (2 * div_up n 5))=>/leq_trans; apply.
 by apply: div_up71.
 Qed.
 
@@ -398,13 +397,14 @@ apply: (leq_trans (n:=2*size (chop_lt xs ++ chop_eq xs) + 5*size (chop_gt xs))).
   rewrite -iter_addn_0 -count_predT -big_const_seq
     big_seq_cond [X in (_ <= X)%N]big_seq_cond;
   apply: leq_sum=>i; rewrite andbT; first by apply: chop_le_mom_gt.
-  by rewrite /chop_gt mem_filter =>/andP [_] /chop_count_le; apply.
+  by rewrite mem_filter =>/andP [_] /chop_count_le; apply.
 rewrite addnC {1}(_ : 5 = 3 + 2) // mulnDl addnAC -addnA -mulnDr size_cat.
 rewrite -!size_cat -catA; rewrite (perm_size Hc) chop_size //.
 case/boolP: (size xs == 0); first by move/eqP/size0nil=>->.
 rewrite -lt0n =>/[dup] Hs /chop_ltgt_bound/andP [_].
-set n := size xs in Hs *; have: (0 < 3)%N by []; move/leq_pmul2l=><-.
-rewrite -(@leq_add2r (2 * div_up n 5)) => /leq_trans; apply.
+set n := size xs in Hs *.
+rewrite -(leq_pmul2l (isT : 0 < 3))
+  -(@leq_add2r (2 * div_up n 5))=>/leq_trans; apply.
 by apply: div_up73.
 Qed.
 
