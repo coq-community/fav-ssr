@@ -1,5 +1,6 @@
+From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import ssrnat eqtype seq path order ssrnum ssralg ssrint.
+From mathcomp Require Import ssrnat eqtype seq path order bigop div ssrnum ssralg ssrint.
 From favssr Require Import prelude sorting.
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -139,7 +140,8 @@ Variable x0 : T.
 Lemma select_cat k ys zs :
   (* k < size ys + size zs -> *)  (* unnecessary *)
   allrel <=%O ys zs ->
-  select x0 k (ys ++ zs) = (if k < size ys then select x0 k ys else select x0 (k - size ys) zs).
+  select x0 k (ys ++ zs) =
+    if k < size ys then select x0 k ys else select x0 (k - size ys) zs.
 Proof.
 move=>Ha; rewrite /select.
 have -> : sort <=%O (ys ++ zs) = sort <=%O ys ++ sort <=%O zs.
@@ -161,33 +163,249 @@ Lemma select_recurrence k x xs :
 Proof.
 move H: (partition3 x xs)=>[[ls es] gs].
 rewrite /partition3 in H; case: H=>Hl He Hg.
-have H3p : perm_eq xs (ls ++ es ++ gs).
+have /(perm_select_eq x0 k)-> : perm_eq xs (ls ++ es ++ gs).
 - rewrite -Hl -He -Hg -(perm_filterC (<x)) perm_cat2l -(perm_filterC (>x)) perm_catC.
   apply: perm_cat; apply/permP=>p; rewrite !count_filter; apply: eq_count=>a /=.
   - by rewrite -!leNgt -andbA -eq_le.
   by case: (p a)=>//=; rewrite -leNgt le_eqVlt; case: leP=>//= _; rewrite orbT.
-rewrite (perm_select_eq _ _ H3p) !select_cat; first last.
+rewrite !select_cat; first last.
 - apply/allrelP=>y z; rewrite -Hl -He -Hg mem_cat !mem_filter /= =>/andP [Hyx _] /orP; case; case/andP.
   - by move/eqP=>-> _; apply: ltW.
   by move=>Hxz _; apply/ltW/lt_trans/Hxz.
 - apply/allrelP=>y z; rewrite -He -Hg !mem_filter /= =>/andP [/eqP -> _] /andP [Hxz _].
   by apply: ltW.
 case: ifP=>// /negbT; rewrite -leNgt=>Hlk.
-have Hkm : (k - size ls < size es) = (k < size ls + size es).
+have {Hlk}Hkm : (k - size ls < size es) = (k < size ls + size es).
 - rewrite ltEnat /= -[in LHS](ltn_add2r (size ls)) -addnBn.
   suff : size ls - k = 0 by move=>->; rewrite addn0 addnC.
   by apply/eqP; rewrite subn_eq0.
 rewrite Hkm; case: ifP=>// Hkle; rewrite /select.
-have Hx : all (pred1 x) (sort <=%O es).
+have /all_pred1P-> : all (pred1 x) (sort <=%O es).
 - rewrite (perm_all (s2:=es)); last by rewrite (perm_sort <=%O es).
   by rewrite -He all_filter; apply/allP=>y _ /=; apply/implyP.
-move/all_pred1P: Hx=>->; rewrite nth_nseq size_sort.
-by rewrite ltEnat /= in Hkm Hkle; rewrite Hkm Hkle.
+rewrite {}Hkle ltEnat /= in Hkm.
+by rewrite nth_nseq size_sort Hkm.
 Qed.
 
 Definition median (xs : seq T) : T :=
-  select x0 (size xs - 1)./2 xs.
+  select x0 (size xs).-1./2 xs.
 
 (* Exercise 3.5 *)
 
+Definition reduce_select_median k xs := xs. (* FIXME *)
+
+Lemma reduce_select_prop k xs : k < size xs ->
+  reduce_select_median k xs != [::] /\
+  median (reduce_select_median k xs) = select x0 k xs.
+Proof.
+Admitted.
+
 End DivideAndConquer.
+
+Section MedianOfMedians.
+
+Context {disp : unit} {T : orderType disp}.
+Implicit Types (xs ys zs : seq T) (k : nat).
+Variable x0 : T.
+
+Lemma median_bound xs : (0 < size xs)%N ->
+  ((count (< median x0 xs) xs <= (size xs).-1./2) &&
+   (count (> median x0 xs) xs <= uphalf (size xs).-1))%N.
+Proof.
+move=>Hs.
+have : ((size xs).-1./2 < size xs)%N.
+- apply/leq_ltn_trans; first by exact: half_le.
+  by rewrite ltn_predL.
+move/(is_selection_select x0)=>/andP [->].
+set n := size xs in Hs *.
+rewrite (_ : n - (n.-1)./2 = (uphalf n.-1).+1) //.
+rewrite -{1}(prednK Hs) -addn1 -addnBAC; last by apply: half_le.
+by rewrite half_subn addn1.
+Qed.
+
+Equations chop (n : nat) (xs : seq T) : seq (seq T) :=
+chop 0 _    => [::];
+chop _ [::] => [::];
+chop n xs   => take n xs :: chop n (drop n xs).
+
+Lemma chop_ge_length_eq n xs : (0 < size xs <= n)%N -> chop n xs = [::xs].
+Proof.
+case: xs=>//=x xs; case: n=>//= n.
+rewrite ltnS=>Hk; simp chop=>/=.
+by rewrite take_oversize // drop_oversize.
+Qed.
+
+Lemma chop_flatten_eq n xs : 0 < n -> xs = flatten (chop n xs).
+Proof.
+funelim (chop n xs)=>//; simp chop=>/= /H /= {}H.
+by rewrite -{1}(cat_take_drop n.+1 (s::l)) /= -cat_cons {1}H.
+Qed.
+
+Lemma chop_mem_size n xs s : 0 < n -> s \in chop n xs -> 0 < size s <= n.
+Proof.
+funelim (chop n xs)=>//; simp chop=>/= /(H s0) /= {}H.
+rewrite inE=>/orP; case=>// /eqP=>-> /=.
+rewrite size_take -/(minn _ _) leEnat ltnS.
+by exact: geq_minl.
+Qed.
+
+Lemma chop_count_le n xs s a : 0 < n -> s \in chop n xs -> (count a s <= n)%N.
+Proof.
+move=>Hn Hx.
+have/andP [_ H2] := chop_mem_size Hn Hx.
+by apply/leq_trans/H2/count_size.
+Qed.
+
+Lemma chop_size n xs : 0 < n -> size (chop n xs) = div_up (size xs) n.
+Proof.
+funelim (chop n xs)=>// /H /= {H}IH.
+case/boolP: (n <= size l)%N; last first.
+- rewrite -ltnNge=>Hk; move: (ltn_trans Hk (ltnSn n))=>{}Hk.
+  by rewrite chop_ge_length_eq //= div_upS // divn_small.
+simp chop=>/= Hk; have ->: (size l).+1 = n.+1 + size (drop n l).
+- by rewrite -{1}(cat_take_drop n l) size_cat size_takel.
+rewrite IH addSn div_upS //; congr S.
+rewrite divnD // divn_small // modn_small // add0n.
+by rewrite -{3}[in RHS](addn0 n) ltn_add2l lt0n.
+Qed.
+
+Definition mom xs := median x0 (map (median x0) (chop 5 xs)).
+
+Definition chop_lt xs :=
+  filter (fun ys => median x0 ys < mom xs) (chop 5 xs).
+Definition chop_gt xs :=
+  filter (fun ys => median x0 ys > mom xs) (chop 5 xs).
+Definition chop_eq xs :=
+  filter (fun ys => median x0 ys == mom xs) (chop 5 xs).
+
+Lemma chops_eq xs : perm_eq (chop 5 xs) (chop_lt xs ++ chop_eq xs ++ chop_gt xs).
+Proof.
+rewrite /chop_lt /chop_eq /chop_gt.
+rewrite -(perm_filterC (fun ys => median x0 ys < mom xs)) perm_cat2l
+  -(perm_filterC (fun ys => median x0 ys == mom xs)).
+apply: perm_cat; apply/permP=>a; rewrite !count_filter; apply: eq_count=>z /=.
+- rewrite -leNgt le_eqVlt; case: eqP; last by rewrite andbF.
+  by move=>->; rewrite eq_refl ltxx !andbT.
+by rewrite -leNgt lt_neqAle eq_sym andbA.
+Qed.
+
+Lemma chop_ltgt_bound xs : (0 < size xs)%N ->
+  ((size (chop_lt xs) <= (div_up (size xs) 5).-1./2) &&
+  (size (chop_gt xs) <= uphalf (div_up (size xs) 5).-1))%N.
+Proof.
+move=>Hs; rewrite -chop_size // /chop_lt /chop_gt !size_filter /mom.
+have : (0 < size (chop 5 xs))%N.
+- by rewrite chop_size //; apply: div_up_gt0.
+move: (median_bound (xs:=map (median x0) (chop 5 xs))).
+by rewrite size_map=>/[apply]/andP []; rewrite !count_map=>->->.
+Qed.
+
+Lemma chop_ge_mom_lt xs x : x \in chop_eq xs ++ chop_gt xs -> (count (< mom xs) x <= 2)%N.
+Proof.
+rewrite /chop_eq /chop_gt mem_cat !mem_filter -andb_orl =>/andP [Hm Hx].
+have/andP [H1 H2] : 0 < size x <= 5 by apply: (chop_mem_size _ Hx).
+apply (leq_trans (n:=count (< median x0 x) x)).
+- apply: sub_count=>y /= /lt_le_trans; apply.
+  by rewrite le_eqVlt eq_sym.
+apply: (leq_trans (n:=(size x).-1./2)); first by case/andP: (median_bound H1).
+by rewrite (_ : 2 = 5./2) //; apply/half_leq/leq_trans/H2/leq_pred.
+Qed.
+
+Lemma chop_le_mom_gt xs x : x \in chop_lt xs ++ chop_eq xs -> (count (> mom xs) x <= 2)%N.
+Proof.
+rewrite /chop_eq /chop_gt mem_cat !mem_filter -andb_orl =>/andP [Hm Hx].
+have/andP [H1 H2] : 0 < size x <= 5 by apply: (chop_mem_size _ Hx).
+apply (leq_trans (n:=count (> median x0 x) x)).
+- apply: sub_count=>y /= /le_lt_trans; apply.
+  by rewrite le_eqVlt orbC.
+apply: (leq_trans (n:=uphalf (size x).-1)); first by case/andP: (median_bound H1).
+rewrite (_ : 2 = uphalf (5.-1)) //.
+apply: uphalf_leq; rewrite -(leq_add2r 1) !addn1 /=.
+by apply/leq_trans/H2; rewrite ltn_predL.
+Qed.
+
+Lemma div_up71 n : (0 < n)%N ->
+  (3 * ((div_up n 5).-1)./2 + 2 * div_up n 5 <= div_up (7 * n) 10 + 1)%N.
+Proof.
+move=>Hn.
+rewrite div_up_div //=; case: n Hn=>//= n _.
+rewrite -(addn1 n) -(addn1 (n %/ 5)) !mulnDr !muln1 addnA.
+rewrite div_up_div; last by apply/ltn_leq_trans/leq_addl.
+rewrite -[X in (_ <= X + 1)%N]addn1 -[X in (_ <= X)%N]addnA leq_add2r.
+rewrite -subn1 -addnBA // (_ : 7 - 1 = 6) //.
+rewrite divnD // (divn_small (isT : 6 < 10)) (modn_small (isT : 6 < 10)) addn0.
+rewrite {2}(_ : 10 = 4 + 6) // leq_add2r -divn2.
+case: (edivnP n 5)=>/= q r {n}-> Hr; rewrite divnMDl // (divn_small Hr) addn0.
+rewrite (_ : 10 = 2 * 5) // mulnDr mulnA divnD // modnD // divnMr // -muln_modl.
+case: (edivnP q 2)=>/= u v {q}-> Hv; rewrite divnMDl // (divn_small Hv) addn0.
+rewrite (mulnC 2 5) // !mulnDr !mulnA divnD // modnD // mulnK // modnMl add0n.
+rewrite (_ : 5 * 2 = 10) // addnA mulnAC -mulnDl (_ : 3+2*2 = 7) // -4!addnA.
+by rewrite {u}leq_add2l; case: v Hv=>//=; case.
+Qed.
+
+Lemma div_up73 n : (0 < n)%N ->
+  (3 * uphalf (div_up n 5).-1 + 2 * div_up n 5 <= div_up (7 * n) 10 + 3)%N.
+Proof.
+move=>Hn.
+rewrite uphalf_half div_up_div //=; case: n Hn=>//= n _.
+rewrite -(addn1 n) -(addn1 (n %/ 5)) !mulnDr !muln1 addnA.
+rewrite div_up_div; last by apply/ltn_leq_trans/leq_addl.
+rewrite -[X in (_ <= X + 3)%N]addn1 -[X in (_ <= X)%N]addnA.
+rewrite (_ : 1 + 3 = 2 + 2) // addnA leq_add2r.
+rewrite -subn1 -addnBA // (_ : 7 - 1 = 6) //.
+rewrite divnD // (divn_small (isT : 6 < 10)) (modn_small (isT : 6 < 10)).
+rewrite {2}(_ : 10 = 4 + 6) // leq_add2r -divn2.
+case: (edivnP n 5)=>/= q r {n}-> Hr; rewrite divnMDl // (divn_small Hr) !addn0.
+rewrite (_ : 10 = 2 * 5) // mulnDr mulnA divnD // modnD // divnMr // -muln_modl.
+case: (edivnP q 2)=>/= u v {q}-> Hv; rewrite divnMDl // (divn_small Hv) addn0.
+rewrite oddD oddM andbF /= -addnA addnC.
+rewrite (mulnC 2 5) // !mulnDr !mulnA divnD // modnD // mulnK // modnMl add0n.
+rewrite (_ : 5 * 2 = 10) // addnA mulnAC -mulnDl (_ : 3+2*2 = 7) // -6!addnA.
+rewrite {u}leq_add2l; case: v Hv=>//=; case=>//= _.
+by rewrite !addnA [X in (_ <= X)%N]addnC.
+Qed.
+
+Lemma mom_pivot_bound_lt xs : count (< mom xs) xs <= div_up (7*size xs) 10 + 1.
+Proof.
+rewrite {2}(chop_flatten_eq xs (isT : 0 < 5)) count_flatten sumnE.
+have Hc := chops_eq xs.
+have H := perm_map (count (< mom xs)) Hc; rewrite perm_sym in Hc.
+rewrite {H}(perm_big _ H) map_cat big_cat /= !big_map.
+apply: (leq_trans (n:=5*size (chop_lt xs) + 2*size (chop_eq xs ++ chop_gt xs))).
+- apply: leq_add;
+  rewrite -iter_addn_0 -count_predT -big_const_seq
+  big_seq_cond [X in (_ <= X)%N]big_seq_cond;
+  apply: leq_sum=>i; rewrite andbT; last by apply: chop_ge_mom_lt.
+  by rewrite /chop_lt mem_filter =>/andP [_] /chop_count_le; apply.
+rewrite {1}(_ : 5 = 3 + 2) // mulnDl -addnA -mulnDr size_cat addnA.
+rewrite -!size_cat -catA; rewrite (perm_size Hc) chop_size //.
+case/boolP: (size xs == 0); first by move/eqP/size0nil=>->.
+rewrite -lt0n =>/[dup] Hs /chop_ltgt_bound /andP [+ _].
+set n := size xs in Hs *.
+have: (0 < 3)%N by []; move/leq_pmul2l=><-.
+rewrite -(@leq_add2r (2 * div_up n 5)) => /leq_trans; apply.
+by apply: div_up71.
+Qed.
+
+Lemma mom_pivot_bound_gt xs : count (> mom xs) xs <= div_up (7*size xs) 10 + 3.
+Proof.
+rewrite {2}(chop_flatten_eq xs (isT : 0 < 5)) count_flatten sumnE.
+have Hc := chops_eq xs.
+have H := perm_map (count (> mom xs)) Hc; rewrite perm_sym in Hc.
+rewrite {H}(perm_big _ H) catA map_cat big_cat /= !big_map.
+apply: (leq_trans (n:=2*size (chop_lt xs ++ chop_eq xs) + 5*size (chop_gt xs))).
+- apply: leq_add;
+  rewrite -iter_addn_0 -count_predT -big_const_seq
+    big_seq_cond [X in (_ <= X)%N]big_seq_cond;
+  apply: leq_sum=>i; rewrite andbT; first by apply: chop_le_mom_gt.
+  by rewrite /chop_gt mem_filter =>/andP [_] /chop_count_le; apply.
+rewrite addnC {1}(_ : 5 = 3 + 2) // mulnDl addnAC -addnA -mulnDr size_cat.
+rewrite -!size_cat -catA; rewrite (perm_size Hc) chop_size //.
+case/boolP: (size xs == 0); first by move/eqP/size0nil=>->.
+rewrite -lt0n =>/[dup] Hs /chop_ltgt_bound/andP [_].
+set n := size xs in Hs *; have: (0 < 3)%N by []; move/leq_pmul2l=><-.
+rewrite -(@leq_add2r (2 * div_up n 5)) => /leq_trans; apply.
+by apply: div_up73.
+Qed.
+
+End MedianOfMedians.

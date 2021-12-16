@@ -1,5 +1,5 @@
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import ssrnat eqtype seq path prime.
+From mathcomp Require Import ssrnat eqtype seq path prime div.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -179,3 +179,33 @@ by rewrite -[X in X <= _]odd_double_half -add1n leq_add2r; case: odd.
 Qed.
 
 End Log2.
+
+Section DivUp.
+
+Definition div_up p q := (p %/ q) + ~~ (q %| p).
+
+Lemma div_up_gt0 p q : 0 < q -> 0 < p -> 0 < div_up p q.
+Proof.
+move=>Hq Hp; rewrite /div_up.
+case/boolP: (p < q)%N => Hpq.
+- by rewrite divn_small // gtnNdvd.
+rewrite -leqNgt in Hpq.
+apply: (ltn_leq_trans (y := p %/ q)); last by apply: leq_addr.
+by rewrite divn_gt0.
+Qed.
+
+Lemma div_upS p q : 0 < q -> div_up p.+1 q = (p %/ q).+1.
+Proof.
+move=>Hq.
+rewrite /div_up divnS // addnAC -[in RHS]addn1 [in RHS]addnC.
+by case: (q %| p.+1)%N.
+Qed.
+
+Lemma div_up_div p q : 0 < p -> div_up p q = (p.-1 %/ q).+1.
+Proof.
+move: (leq0n q); rewrite leq_eqVlt=>/orP; case.
+- by rewrite eq_sym lt0n =>/eqP ->; rewrite /div_up !divn0 /= =>->.
+by move=>Hq; case: p=>//=p _; apply: div_upS.
+Qed.
+
+End DivUp.
