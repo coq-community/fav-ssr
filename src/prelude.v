@@ -39,11 +39,9 @@ Qed.
 Lemma odd2 n : odd n = odd n.+2.
 Proof. by rewrite -addn2 oddD addbF. Qed.
 
+(* is this needed? *)
 Lemma ltn_leq_trans y x z : x < y -> y <= z -> x < z.
-Proof.
-rewrite !ltn_neqAle => /andP [nexy lexy leyz]; rewrite (leq_trans lexy) // andbT.
-by apply: contraNneq nexy => eqxz; rewrite eqxz eqn_leq leyz andbT in lexy *.
-Qed.
+Proof. by move=>Hx; apply/leq_trans. Qed.
 
 Lemma leq_ltn_add m1 m2 n1 n2 : m1 <= n1 -> m2 < n2 -> m1 + m2 < n1 + n2.
 Proof.
@@ -206,6 +204,14 @@ Proof.
 move: (leq0n q); rewrite leq_eqVlt=>/orP; case.
 - by rewrite eq_sym lt0n =>/eqP ->; rewrite /div_up !divn0 /= =>->.
 by move=>Hq; case: p=>//=p _; apply: div_upS.
+Qed.
+
+Lemma div_up_lt n m : 1 < m -> 1 < n -> div_up n m < n.
+Proof.
+move=>Hm; have H0: 0 < m by apply/ltn_trans/Hm.
+case: n=>// n; rewrite ltnS=>Hn.
+rewrite div_upS // ltnS.
+by apply: ltn_Pdiv.
 Qed.
 
 End DivUp.
