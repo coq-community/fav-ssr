@@ -165,6 +165,7 @@ Admitted.
 
 (* Exercise 2.4 *)
 
+(* TODO rewrite in one pass? *)
 Definition partition3 x xs : seq T * seq T * seq T :=
   (filter (< x) xs, filter (pred1 x) xs, filter (> x) xs).
 
@@ -191,11 +192,11 @@ Admitted.
 (* Exercise 2.5.1 *)
 
 (* TODO move to basics? *)
-Fixpoint T_filter {A} (ta : A -> nat) (s : seq A) : nat :=
-  if s is x :: s' then ta x + T_filter ta s' + 1 else 1.
+Fixpoint T_mapfilter {A} (ta : A -> nat) (s : seq A) : nat :=
+  if s is x :: s' then ta x + T_mapfilter ta s' + 1 else 1.
 
-Lemma T_filter_size {A} (xs : seq A) ta :
-  T_filter ta xs = \sum_(x<-xs) (ta x) + size xs + 1.
+Lemma T_mapfilter_size {A} (xs : seq A) ta :
+  T_mapfilter ta xs = \sum_(x<-xs) (ta x) + size xs + 1.
 Proof.
 elim: xs=>/=; first by rewrite big_nil.
 by move=>x xs ->; rewrite big_cons -(addn1 (size _)) !addnA.
@@ -205,7 +206,7 @@ Equations? T_quicksort xs : nat by wf (size xs) lt :=
 T_quicksort [::]    => 1;
 T_quicksort (x::xs) => T_quicksort (filter (< x) xs) +
                        T_quicksort (filter (>= x) xs) +
-                       2 * T_filter (fun => 1%N) xs + 1.
+                       2 * T_mapfilter (fun => 1%N) xs + 1.
 Proof.
 - by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
 by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
@@ -769,11 +770,10 @@ move/[swap]=>Hp; elim: xs=>/=; first by rewrite Hp.
 move=>y xs IH; rewrite le_path_sortedE =>/andP [Ha Hs].
 case: ifP=>Hf /=.
 - rewrite Hp; case: ifP=>/=; first by rewrite Hf.
-  rewrite insort_key_cons //.
-  rewrite all_map in Ha; rewrite all_filter; apply/sub_all/Ha.
+  rewrite insort_key_cons // all_filter.
+  rewrite all_map in Ha; apply/sub_all/Ha.
   by move=>z /= Hf2; apply/implyP=>_; apply/le_trans/Hf2.
-case: ifP=>/=; rewrite (IH Hs) //.
-by rewrite Hf.
+by case: ifP=>/=; rewrite (IH Hs) // Hf.
 Qed.
 
 Lemma isort_key_stable f k xs :

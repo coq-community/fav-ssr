@@ -48,39 +48,14 @@ Proof.
 by move=>H1 H2; apply: (leq_ltn_trans (n:=n1 + m2)); rewrite ?ltn_add2l ?leq_add2r.
 Qed.
 
-Lemma ex_exp b k : 1 < b -> 0 < k -> {n | b^n <= k < b^n.+1}.
-Proof.
-move=>Hb; elim: k=>// k IH _.
-case/boolP: (k==0).
-- by move/eqP=>->; exists 0; rewrite expn1.
-rewrite -lt0n => /IH [n Hn].
-case/boolP: (k==(b^n.+1).-1).
-- move/eqP=>->; exists n.+1; case/andP: Hn=>_ Hn.
-  by rewrite (ltn_predK Hn); apply/andP; split=>//; rewrite ltn_exp2l.
-move=>Hk; exists n.
-case/andP: Hn=>Hn1 Hn2; apply/andP; split; first by apply: leqW.
-by rewrite -ltn_predRL ltn_neqAle Hk /= -ltnS (ltn_predK Hn2).
-Qed.
-
-Lemma ex_exp2 b k : 1 < b -> 1 < k -> {n | b^n < k <= b^n.+1}.
-Proof.
-move=>Hb Hk; rewrite -ltn_predRL in Hk.
-have H0 : 0 < k by rewrite lt0n; apply/negP=>/eqP; move: Hk=>/[swap]->.
-case: (ex_exp Hb Hk)=>// n /andP [H1 H2].
-exists n; apply/andP; split.
-- by apply: (leq_ltn_trans H1); rewrite ltn_predL.
-by rewrite -ltnS -(prednK H0).
-Qed.
-
 End Arith.
 
 Section Size.
 
-Lemma size1 {A} (xs : seq A) : size xs = 1 -> {x : A | xs = [::x]}.
+Lemma size1 {A} (xs : seq A) : size xs = 1 -> exists x, xs = [::x].
 Proof. by case: xs=>// x; case=>//= _; exists x. Qed.
 
-Lemma size2 {A} (xs : seq A) :
-  1 < size xs -> {x : A & {y : A & {ys : seq A & xs = [:: x, y & ys]}}}.
+Lemma size2 {A} (xs : seq A) : 1 < size xs -> exists x y ys, xs = [:: x, y & ys].
 Proof. by case: xs=>// x; case=>//= y ys _; exists x,y,ys. Qed.
 
 End Size.
@@ -182,6 +157,12 @@ Section DivUp.
 
 Definition div_up p q := (p %/ q) + ~~ (q %| p).
 
+Lemma div_up0 d : div_up 0 d = 0%N.
+Proof. by rewrite /div_up div0n dvdn0. Qed.
+
+Lemma div_up_0 n : div_up n 0 = (n != 0).
+Proof. by rewrite /div_up divn0 dvd0n. Qed.
+
 Lemma div_up_gt0 p q : 0 < q -> 0 < p -> 0 < div_up p q.
 Proof.
 move=>Hq Hp; rewrite /div_up.
@@ -206,12 +187,39 @@ move: (leq0n q); rewrite leq_eqVlt=>/orP; case.
 by move=>Hq; case: p=>//=p _; apply: div_upS.
 Qed.
 
+Lemma div_up_divDP p q : 0 < q -> div_up p q = (p + q.-1) %/ q.
+Proof.
+move=>Hq.
+move: (leq0n p); rewrite leq_eqVlt=>/orP; case.
+- rewrite eq_sym =>/eqP ->.
+  by rewrite div_up0 add0n divn_small // ltn_predL.
+case: p=>// p _; rewrite div_upS //.
+rewrite -(addn1 p) -subn1 -addnA addnBA // (addnC 1) addnK.
+by rewrite divnD // divnn modnn Hq addn1 addn0 leqNgt ltn_pmod //= addn0.
+Qed.
+
 Lemma div_up_lt n m : 1 < m -> 1 < n -> div_up n m < n.
 Proof.
 move=>Hm; have H0: 0 < m by apply/ltn_trans/Hm.
 case: n=>// n; rewrite ltnS=>Hn.
 rewrite div_upS // ltnS.
 by apply: ltn_Pdiv.
+Qed.
+
+Lemma leq_div_up2r d m n : m <= n -> div_up m d <= div_up n d.
+Proof.
+have [->|d_gt0 le_mn] := posnP d.
+- rewrite !div_up_0.
+  by case: m=>//= m; case: n.
+rewrite !div_up_divDP //; apply: leq_div2r.
+by rewrite leq_add2r.
+Qed.
+
+Lemma leq_div_up n d : div_up n d * d <= n + d.
+Proof.
+rewrite /div_up mulnDl; apply: leq_add.
+- by apply: leq_trunc_div.
+by case: (d %| n)=>//=; rewrite mul1n.
 Qed.
 
 End DivUp.
