@@ -153,73 +153,108 @@ Qed.
 
 End Log2.
 
-Section DivUp.
+Section UpDiv.
 
-Definition div_up p q := (p %/ q) + ~~ (q %| p).
+Definition up_div p q := (p %/ q) + ~~ (q %| p).
 
-Lemma div_up0 d : div_up 0 d = 0%N.
-Proof. by rewrite /div_up div0n dvdn0. Qed.
+Lemma up_div0n d : up_div 0 d = 0.
+Proof. by rewrite /up_div div0n dvdn0. Qed.
 
-Lemma div_up_0 n : div_up n 0 = (n != 0).
-Proof. by rewrite /div_up divn0 dvd0n. Qed.
+Lemma up_divn0 n : up_div n 0 = (n != 0).
+Proof. by rewrite /up_div divn0 dvd0n. Qed.
 
-Lemma div_up_gt0 p q : 0 < q -> 0 < p -> 0 < div_up p q.
+Lemma up_div1n d : up_div 1 d = 1.
+Proof. by rewrite /up_div dvdn1; case: d=>//; case. Qed.
+
+Lemma up_divn1 n : up_div n 1 = n.
+Proof. by rewrite /up_div divn1 dvd1n addn0. Qed.
+
+Lemma up_div_gt0 p q : 0 < p -> 0 < up_div p q.
 Proof.
-move=>Hq Hp; rewrite /div_up.
+move=>Hp; rewrite /up_div.
 case/boolP: (p < q)%N => Hpq.
 - by rewrite divn_small // gtnNdvd.
 rewrite -leqNgt in Hpq.
+have [->|Hq] := posnP q.
+- by rewrite divn0 dvd0n -lt0n Hp.
 apply: (ltn_leq_trans (y := p %/ q)); last by apply: leq_addr.
 by rewrite divn_gt0.
 Qed.
 
-Lemma div_upS p q : 0 < q -> div_up p.+1 q = (p %/ q).+1.
+Lemma up_divS p q : up_div p.+1 q = (p %/ q).+1.
 Proof.
-move=>Hq.
-rewrite /div_up divnS // addnAC -[in RHS]addn1 [in RHS]addnC.
+have [->|Hq] := posnP q.
+- by rewrite up_divn0 divn0.
+rewrite /up_div divnS // addnAC -[in RHS]addn1 [in RHS]addnC.
 by case: (q %| p.+1)%N.
 Qed.
 
-Lemma div_up_div p q : 0 < p -> div_up p q = (p.-1 %/ q).+1.
+Corollary up_div_div p q : 0 < p -> up_div p q = (p.-1 %/ q).+1.
+Proof. by case: p=>//=p _; apply: up_divS. Qed.
+
+Corollary div_pred_up_div p q : p.-1 %/ q = (up_div p q).-1.
 Proof.
-move: (leq0n q); rewrite leq_eqVlt=>/orP; case.
-- by rewrite eq_sym lt0n =>/eqP ->; rewrite /div_up !divn0 /= =>->.
-by move=>Hq; case: p=>//=p _; apply: div_upS.
+case: p=>/=; first by rewrite div0n up_div0n.
+by move=>n; rewrite up_divS.
 Qed.
 
-Lemma div_up_divDP p q : 0 < q -> div_up p q = (p + q.-1) %/ q.
+Lemma up_div_divDP p q : 0 < q -> up_div p q = (p + q.-1) %/ q.
 Proof.
-move=>Hq.
-move: (leq0n p); rewrite leq_eqVlt=>/orP; case.
-- rewrite eq_sym =>/eqP ->.
-  by rewrite div_up0 add0n divn_small // ltn_predL.
-case: p=>// p _; rewrite div_upS //.
+move=>Hq; have [->|] := posnP p.
+- by rewrite up_div0n add0n divn_small // ltn_predL.
+case: p=>// p _; rewrite up_divS //.
 rewrite -(addn1 p) -subn1 -addnA addnBA // (addnC 1) addnK.
 by rewrite divnD // divnn modnn Hq addn1 addn0 leqNgt ltn_pmod //= addn0.
 Qed.
 
-Lemma div_up_lt n m : 1 < m -> 1 < n -> div_up n m < n.
+Lemma up_div_lt n m : 1 < m -> 1 < n -> up_div n m < n.
 Proof.
 move=>Hm; have H0: 0 < m by apply/ltn_trans/Hm.
 case: n=>// n; rewrite ltnS=>Hn.
-rewrite div_upS // ltnS.
+rewrite up_divS // ltnS.
 by apply: ltn_Pdiv.
 Qed.
 
-Lemma leq_div_up2r d m n : m <= n -> div_up m d <= div_up n d.
+Lemma leq_up_div2r d m n : m <= n -> up_div m d <= up_div n d.
 Proof.
-have [->|d_gt0 le_mn] := posnP d.
-- rewrite !div_up_0.
+have [->|Hd Hmn] := posnP d.
+- rewrite !up_divn0.
   by case: m=>//= m; case: n.
-rewrite !div_up_divDP //; apply: leq_div2r.
+rewrite !up_div_divDP //; apply: leq_div2r.
 by rewrite leq_add2r.
 Qed.
 
-Lemma leq_div_up n d : div_up n d * d <= n + d.
+Lemma leq_up_div n d : up_div n d * d <= n + d.
 Proof.
-rewrite /div_up mulnDl; apply: leq_add.
+rewrite /up_div mulnDl; apply: leq_add.
 - by apply: leq_trunc_div.
 by case: (d %| n)=>//=; rewrite mul1n.
 Qed.
 
-End DivUp.
+Lemma up_divnMl p m d : 0 < p -> up_div (p * m) (p * d) = up_div m d.
+Proof. by move=>Hp; rewrite /up_div divnMl // dvdn_pmul2l. Qed.
+
+Lemma up_divMA m n p : up_div (up_div m n) p = up_div m (n * p).
+Proof.
+have [->|Hp] := posnP p.
+- rewrite muln0 !up_divn0; case: m=>/= [|m].
+  - by rewrite up_div0n.
+  by rewrite up_divS.
+case: n=>[|n].
+- rewrite up_divn0; case: m=>//= [|_].
+  - by rewrite up_div0n.
+  by rewrite up_div1n.
+rewrite !up_div_divDP //=; last by rewrite muln_gt0.
+rewrite divnMA; congr (_ %/ p).
+rewrite !divnD // (divn_small (ltnSn n)) addn0 -!addnA; apply/eqP.
+rewrite eqn_add2l divn_pred dvdn_mulr //= mulKn //.
+rewrite subn1 addnC eqn_add2l.
+case: n=>[|n]; first by rewrite mul1n !modn1.
+rewrite modn_pred //=; last by rewrite muln_gt0.
+by rewrite dvdn_mulr // (modn_small (ltnSn n.+1)).
+Qed.
+
+Lemma up_div_uphalf n : up_div n 2 = uphalf n.
+Proof. by case: n=>//= n; rewrite up_divS // divn2. Qed.
+
+End UpDiv.

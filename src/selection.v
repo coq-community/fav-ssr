@@ -145,8 +145,8 @@ Variable x0 : int.
 
 Lemma select_uniq k i (xs : seq int) :
   (k < size xs)%N -> (i < size xs)%N -> uniq xs ->
-  { z | let xs' := set_nth x0 xs i z in
-        uniq xs' /\ select x0 k xs' != select x0 k xs }.
+  exists z, let xs' := set_nth x0 xs i z in
+    uniq xs' /\ select x0 k xs' != select x0 k xs.
 Proof.
 Admitted.
 
@@ -244,10 +244,39 @@ rewrite -{1}(prednK Hs) -addn1 -addnBAC; last by apply: half_le.
 by rewrite half_subn addn1.
 Qed.
 
+(* TODO use reshape instead? *)
 Equations chop (n : nat) xs : seq (seq T) :=
 chop 0 _    => [::];
 chop _ [::] => [::];
 chop n xs   => take n xs :: chop n (drop n xs).
+
+Lemma chop_nil n : chop n [::] = [::].
+Proof. by case: n. Qed.
+
+Lemma chop1 n xs ys : (0 < n)%N -> size xs = n -> chop n (xs ++ ys) = xs :: chop n ys.
+Proof.
+case: n=>// n _.
+case: xs=>//= h t /eqP; rewrite eqSS=>/eqP Hn.
+by simp chop=>/=; rewrite take_cat drop_cat Hn ltnn subnn take0 drop0 cats0.
+Qed.
+
+Lemma chop_cat n k xs ys :
+  (0 < n)%N ->
+  size xs = n * k -> chop n (xs++ys) = chop n xs ++ chop n ys.
+Proof.
+move=>Hn; elim: k xs.
+- move=>xs.
+  rewrite muln0=>/size0nil->/=.
+  by simp chop; rewrite chop_nil.
+move=>k IH xs Hx.
+rewrite -(cat_take_drop n xs) -catA.
+have Ht : size (take n xs) = n.
+- rewrite size_take Hx.
+  case: {IH Hx}k; first by rewrite muln1 ltnn.
+  by move=>k; rewrite -(addn1 k.+1) mulnDr muln1 -{1}(add0n n) ltn_add2r muln_gt0 Hn.
+rewrite chop1 // [in RHS]chop1 // (IH (drop n xs)) //.
+by rewrite size_drop Hx -addn1 mulnDr muln1 -addnBA // subnn addn0.
+Qed.
 
 Lemma chop_ge_length_eq n xs :
   (0 < size xs <= n)%N -> chop n xs = [::xs].
@@ -255,6 +284,14 @@ Proof.
 case: xs=>//=x xs; case: n=>//= n.
 rewrite ltnS=>Hk; simp chop=>/=.
 by rewrite take_oversize // drop_oversize.
+Qed.
+
+Lemma chop_flattenK n (xs : seq (seq T)) :
+  (0 < n)%N -> (forall x, x \in xs -> size x = n) -> chop n (flatten xs) = xs.
+Proof.
+move=>Hn; elim: xs=>/=; first by rewrite chop_nil.
+move=>xs xxs IH H; rewrite chop1 //; last by apply: H; rewrite inE eq_refl.
+by rewrite IH // =>x Hx; apply: H; rewrite inE Hx orbT.
 Qed.
 
 Lemma chop_flatten_eq n xs :
@@ -284,15 +321,15 @@ by apply/leq_trans/H2/count_size.
 Qed.
 
 Lemma chop_size n xs :
-  0 < n -> size (chop n xs) = div_up (size xs) n.
+  0 < n -> size (chop n xs) = up_div (size xs) n.
 Proof.
 funelim (chop n xs)=>// /H /= {H}IH.
 case/boolP: (n <= size l)%N; last first.
 - rewrite -ltnNge=>Hk; move: (ltn_trans Hk (ltnSn n))=>{}Hk.
-  by rewrite chop_ge_length_eq //= div_upS // divn_small.
+  by rewrite chop_ge_length_eq //= up_divS divn_small.
 simp chop=>/= Hk; have ->: (size l).+1 = n.+1 + size (drop n l).
 - by rewrite -{1}(cat_take_drop n l) size_cat size_takel.
-rewrite IH addSn div_upS //; congr S.
+rewrite IH addSn up_divS; congr S.
 rewrite divnD // divn_small // modn_small // add0n.
 by rewrite -{3}[in RHS](addn0 n) ltn_add2l lt0n.
 Qed.
@@ -305,7 +342,7 @@ Proof.
 move=>Hn; rewrite /mom.
 suff: {subset [seq median x0 i | i <- chop 5 xs] <= xs}.
 - apply; apply: median_mem.
-  by rewrite size_map chop_size //; apply: div_up_gt0.
+  by rewrite size_map chop_size //; apply: up_div_gt0.
 move=>_ /mapP /= [s Hs ->].
 have H5 : 0 < 5 by [].
 case/andP: (chop_mem_size H5 Hs)=>Hs' _.
@@ -332,12 +369,12 @@ by rewrite -leNgt lt_neqAle eq_sym andbA.
 Qed.
 
 Lemma chop_ltgt_bound xs : (0 < size xs)%N ->
-  ((size (chop_lt xs) <= (div_up (size xs) 5).-1./2) &&
-  (size (chop_gt xs) <= uphalf (div_up (size xs) 5).-1))%N.
+  ((size (chop_lt xs) <= (up_div (size xs) 5).-1./2) &&
+  (size (chop_gt xs) <= uphalf (up_div (size xs) 5).-1))%N.
 Proof.
 move=>Hs; rewrite -chop_size // !size_filter /mom.
 have : (0 < size (chop 5 xs))%N.
-- by rewrite chop_size //; apply: div_up_gt0.
+- by rewrite chop_size //; apply: up_div_gt0.
 move: (median_bound (xs:=map (median x0) (chop 5 xs))).
 by rewrite size_map=>/[apply]/andP []; rewrite !count_map=>->->.
 Qed.
@@ -370,13 +407,13 @@ apply: uphalf_leq; rewrite -(leq_add2r 1) !addn1 /=.
 by apply/leq_trans/H2; rewrite ltn_predL.
 Qed.
 
-Lemma div_up71 n : (0 < n)%N ->
-  (3 * ((div_up n 5).-1)./2 + 2 * div_up n 5 <= div_up (7 * n) 10 + 1)%N.
+Lemma up_div71 n : (0 < n)%N ->
+  (3 * ((up_div n 5).-1)./2 + 2 * up_div n 5 <= up_div (7 * n) 10 + 1)%N.
 Proof.
 move=>Hn.
-rewrite div_up_div //=; case: n Hn=>//= n _.
+rewrite up_div_div //=; case: n Hn=>//= n _.
 rewrite -(addn1 n) -(addn1 (n %/ 5)) !mulnDr !muln1 addnA.
-rewrite div_up_div; last by apply/ltn_leq_trans/leq_addl.
+rewrite up_div_div; last by apply/ltn_leq_trans/leq_addl.
 rewrite -[X in (_ <= X + 1)%N]addn1 -[X in (_ <= X)%N]addnA leq_add2r.
 rewrite -subn1 -addnBA // (_ : 7 - 1 = 6) //.
 rewrite divnD // (divn_small (isT : 6 < 10)) (modn_small (isT : 6 < 10)) addn0.
@@ -389,13 +426,13 @@ rewrite (_ : 5 * 2 = 10) // addnA mulnAC -mulnDl (_ : 3+2*2 = 7) // -4!addnA.
 by rewrite {u}leq_add2l; case: v Hv=>//=; case.
 Qed.
 
-Lemma div_up73 n : (0 < n)%N ->
-  (3 * uphalf (div_up n 5).-1 + 2 * div_up n 5 <= div_up (7 * n) 10 + 3)%N.
+Lemma up_div73 n : (0 < n)%N ->
+  (3 * uphalf (up_div n 5).-1 + 2 * up_div n 5 <= up_div (7 * n) 10 + 3)%N.
 Proof.
 move=>Hn.
-rewrite uphalf_half div_up_div //=; case: n Hn=>//= n _.
+rewrite uphalf_half up_div_div //=; case: n Hn=>//= n _.
 rewrite -(addn1 n) -(addn1 (n %/ 5)) !mulnDr !muln1 addnA.
-rewrite div_up_div; last by apply/ltn_leq_trans/leq_addl.
+rewrite up_div_div; last by apply/ltn_leq_trans/leq_addl.
 rewrite -[X in (_ <= X + 3)%N]addn1 -[X in (_ <= X)%N]addnA.
 rewrite (_ : 1 + 3 = 2 + 2) // addnA leq_add2r.
 rewrite -subn1 -addnBA // (_ : 7 - 1 = 6) //.
@@ -412,8 +449,8 @@ by rewrite !addnA [X in (_ <= X)%N]addnC.
 Qed.
 
 Lemma mom_pivot_bound xs :
-  (count (< mom xs) xs <= div_up (7*size xs) 10 + 1) &&
-  (count (> mom xs) xs <= div_up (7*size xs) 10 + 3).
+  (count (< mom xs) xs <= up_div (7*size xs) 10 + 1) &&
+  (count (> mom xs) xs <= up_div (7*size xs) 10 + 3).
 Proof.
 case/boolP: (size xs == 0); first by move/eqP/size0nil=>->.
 rewrite -lt0n =>/[dup] Hs /chop_ltgt_bound/andP [L1 L2].
@@ -423,7 +460,7 @@ have H2 := perm_map (count (> mom xs)) Hc; rewrite catA in H2.
 rewrite {2 5}(chop_flatten_eq xs (isT : 0 < 5)) !count_flatten !sumnE.
 rewrite {H1}(perm_big _ H1) {H2}(perm_big _ H2); rewrite perm_sym in Hc.
 apply/andP; split; rewrite map_cat big_cat /= !big_map.
-- apply/leq_trans/div_up71=>//.
+- apply/leq_trans/up_div71=>//.
   apply: (leq_trans (n:=5*size (chop_lt xs) + 2*size (chop_eq xs ++ chop_gt xs))).
   - apply: leq_add;
     rewrite -iter_addn_0 -count_predT -big_const_seq
@@ -433,7 +470,7 @@ apply/andP; split; rewrite map_cat big_cat /= !big_map.
   rewrite {1}(_ : 5 = 3 + 2) // mulnDl -addnA -mulnDr size_cat addnA.
   rewrite -!size_cat -catA; rewrite (perm_size Hc) chop_size //.
   by rewrite leq_add2r leq_pmul2l.
-apply/leq_trans/div_up73=>//.
+apply/leq_trans/up_div73=>//.
 apply: (leq_trans (n:=2*size (chop_lt xs ++ chop_eq xs) + 5*size (chop_gt xs))).
 - apply: leq_add;
   rewrite -iter_addn_0 -count_predT -big_const_seq
@@ -458,7 +495,7 @@ Inductive mom_select_grph : nat -> seq T -> T -> Prop :=
 | mom_select_gt k xs : size xs <= 20 -> mom_select_grph k xs (select x0 k xs)
 | mom_select_le_1 k xs M ls es gs res:
     size xs > 20 ->
-    mom_select_grph ((div_up (size xs) 5).-1./2)
+    mom_select_grph ((up_div (size xs) 5).-1./2)
                      (map (median x0) (chop 5 xs))
                      M ->
     (ls, es, gs) = partition3 M xs ->
@@ -467,7 +504,7 @@ Inductive mom_select_grph : nat -> seq T -> T -> Prop :=
     mom_select_grph k xs res
 | mom_select_le_2 k xs M ls es gs :
     size xs > 20 ->
-    mom_select_grph ((div_up (size xs) 5).-1./2)
+    mom_select_grph ((up_div (size xs) 5).-1./2)
                      (map (median x0) (chop 5 xs))
                      M ->
     (ls, es, gs) = partition3 M xs ->
@@ -475,7 +512,7 @@ Inductive mom_select_grph : nat -> seq T -> T -> Prop :=
     mom_select_grph k xs M
 | mom_select_le_3 k xs M ls es gs res :
     size xs > 20 ->
-    mom_select_grph ((div_up (size xs) 5).-1./2)
+    mom_select_grph ((up_div (size xs) 5).-1./2)
                      (map (median x0) (chop 5 xs))
                      M ->
     (ls, es, gs) = partition3 M xs ->
@@ -487,7 +524,7 @@ Lemma mom_select_spec k xs r : mom_select_grph k xs r -> r = select x0 k xs.
 Proof.
 elim=>//= {}k {}xs M ls es gs => [res||res] Hs _;
 set ms := [seq median _ i | i <- chop 5 xs];
-rewrite (_ : div_up (size xs) 5 = size ms); try by [rewrite size_map chop_size];
+rewrite (_ : up_div (size xs) 5 = size ms); try by [rewrite size_map chop_size];
 rewrite -/(median _ ms) -/(mom _ xs)=>->; case=>Hl He Hg Hk;
 rewrite (select_recurrence x0 k (mom x0 xs) xs) /= -Hl -He -Hg.
 - by move=>_ ->; rewrite Hk.
@@ -501,7 +538,7 @@ Qed.
 
 Equations? mom_select_exists k xs : {t | mom_select_grph k xs t} by wf (size xs) lt :=
 mom_select_exists k xs with inspect (20 < size xs) := {
-  | true eqn: Hn with mom_select_exists ((div_up (size xs) 5).-1./2)
+  | true eqn: Hn with mom_select_exists ((up_div (size xs) 5).-1./2)
                                          (map (median x0) (chop 5 xs)) => {
     | @exist M fM with inspect (partition3 M xs) => {
       | (ls, es, gs) eqn: eq with inspect (k < size ls) => {
@@ -520,11 +557,11 @@ Proof.
 1,2,5: apply: ssrnat.ltP.
   (* list of chopped medians is smaller than xs *)
 - rewrite size_map chop_size //.
-  by apply: div_up_lt=>//; apply/ltn_trans/Hn.
+  by apply: up_div_lt=>//; apply/ltn_trans/Hn.
   (* ls is smaller than xs *)
 - rewrite size_filter (mom_select_spec fM).
   set ms := [seq median _ i | i <- chop 5 xs].
-  rewrite (_ : div_up (size xs) 5 = size ms); last by rewrite size_map chop_size.
+  rewrite (_ : up_div (size xs) 5 = size ms); last by rewrite size_map chop_size.
   rewrite -/(median _ ms) -/(mom _ xs).
   rewrite -(count_predC (< mom x0 xs)) -{1}(addn0 (count _ xs)) ltn_add2l -has_count.
   apply/hasP; exists (mom x0 xs)=>/=; last by rewrite ltxx.
@@ -532,7 +569,7 @@ Proof.
   (* gs is smaller than xs *)
 - rewrite size_filter (mom_select_spec fM).
   set ms := [seq median _ i | i <- chop 5 xs].
-  rewrite (_ : div_up (size xs) 5 = size ms); last by rewrite size_map chop_size.
+  rewrite (_ : up_div (size xs) 5 = size ms); last by rewrite size_map chop_size.
   rewrite -/(median _ ms) -/(mom _ xs).
   rewrite -(count_predC (> mom x0 xs)) -{1}(addn0 (count _ xs)) ltn_add2l -has_count.
   apply/hasP; exists (mom x0 xs)=>/=; last by rewrite ltxx.
@@ -661,12 +698,12 @@ Proof.
 all: apply: ssrnat.ltP.
   (* xss is smaller than xs *)
 - rewrite size_map chop_size //.
-  by apply: div_up_lt=>//; apply/ltn_trans/Hn.
+  by apply: up_div_lt=>//; apply/ltn_trans/Hn.
   (* ls is smaller than xs *)
 - rewrite size_filter mom_select_correct.
   set ms := [seq median _ i | i <- chop 5 xs].
   rewrite (_ : (size xs + 4) %/ 5 = size ms); last first.
-  - by rewrite size_map chop_size // div_up_divDP.
+  - by rewrite size_map chop_size // up_div_divDP.
   rewrite -/(median _ ms) -/(mom _ xs).
   rewrite -(count_predC (< mom x0 xs)) -{1}(addn0 (count _ xs)) ltn_add2l -has_count.
   apply/hasP; exists (mom x0 xs)=>/=; last by rewrite ltxx.
@@ -675,7 +712,7 @@ all: apply: ssrnat.ltP.
 rewrite size_filter mom_select_correct.
 set ms := [seq median _ i | i <- chop 5 xs].
 rewrite (_ : (size xs + 4) %/ 5 = size ms); last first.
-- by rewrite size_map chop_size // div_up_divDP.
+- by rewrite size_map chop_size // up_div_divDP.
 rewrite -/(median _ ms) -/(mom _ xs).
 rewrite -(count_predC (> mom x0 xs)) -{1}(addn0 (count _ xs)) ltn_add2l -has_count.
 apply/hasP; exists (mom x0 xs)=>/=; last by rewrite ltxx.
@@ -687,17 +724,17 @@ Defined.
   *)
 Equations? T_mom_select_upper (n : nat) : nat by wf n lt :=
 T_mom_select_upper n with inspect (20 < n)%N => {
-  | true eqn: H => T_mom_select_upper (div_up n 5) +
-                   T_mom_select_upper (div_up (7*n) 10 + 3) + 16*n + 51
+  | true eqn: H => T_mom_select_upper (up_div n 5) +
+                   T_mom_select_upper (up_div (7*n) 10 + 3) + 16*n + 51
   | false eqn: H => 463
 }.
 Proof.
 all: apply: ssrnat.ltP.
-- by apply: div_up_lt=>//; apply/ltn_trans/H.
+- by apply: up_div_lt=>//; apply/ltn_trans/H.
 have {H}Hn : n = n-21+21 by rewrite addnBAC // addnK.
 rewrite {}Hn; set m := n-21.
 rewrite {2}(_ : 21 = 18+3) // mulnDr addnA ltn_add2r.
-rewrite (_ : 7*21 = 146+1) // addnA addn1 div_upS //.
+rewrite (_ : 7*21 = 146+1) // addnA addn1 up_divS.
 rewrite divnD // (_ : 146%/10 = 14) // (_ : 146%%10 = 6) //.
 rewrite {3}(_ : 9 = 3+6) // ltn_add2r addnAC -[X in (X < _)%N]addn1.
 rewrite -addnA (_ : 14+1 = 15) // (_ : 18 = 3+15) // addnA ltn_add2r.
@@ -716,12 +753,12 @@ funelim (T_mom_select_upper n); funelim (T_mom_select_upper m)=>//; first 1 last
 - move/negbT: {H0}H; rewrite -leqNgt=>H.
   by move: (leq_ltn_trans H H1); rewrite ltnNge Hnm.
 - rewrite -2!addnA; apply/ltn_leq_trans/leq_addr.
-  by apply: (H0 0 _ _ (div_up n 5)).
+  by apply: (H0 0 _ _ (up_div n 5)).
 rewrite leq_add2r; apply: leq_add; last by rewrite leq_pmul2l.
 apply: leq_add.
-- by apply/H4/leq_div_up2r.
+- by apply/H4/leq_up_div2r.
 apply/H5; rewrite leq_add2r.
-by apply: leq_div_up2r; rewrite leq_pmul2l.
+by apply: leq_up_div2r; rewrite leq_pmul2l.
 Qed.
 
 Lemma T_mom_select_bound k xs :
@@ -732,10 +769,8 @@ apply_funelim (T_mom_select k xs).
   funelim (T_mom_select_upper (size xs)); first by rewrite H in Hn.
   apply: leq_trans; first by exact: T_slow_select_leq.
   move/negbT: Hn; rewrite -ltnNge ltnS => Hn.
-  rewrite (_ : 463 = 460+3) // leq_add2r (_ : 460=400+60) //.
-  apply: leq_add.
-  - by rewrite (_ : 400 = 20^2) // leq_sqr.
-  by rewrite (_ : 60 = 3*20) // leq_pmul2l.
+  rewrite (_ : 463 = 460+3) // leq_add2r (_ : 460 = 20^2+3*20) //.
+  by apply: leq_add; [rewrite leq_sqr | rewrite leq_pmul2l].
 move=>{}k {}xs idx Hi xss ms ls es gs H2 Hm Hx Hn Hi1 Hi2 Hi3 _ _ _ _ _.
 funelim (T_mom_select_upper (size xs)); last by rewrite H in Hn.
 clear H H0 H1 H2.
@@ -754,7 +789,7 @@ apply: leq_add; first by exact: T_chop_leq.
 rewrite T_partition3_eq !addnA; apply: leq_add; last first.
 - have /andP [Hl Hg] := (mom_pivot_bound x0 xs).
   have Hms : (size xs + 4) %/ 5 = size ms.
-  - by rewrite size_map chop_size // div_up_divDP.
+  - by rewrite size_map chop_size // up_div_divDP.
   case: ifP=>Hk.
   - apply/(leq_trans Hi2)/T_mom_select_upper_mono.
     rewrite size_filter mom_select_correct /idx Hms
@@ -764,14 +799,14 @@ rewrite T_partition3_eq !addnA; apply: leq_add; last first.
   apply/(leq_trans Hi3)/T_mom_select_upper_mono.
   by rewrite size_filter mom_select_correct /idx Hms.
 rewrite T_mapfilter_size chop_size // -5!addnA.
-have Hs: (\sum_(x <- xss) T_slow_median x <= 44 * div_up (size xs) 5)%N.
+have Hs: (\sum_(x <- xss) T_slow_median x <= 44 * up_div (size xs) 5)%N.
 - rewrite -chop_size // -/xss -sumn_nseq sumnE big_nseq -count_predT -big_const_seq /=.
   rewrite !big_seq; apply: leq_sum=>/= i Hi.
   case/andP: (chop_mem_size (isT : 0 < 5) Hi)=>Hs1 Hs2.
   apply: leq_trans; first by exact: T_slow_median_leq.
   rewrite (_ : 44 = 40+4) // leq_add2r (_ : 40 = 5^2+3*5) //.
   by apply: leq_add; [rewrite leq_exp2r | rewrite leq_pmul2l].
-apply: (leq_trans (n:=45*div_up (size xs) 5 + 2*size xs + 5)).
+apply: (leq_trans (n:=45*up_div (size xs) 5 + 2*size xs + 5)).
 - rewrite -[X in (_ <= X)%N]addnA; apply: leq_add.
   - by rewrite (_ : 45 = 44+1) // mulnDl mul1n leq_add2r.
   rewrite addnC mul2n -addnn -!addnA (_ : 3+1 = 4) // leq_add2l.
@@ -784,10 +819,28 @@ apply: (leq_trans (n:=45*div_up (size xs) 5 + 2*size xs + 5)).
 rewrite (_ : 50 = 45+5) // addnA leq_add2r [X in (_ <= X)%N]addnC.
 rewrite {3}(_ : 11 = 9+2) // mulnDl addnA leq_add2r.
 rewrite (_ : 45=9*5) // mulnAC -mulnA; apply: (leq_trans (n:=9 * (size xs + 5))).
-- rewrite leq_pmul2l //; apply: leq_div_up.
+- rewrite leq_pmul2l //; apply: leq_up_div.
 by rewrite mulnDr addnC.
 Qed.
 
 (* Exercise 3.7 *)
 
+Definition f (n : nat) : seq nat := [::]. (* FIXME *)
+
+Lemma f_increasing n : (size (f n) < size (f n.+1))%N.
+Proof.
+Admitted.
+
+Lemma f_property n : (10 * count (> mom 0%N (f n)) (f n) > 7 * size (f n))%N.
+Proof.
+Admitted.
+
 End TimeFunctions.
+
+Section AkraBazziLight.
+
+(* TODO *)
+
+(* Exercise 3.8 *)
+
+End AkraBazziLight.
