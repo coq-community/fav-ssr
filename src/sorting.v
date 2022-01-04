@@ -120,10 +120,7 @@ Equations? quicksort xs : seq T by wf (size xs) lt :=
 quicksort [::]    => [::];
 quicksort (x::xs) => quicksort (filter (< x) xs) ++ [:: x] ++
                      quicksort (filter (>= x) xs).
-Proof.
-- by rewrite size_filter /=; apply/ssrnat.ltP/count_size.
-by rewrite size_filter /=; apply/ssrnat.ltP/count_size.
-Qed.
+Proof. all: by rewrite size_filter /=; apply/ssrnat.ltP/count_size. Qed.
 
 (* Functional Correctness *)
 
@@ -175,8 +172,7 @@ quicksort3 (x::xs) with inspect (partition3 x xs) => {
   | (ls, es, gs) eqn: eq => quicksort3 ls ++ x :: es ++ quicksort3 gs
 }.
 Proof.
-- by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
-by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
+all: by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
 Qed.
 
 (* this is the main part *)
@@ -208,8 +204,7 @@ T_quicksort (x::xs) => T_quicksort (filter (< x) xs) +
                        T_quicksort (filter (>= x) xs) +
                        2 * T_mapfilter (fun => 1%N) xs + 1.
 Proof.
-- by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
-by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
+all: by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
 Qed.
 
 (* FIXME replace these with concrete numbers *)
@@ -242,8 +237,9 @@ msort xs    => let n := size xs in
                merge <=%O (msort (take n./2 xs))
                           (msort (drop n./2 xs)).
 Proof.
-- by apply/ssrnat.ltP; rewrite size_take /= !ltnS !half_le.
-by apply/ssrnat.ltP; rewrite size_drop /= /leq subSS subnAC subnn.
+all: apply/ssrnat.ltP.
+- by rewrite size_take /= !ltnS !half_le.
+by rewrite size_drop /= /leq subSS subnAC subnn.
 Qed.
 
 (* Functional Correctness *)
@@ -277,8 +273,9 @@ C_msort xs    => let n := (size xs) in
                  let zs := drop n./2 xs in
                  C_msort ys + C_msort zs + C_merge (msort ys) (msort zs).
 Proof.
-- by apply/ssrnat.ltP; rewrite size_take /= !ltnS !half_le.
-by apply/ssrnat.ltP; rewrite size_drop /= /leq subSS subnAC subnn.
+all: apply/ssrnat.ltP.
+- by rewrite size_take /= !ltnS !half_le.
+by rewrite size_drop /= /leq subSS subnAC subnn.
 Qed.
 
 Lemma C_merge_leq xs ys : (C_merge xs ys <= size xs + size ys)%N.
@@ -322,9 +319,10 @@ msort2 xs with inspect (halve xs [::] [::]) := {
   | (ys1, ys2) eqn: eq => merge <=%O (msort2 ys1) (msort2 ys2)
 }.
 Proof.
+all: apply/ssrnat.ltP.
 (* FIXME *)
-- by apply/ssrnat.ltP.
-by apply/ssrnat.ltP.
+- by [].
+by [].
 Qed.
 
 Lemma perm_msort2 xs : perm_eq (msort2 xs) xs.
