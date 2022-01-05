@@ -130,6 +130,8 @@ End EqTree.
 Section CompleteTrees.
 Context {A : Type}.
 
+(* aka perfect *)
+
 Fixpoint complete (t : tree A) : bool :=
   if t is Node l x r
     then [&& height l == height r, complete l & complete r]
@@ -220,4 +222,25 @@ Qed.
 
 (* Exercise 4.2 *)
 
+Fixpoint mcs (t : tree A) : tree A := t. (* FIXME *)
+
+Lemma complete_mcs t : complete (mcs t).
+Proof.
+Admitted.
+
 End CompleteTrees.
+
+Section CompleteTreesEq.
+Context {T : eqType}.
+
+Lemma subtree_mcs (t : tree T) : mcs t \in subtrees t.
+Proof.
+Admitted.
+
+Lemma mcs_maximal (t u : tree T) :
+  u \in subtrees t -> complete u ->
+  height u <= height (mcs t).
+Proof.
+Admitted.
+
+End CompleteTreesEq.
