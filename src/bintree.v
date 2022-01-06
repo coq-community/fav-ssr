@@ -1,5 +1,7 @@
+From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import eqtype ssrnat seq.
+From mathcomp Require Import eqtype ssrnat seq prime.
+From favssr Require Import prelude.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -244,3 +246,84 @@ Proof.
 Admitted.
 
 End CompleteTreesEq.
+
+Section AlmostCompleteTrees.
+Context {A : Type}.
+
+Definition acomplete (t : tree A) : bool :=
+  height t - min_height t <= 1.
+
+Lemma acomplete_h1 t :
+  acomplete t -> ~~ complete t ->
+  height t = (min_height t).+1.
+Proof.
+rewrite /acomplete leq_eqVlt; case/orP.
+- rewrite -(eqn_add2r (min_height t)) addnBAC; last by exact: mh_leq.
+  by rewrite addnK add1n=>/eqP ->.
+rewrite ltnS leqn0 subn_eq0=>E.
+suff : min_height t == height t by move/complete_mh_h=>->.
+by rewrite eqn_leq E mh_leq.
+Qed.
+
+Lemma acomplete_minimal (s t : tree A) :
+  acomplete s -> size_tree s <= size_tree t ->
+  height s <= height t.
+Proof.
+case/boolP: (complete s).
+- move/completeE=>H _ S; rewrite -(leq_exp2l (m:=2)) // -H.
+  apply/leq_trans/(exp_h_geq t).
+  by rewrite !size1_size leq_add2r.
+move=>/[dup] H /[swap] /acomplete_h1 /[apply] -> S.
+rewrite -(ltn_exp2l (m:=2)) //.
+apply: (leq_trans (ncomplete_mh_size1 H)).
+apply/leq_trans/(exp_h_geq t).
+by rewrite !size1_size leq_add2r.
+Qed.
+
+Lemma acomplete_h t : acomplete t -> height t = log2n (size1_tree t).
+Proof.
+case/boolP: (complete t).
+- by move/completeE=>->_; rewrite exp2nK.
+move=>/[dup] H /[swap] /acomplete_h1 /[apply] E; rewrite E; symmetry.
+apply: log2n_eq; rewrite (ncomplete_mh_size1 H) /= -E.
+by exact: exp_h_geq.
+Qed.
+
+Lemma acomplete_mh t : acomplete t -> min_height t = trunc_log 2 (size1_tree t).
+Proof.
+case/boolP: (complete t).
+- move/[dup]/complete_mh_h/eqP=>->.
+  by move/completeE =>->_; rewrite trunc_expnK.
+move=>/[dup] H /[swap] /acomplete_h1 /[apply] E; symmetry.
+apply: trunc_log_eq=>//; rewrite exp_mh_leq /=.
+by apply: (leq_trans (ncomplete_size1 H)); rewrite E.
+Qed.
+
+Variable x0 : A.
+
+Equations? bal (n : nat) (xs : seq A) : tree A * seq A by wf n lt :=
+bal n xs with inspect (n == 0) := {
+  | true eqn: Hn => (@Leaf A, xs)
+  | false eqn: Hn with inspect (n./2) := {
+    | m eqn: Hm => let '(l, ys) := bal m xs in
+                   let '(r, zs) := bal (n-1-m) (behead ys) in
+                   (Node l (head x0 ys) r, zs)
+  }
+}.
+Proof.
+all: apply: ssrnat.ltP; move/negbT: Hn; rewrite -lt0n=>Hn.
+- by apply: half_lt.
+rewrite subnAC half_subn.
+apply/leq_trans/uphalf_le.
+by rewrite subn1 ltn_predL uphalf_gt0.
+Defined.
+
+Definition bal_list n xs := (bal n xs).1.
+
+Definition balance_list xs := bal_list (size xs) xs.
+
+Definition bal_tree n t := bal_list n (inorder t).
+
+Definition balance_tree t := bal_tree (size_tree t) t.
+
+End AlmostCompleteTrees.

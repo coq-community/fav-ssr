@@ -29,6 +29,13 @@ Qed.
 Lemma uphalf_le n : uphalf n <= n.
 Proof. by case: n=>//= n; rewrite ltnS; apply: half_le. Qed.
 
+Lemma half_lt n : 0 < n -> n./2 < n.
+Proof.
+case: n=>// n _; rewrite -(addn1 n) halfD andbT addn0 -uphalf_half addn1.
+apply/leq_ltn_trans/ltnSn.
+by exact: uphalf_le.
+Qed.
+
 Lemma half_subn n : n - n./2 = uphalf n.
 Proof.
 have {1}-> : n = n./2 + uphalf n
@@ -76,9 +83,27 @@ Qed.
 
 End Sorted.
 
+Section TruncLog.
+
+(* TODO added to Mathcomp in https://github.com/math-comp/math-comp/pull/823, should be available in 1.14 *)
+
+Lemma trunc_log_eq p n k : 1 < p -> p ^ n <= k < p ^ n.+1 -> trunc_log p k = n.
+Proof.
+move=> p_gt1 /andP[npLk kLpn]; apply/anti_leq.
+rewrite trunc_log_max// andbT -ltnS -(ltn_exp2l _ _ p_gt1).
+apply: leq_ltn_trans kLpn; apply: trunc_logP => //.
+by apply: leq_trans npLk; rewrite expn_gt0 ltnW.
+Qed.
+
+Lemma trunc_expnK p n : 1 < p -> trunc_log p (p ^ n) = n.
+Proof. by move=> ?; apply: trunc_log_eq; rewrite // leqnn ltn_exp2l /=. Qed.
+
+End TruncLog.
+
 Section Log2.
 
 (* ceiling of log_2, from https://github.com/thery/mathcomp-extra/blob/master/more_thm.v *)
+(* TODO added to Mathcomp in https://github.com/math-comp/math-comp/pull/823, should be available in 1.14 *)
 Definition log2n n :=
   let v := trunc_log 2 n in if n <= 2 ^ v then v else v.+1.
 
