@@ -47,6 +47,12 @@ elim: t=>//= l -> _ r ->.
 by rewrite addnAC addnA.
 Qed.
 
+Lemma size_inorder t : size (inorder t) = size_tree t.
+Proof.
+elim: t=>//=l IHl x r IHr.
+by rewrite size_cat /= IHl IHr addnS addn1.
+Qed.
+
 Fixpoint height (t : tree A) : nat :=
   if t is Node l _ r
     then maxn (height l) (height r) + 1
@@ -289,7 +295,7 @@ apply: log2n_eq; rewrite (ncomplete_mh_size1 H) /= -E.
 by exact: exp_h_geq.
 Qed.
 
-Lemma acomplete_mh t : acomplete t -> min_height t = trunc_log 2 (size1_tree t).
+Lemma acomplete_mh t : acomplete t -> min_height t = trunc_log' 2 (size1_tree t).
 Proof.
 case/boolP: (complete t).
 - move/[dup]/complete_mh_h/eqP=>->.
@@ -304,14 +310,14 @@ Variable x0 : A.
 Equations? bal (n : nat) (xs : seq A) : tree A * seq A by wf n lt :=
 bal n xs with inspect (n == 0) := {
   | true eqn: Hn => (@Leaf A, xs)
-  | false eqn: Hn with inspect (n./2) := {
-    | m eqn: Hm => let '(l, ys) := bal m xs in
-                   let '(r, zs) := bal (n-1-m) (behead ys) in
-                   (Node l (head x0 ys) r, zs)
-  }
+  | false eqn: Hn =>
+      let m := n./2 in
+      let '(l, ys) := bal m xs in
+      let '(r, zs) := bal (n-1-m) (behead ys) in
+      (Node l (head x0 ys) r, zs)
 }.
 Proof.
-all: apply: ssrnat.ltP; move/negbT: Hn; rewrite -lt0n=>Hn.
+all: apply: ssrnat.ltP; move/negbT: Hn; rewrite /m -lt0n=>Hn.
 - by apply: half_lt.
 rewrite subnAC half_subn.
 apply/leq_trans/uphalf_le.
@@ -325,5 +331,108 @@ Definition balance_list xs := bal_list (size xs) xs.
 Definition bal_tree n t := bal_list n (inorder t).
 
 Definition balance_tree t := bal_tree (size_tree t) t.
+
+Lemma bal_prefix_suffix n xs t ss :
+  n <= size xs ->
+  bal n xs = (t, ss) ->
+  xs = inorder t ++ ss /\ size_tree t = n.
+Proof.
+elim/ltn_ind: n xs t ss; case.
+- by move=>_ ??? _; simp bal=>/=; case=><-<-.
+move=>n IH xs t ss Hn; simp bal=>/=; rewrite subn1 /=.
+set m := uphalf n.
+have Hm : m<=n by exact: uphalf_le.
+set m' := n - m.
+have Hm' : m'<=n by exact: leq_subr.
+case H1: (bal m xs)=>[l ys].
+case H2: (bal m' (behead ys))=>[r zs].
+case=>{t}<- E; rewrite {zs}E /= in H2 *.
+case: (IH m _ xs l ys)=>//.
+- by apply: (leq_trans Hm); rewrite ltnW.
+move=>E1 E2.
+have Hys: m + size ys = size xs.
+- by rewrite -E2 -size_inorder -size_cat -E1.
+have H3: 0 < size ys.
+- rewrite -(ltn_add2l m) addn0 Hys.
+  by apply/leq_ltn_trans/Hn.
+case: (IH m' _ (behead ys) r ss)=>//.
+- rewrite size_behead -ltnS prednK //.
+  by rewrite -(ltn_add2r m) addnBAC // addnK addnC Hys.
+rewrite -catA cat_cons E1 E2=><-->; split.
+- by case: {H1 H2 E1 Hys}ys H3.
+by rewrite (addnC m) addnBAC // addnK addn1.
+Qed.
+
+Corollary bal_suffix_size n xs :
+  n <= size xs -> size (bal n xs).2 = size xs - n.
+Proof.
+move=>Hn; case E: (bal n xs)=>[l ys] /=.
+case: (bal_prefix_suffix Hn E)=>-> H.
+by rewrite size_cat size_inorder H addnC addnK.
+Qed.
+
+Corollary bal_list_take n xs :
+  n <= size xs -> inorder (bal_list n xs) = take n xs.
+Proof.
+move=>Hn; rewrite /bal_list.
+case E: (bal n xs)=>[l ys] /=.
+case: (bal_prefix_suffix Hn E)=>-> H.
+by rewrite take_cat size_inorder H ltnn subnn take0 cats0.
+Qed.
+
+Corollary inorder_balance_list xs : inorder (balance_list xs) = xs.
+Proof. by rewrite /balance_list bal_list_take // take_oversize. Qed.
+
+Corollary bal_tree_take n t :
+  n <= size_tree t -> inorder (bal_tree n t) = take n (inorder t).
+Proof. by move=>Hn; rewrite /bal_tree bal_list_take // size_inorder. Qed.
+
+Corollary inorder_balance_tree t : inorder (balance_tree t) = inorder t.
+Proof. by rewrite /balance_tree bal_tree_take // take_oversize // size_inorder. Qed.
+
+Lemma bal_h_mh n xs t ss :
+  n <= size xs -> bal n xs = (t, ss) ->
+  height t = log2n n.+1 /\ min_height t = trunc_log' 2 n.+1.
+Proof.
+elim/ltn_ind: n xs t ss; case.
+- by move=>_ ??? _; simp bal=>/=; case=><-.
+move=>n IH xs t ss Hn; simp bal=>/=; rewrite subn1 /=.
+set m := uphalf n.
+have Hm : m<=n by exact: uphalf_le.
+have Hm2 : m < size xs by apply: (leq_ltn_trans Hm).
+set m' := n - m.
+have Hm' : m'<=n by exact: leq_subr.
+case H1: (bal m xs)=>[l ys].
+have Hys: size ys = size xs - m.
+- rewrite (surjective_pairing (bal m xs)) in H1.
+  by case: H1=>_<-; rewrite bal_suffix_size //; apply: ltnW.
+case H2: (bal m' (behead ys))=>[r zs].
+case=>{t}<- E; rewrite {zs}E /= in H2 *.
+case: (IH _ Hm _ _ _ _ H1)=>[|->->]; first by apply: ltnW.
+case: (IH _ Hm' _ _ _ _ H2)=>[|->->].
+- by rewrite size_behead -ltnS prednK Hys ?ltn_sub2r // subn_gt0.
+have Hmm : m' <= m.
+- rewrite /m' (half_uphalfK n) /m addnK uphalf_half.
+  by apply: leq_addl.
+rewrite -(leq_add2r 1) !addn1 in Hmm.
+rewrite /maxn /minn !ltnNge leq_log2n // leq_trunc_log //=.
+rewrite (log2nS (isT : 0 < n.+1)) (trunc_log2S (isT : 1 < n.+2)); split.
+- by rewrite -addn1 addn1.
+rewrite /m' /m {1}(half_uphalfK n) addnK.
+by rewrite -(addn2 n) halfD /= andbF /= add0n !addn1.
+Qed.
+
+Corollary bal_acomplete n xs t ss :
+  n <= size xs -> bal n xs = (t, ss) -> acomplete t.
+Proof.
+rewrite /acomplete.
+move/bal_h_mh => /[apply] [[->->]].
+have /andP [H1 H2] := trunc_up_log_ltn n.+1.
+by rewrite -(leq_add2r (trunc_log' 2 n.+1)) addnBAC // addnK addnC.
+Qed.
+
+(* Exercise 4.3 *)
+
+(* Exercise 4.4 *)
 
 End AlmostCompleteTrees.
