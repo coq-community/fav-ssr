@@ -433,6 +433,15 @@ Qed.
 
 (* Exercise 4.3 *)
 
+Fixpoint acomplete_rec (t : tree A) : bool :=
+  if t is Node l x r then
+    false (* FIXME *)
+  else true.
+
+Lemma acomplete_rec_correct t : acomplete_rec t = acomplete t.
+Proof.
+Admitted.
+
 (* Exercise 4.4 *)
 
 End AlmostCompleteTrees.

@@ -11,6 +11,13 @@ Definition inspect {A} (a : A) : {b | a = b} :=
 
 Notation "x 'eqn:' p" := (exist _ x p) (only parsing, at level 20).
 
+Lemma bool_eq_iff (a b : bool) : (a <-> b) <-> a == b.
+Proof.
+case: a; case: b=>//; split=>//.
+- by case=>/(_ isT).
+by case=>_ /(_ isT).
+Qed.
+
 Section Arith.
 
 Lemma uphalf_addn n m :
