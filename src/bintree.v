@@ -16,7 +16,7 @@ Fixpoint map_tree (f : A -> B) (t : tree A) : tree B :=
     then Node (map_tree f l) (f x) (map_tree f r)
   else @Leaf B.
 
-Fixpoint inorder (t : tree A) : seq A :=
+Fixpoint inorder {A} (t : tree A) : seq A :=
   if t is Node l x r
     then inorder l ++ [:: x] ++ inorder r
   else [::].
@@ -51,6 +51,12 @@ Lemma size_inorder t : size (inorder t) = size_tree t.
 Proof.
 elim: t=>//=l IHl x r IHr.
 by rewrite size_cat /= IHl IHr addnS addn1.
+Qed.
+
+Lemma map_inorder f t : map f (inorder t) = inorder (map_tree f t).
+Proof.
+elim: t=>//=l IHl x r IHr.
+by rewrite map_cat map_cons IHl IHr.
 Qed.
 
 Fixpoint height (t : tree A) : nat :=
@@ -444,4 +450,130 @@ Admitted.
 
 (* Exercise 4.4 *)
 
+Equations T_bal (n : nat) : nat by wf n lt :=
+T_bal n => 1.  (* FIXME *)
+
+Parameters c1 c2 : nat.
+
+Lemma T_bal_linear n : T_bal n <= c1 * n + c2.
+Proof.
+Admitted.
+
 End AlmostCompleteTrees.
+
+Section AugmentedTrees.
+
+Context {A : Type} {B : eqType}.
+
+Fixpoint inorder_a (t : tree (A * B)) : seq A :=
+  if t is Node l (x, _) r
+    then inorder_a l ++ [:: x] ++ inorder_a r
+  else [::].
+
+Definition inorder_a' (t : tree (A * B)) : seq A := map fst (inorder t).
+
+Definition inorder_a'' (t : tree (A * B)) : seq A := inorder (map_tree fst t).
+
+Lemma in_a t : inorder_a t = inorder_a' t.
+Proof.
+elim: t=>//=l -> [x y] r ->.
+by rewrite /inorder_a' map_cat map_cons.
+Qed.
+
+Lemma in_a' t : inorder_a t = inorder_a'' t.
+Proof.
+elim: t=>//=l -> [x y] r ->.
+by rewrite /inorder_a'' -!map_inorder /= map_cat map_cons.
+Qed.
+
+Definition sz (t : tree (A*nat)) : nat :=
+  if t is Node _ (_, n) _ then n else 0.
+
+Definition node_sz (l : tree (A*nat)) (a : A) (r : tree (A*nat)) : tree (A*nat) :=
+  Node l (a, sz l + sz r + 1) r.
+
+Fixpoint invar_sz (t : tree (A*nat)) : bool :=
+  if t is Node l (_, n) r then
+    [&& n == sz l + sz r + 1, invar_sz l & invar_sz r ]
+  else true.
+
+Lemma size_invar t : invar_sz t -> sz t = size_tree t.
+Proof. by elim: t=>//=l IHl [a n] r IHr /and3P [/eqP -> /IHl <- /IHr <-]. Qed.
+
+Variables (zero : B) (f : B -> A -> B -> B).
+
+Fixpoint F (t : tree (A*B)) : B :=
+  if t is Node l (a,_) r then f (F l) a (F r) else zero.
+
+Definition b_val (t : tree (A*B)) : B :=
+  if t is Node _ (_,b) _ then b else zero.
+
+Definition node_f (l : tree (A*B)) (a : A) (r : tree (A*B)) : tree (A*B) :=
+  Node l (a, f (b_val l) a (b_val r)) r.
+
+Fixpoint invar_f (t : tree (A*B)) : bool :=
+  if t is Node l (a,b) r then
+    [&& b == f (b_val l) a (b_val r), invar_f l & invar_f r ]
+  else true.
+
+Lemma F_invar t : invar_f t -> b_val t = F t.
+Proof. by elim: t=>//=l IHl [a n] r IHr /and3P [/eqP -> /IHl <- /IHr <-]. Qed.
+
+End AugmentedTrees.
+
+Section AugmentedTreesEx.
+
+Context {A : Type}.
+
+(* Exercise 4.5 *)
+
+Definition T : Type := bool * unit. (* FIXME *)
+
+Definition ch (t : tree (A*T)) : T := (true, tt).  (* FIXME *)
+
+Definition node_ch (l : tree (A*T)) (a : A) (r : tree (A*T)) : tree (A*T) :=
+  @Leaf (A*T).  (* FIXME *)
+
+Definition invar_ch (t : tree (A*T)) : bool := true. (* FIXME *)
+
+Lemma ch_invar (t : tree (A*T)) : invar_ch t -> ch t = (complete t, tt).  (* FIXME *)
+Proof.
+Admitted.
+
+Lemma ch_invar_node (l : tree (A*T)) (a : A) (r : tree (A*T)) :
+  invar_ch l -> invar_ch r -> invar_ch (node_ch l a r).
+Proof.
+Admitted.
+
+(* Exercise 4.6 *)
+
+From mathcomp Require Import order bigop.
+Import Order.TotalTheory.
+
+Context {disp : unit} {P : orderType disp}.
+Variable (x0 : P) (lmin : left_id x0 Order.max).
+
+Lemma rmin : right_id x0 Order.max.
+Proof. by move=>x; rewrite maxC lmin. Qed.
+
+Canonical max_monoid := Monoid.Law maxA lmin rmin.
+
+Definition max_seq (xs : seq P) : P :=
+  \big[Order.max/x0]_(x<-xs) x.
+
+Definition mx (t : tree (P*P)) : option P :=
+  None.  (* FIXME *)
+
+Definition node_mx (l : tree (P*P)) (a : P) (r : tree (P*P)) : tree (P*P) :=
+  @Leaf (P*P).   (* FIXME *)
+
+Fixpoint invar_mx (t : tree (P*P)) : bool :=
+  true.  (* FIXME *)
+
+Lemma max_invar t :
+  invar_mx t ->
+  mx t = if t is Leaf then None else Some (max_seq (inorder_a t)).
+Proof.
+Admitted.
+
+End AugmentedTreesEx.
