@@ -413,7 +413,7 @@ Proof.
 move=>Hn.
 rewrite up_div_div //=; case: n Hn=>//= n _.
 rewrite -(addn1 n) -(addn1 (n %/ 5)) !mulnDr !muln1 addnA.
-rewrite up_div_div; last by apply/ltn_leq_trans/leq_addl.
+rewrite up_div_div; last by apply/leq_trans/leq_addl.
 rewrite -[X in (_ <= X + 1)%N]addn1 -[X in (_ <= X)%N]addnA leq_add2r.
 rewrite -subn1 -addnBA // (_ : 7 - 1 = 6) //.
 rewrite divnD // (divn_small (isT : 6 < 10)) (modn_small (isT : 6 < 10)) addn0.
@@ -432,7 +432,7 @@ Proof.
 move=>Hn.
 rewrite uphalf_half up_div_div //=; case: n Hn=>//= n _.
 rewrite -(addn1 n) -(addn1 (n %/ 5)) !mulnDr !muln1 addnA.
-rewrite up_div_div; last by apply/ltn_leq_trans/leq_addl.
+rewrite up_div_div; last by apply/leq_trans/leq_addl.
 rewrite -[X in (_ <= X + 3)%N]addn1 -[X in (_ <= X)%N]addnA.
 rewrite (_ : 1 + 3 = 2 + 2) // addnA leq_add2r.
 rewrite -subn1 -addnBA // (_ : 7 - 1 = 6) //.
@@ -741,7 +741,7 @@ rewrite -addnA (_ : 14+1 = 15) // (_ : 18 = 3+15) // addnA ltn_add2r.
 case: (edivnP m 10)=>q r -> /= Hr.
 rewrite mulnDr mulnA divnMDl // modnMDl (mulnC _ 10).
 rewrite {3}(_ : 10 = 7+3) // mulnDl -3!addnA ltn_add2l.
-apply: (ltn_leq_trans (y:=r+3)); last by apply: leq_addl.
+apply: (leq_trans (n:=r+3)); last by apply: leq_addl.
 by do 10!(case: r Hr=>//= r Hr).
 Defined.
 
@@ -752,7 +752,7 @@ move=>Hnm.
 funelim (T_mom_select_upper n); funelim (T_mom_select_upper m)=>//; first 1 last.
 - move/negbT: {H0}H; rewrite -leqNgt=>H.
   by move: (leq_ltn_trans H H1); rewrite ltnNge Hnm.
-- rewrite -2!addnA; apply/ltn_leq_trans/leq_addr.
+- rewrite -2!addnA; apply/leq_trans/leq_addr.
   by apply: (H0 0 _ _ (up_div n 5)).
 rewrite leq_add2r; apply: leq_add; last by rewrite leq_pmul2l.
 apply: leq_add.

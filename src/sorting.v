@@ -171,9 +171,7 @@ quicksort3 [::]    => [::];
 quicksort3 (x::xs) with inspect (partition3 x xs) => {
   | (ls, es, gs) eqn: eq => quicksort3 ls ++ x :: es ++ quicksort3 gs
 }.
-Proof.
-all: by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
-Qed.
+Proof. all: by apply/ssrnat.ltP; rewrite size_filter; apply: count_size. Qed.
 
 (* this is the main part *)
 Lemma quick_filter_ge x xs :
@@ -203,9 +201,7 @@ T_quicksort [::]    => 1;
 T_quicksort (x::xs) => T_quicksort (filter (< x) xs) +
                        T_quicksort (filter (>= x) xs) +
                        2 * T_mapfilter (fun => 1%N) xs + 1.
-Proof.
-all: by apply/ssrnat.ltP; rewrite size_filter; apply: count_size.
-Qed.
+Proof. all: by apply/ssrnat.ltP; rewrite size_filter; apply: count_size. Qed.
 
 (* FIXME replace these with concrete numbers *)
 Parameters (a b c : nat).
@@ -351,9 +347,7 @@ Equations? merge_all (xss : seq (seq T)) : seq T by wf (size xss) lt :=
 merge_all [::]   => [::];
 merge_all [::xs] => xs;
 merge_all xss    => merge_all (merge_adj xss).
-Proof.
-by apply/ssrnat.ltP; rewrite size_merge_adj /= !ltnS; apply: uphalf_le.
-Qed.
+Proof. by apply/ssrnat.ltP; rewrite size_merge_adj /= !ltnS; apply: uphalf_le. Qed.
 
 Definition msort_bu xs : seq T :=
   merge_all (map (fun x => [::x]) xs).
@@ -412,9 +406,7 @@ Equations? C_merge_all (xss : seq (seq T)) : nat by wf (size xss) lt :=
 C_merge_all [::]   => 0;
 C_merge_all [::xs] => 0;
 C_merge_all xss    => C_merge_adj xss + C_merge_all (merge_adj xss).
-Proof.
-by apply/ssrnat.ltP; rewrite size_merge_adj /= !ltnS; apply: uphalf_le.
-Qed.
+Proof. by apply/ssrnat.ltP; rewrite size_merge_adj /= !ltnS; apply: uphalf_le. Qed.
 
 Definition C_msort_bu xs : nat :=
   C_merge_all (map (fun x => [::x]) xs).

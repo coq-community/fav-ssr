@@ -52,14 +52,16 @@ Proof. by rewrite {1}(half_uphalfK n) -addnBAC // subnn. Qed.
 Lemma odd2 n : odd n = odd n.+2.
 Proof. by rewrite -addn2 oddD addbF. Qed.
 
-(* is this needed? *)
-Lemma ltn_leq_trans y x z : x < y -> y <= z -> x < z.
-Proof. by move=>Hx; apply/leq_trans. Qed.
-
 Lemma leq_ltn_add m1 m2 n1 n2 : m1 <= n1 -> m2 < n2 -> m1 + m2 < n1 + n2.
 Proof.
 by move=>H1 H2; apply: (leq_ltn_trans (n:=n1 + m2)); rewrite ?ltn_add2l ?leq_add2r.
 Qed.
+
+Lemma leq_max2l m n p : m <= n -> maxn p m <= maxn p n.
+Proof. by move=>H; rewrite !maxnE leq_add2l; apply: leq_sub2r. Qed.
+
+Lemma leq_max2r m n p : m <= n -> maxn m p <= maxn n p.
+Proof. by move=>H; rewrite maxnC (maxnC n); apply: leq_max2l. Qed.
 
 End Arith.
 
@@ -291,7 +293,7 @@ case/boolP: (p < q)%N => Hpq.
 rewrite -leqNgt in Hpq.
 have [->|Hq] := posnP q.
 - by rewrite divn0 dvd0n -lt0n Hp.
-apply: (ltn_leq_trans (y := p %/ q)); last by apply: leq_addr.
+apply: (leq_trans (n:=p %/ q)); last by apply: leq_addr.
 by rewrite divn_gt0.
 Qed.
 

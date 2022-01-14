@@ -521,6 +521,9 @@ Proof. by elim: t=>//=l IHl [a n] r IHr /and3P [/eqP -> /IHl <- /IHr <-]. Qed.
 
 End AugmentedTrees.
 
+From mathcomp Require Import order bigop.
+Import Order.TotalTheory.
+
 Section AugmentedTreesEx.
 
 Context {A : Type}.
@@ -546,9 +549,6 @@ Proof.
 Admitted.
 
 (* Exercise 4.6 *)
-
-From mathcomp Require Import order bigop.
-Import Order.TotalTheory.
 
 Context {disp : unit} {P : orderType disp}.
 Variable (x0 : P) (lmin : left_id x0 Order.max).
