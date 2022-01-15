@@ -8,6 +8,9 @@ Unset Printing Implicit Defensive.
 
 Inductive tree A := Leaf | Node of (tree A) & A & (tree A).
 
+Definition is_node {A} (t : tree A) :=
+  if t is Node _ _ _ then true else false.
+
 Section BasicFunctions.
 Context {A B : Type}.
 
