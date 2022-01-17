@@ -247,9 +247,9 @@ Lemma inorder_ins_list x xs :
 Proof.
 elim: xs=>//=a xs IH Hp.
 case: ifP.
-- move/[dup]=>Hxa; rewrite inE lt_neqAle => /andP [/negbTE -> _] /=.
+- move/[dup]=>Hxa; rewrite inE lt_neqAle =>/andP [/negbTE -> _] /=.
   move: IH; case: ifP=>//.
-  move: (order_path_min lt_trans Hp) => /allP /[apply] Hax.
+  move: (order_path_min lt_trans Hp) =>/allP/[apply] Hax.
   by move: (lt_asym x a); rewrite Hxa Hax.
 move/negbT; rewrite inE -leNgt=>Hax; case: ifP=>//=.
 move/negbT=>Hxa; move/path_sorted: Hp=>/IH.
@@ -309,7 +309,7 @@ Lemma sorted_cat_cons_cat (l r : seq T) x :
   sorted <%O (l ++ x :: r) = sorted <%O (l ++ [::x]) && sorted <%O (x::r).
 Proof.
 apply/eqP/bool_eq_iff; split.
-- by move/[dup]/cat_sorted2=>->; rewrite -cat1s catA => /cat_sorted2 ->.
+- by move/[dup]/cat_sorted2=>->; rewrite -cat1s catA =>/cat_sorted2 ->.
 case/andP=>/= + H; rewrite cats1.
 case: l=>//=a l; rewrite rcons_path=>/andP [H1 H2].
 by rewrite cat_path /= H1 H2.
@@ -323,7 +323,7 @@ Proof.
 elim: xs=>/=; first by move=>_; case: ifP.
 move=>y xs + H.
 move: (H); move/(order_path_min lt_trans).
-rewrite all_cat /= andbT => /andP [Hxs Hya].
+rewrite all_cat /= andbT =>/andP [Hxs Hya].
 case: ifP.
 - move=>Ha; case: ifP=>// /negbT Hy.
   move=>IH; case: ifP=>//= /negbT He.
@@ -356,7 +356,7 @@ elim: xs=>/=.
   by rewrite del_nop //; apply/(path_le lt_trans)/H.
 move=>y xs + H.
 move: (H); move/(order_path_min lt_trans).
-rewrite all_cat /= => /and3P [Hxs Hya Hys].
+rewrite all_cat /= =>/and3P [Hxs Hya Hys].
 case: ifP.
 - move=>Ha; case: ifP=>// /negbT Hy.
   by move=>-> //; apply: (path_sorted H).
@@ -437,7 +437,7 @@ suff: x \in inorder l = false by move=>->.
 apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder l)).
 apply/eq_in_count=>z /=.
 move: H1; rewrite (sorted_pairwise lt_trans) pairwise_cat /= allrel1r andbT.
-case/andP=>+ _ => /allP/(_ z)/[apply] Hz.
+case/andP=>+ _ =>/allP/(_ z)/[apply] Hz.
 by move: (lt_trans Hz Hx); rewrite lt_neqAle eq_sym=>/andP [/negbTE].
 Qed.
 
@@ -523,7 +523,7 @@ Proof. by move=>x; rewrite /le_ivl ltxx eq_refl lexx. Qed.
 
 Fact anti_ivl : antisymmetric le_ivl.
 Proof.
-move=>x y; rewrite /le_ivl => /andP [].
+move=>x y; rewrite /le_ivl =>/andP [].
 case/orP=>[H1|/andP [/eqP H11 H21]]; case/orP=>[H2|/andP [/eqP H12 H22]].
 - by move: (lt_asym (low x) (low y)); rewrite H1 H2.
 - by rewrite H12 ltxx in H1.
@@ -531,7 +531,7 @@ case/orP=>[H1|/andP [/eqP H11 H21]]; case/orP=>[H2|/andP [/eqP H12 H22]].
 apply/val_inj.
 move: {H12}H11 H21 H22; case: x =>[[x1 x2] /= Hx]; case: y =>[[y1 y2] /= Hy].
 rewrite /low /high /= => -> H1 H2.
-by move: (eq_le x2 y2); rewrite H1 H2 /= => /eqP ->.
+by move: (eq_le x2 y2); rewrite H1 H2 /= =>/eqP ->.
 Qed.
 
 Fact trans_ivl : transitive le_ivl.
@@ -571,6 +571,12 @@ Lemma overlapC x y : overlap x y = overlap y x.
 Proof. by rewrite /overlap andbC. Qed.
 
 Definition has_overlap (s : seq ivl) y := has (overlap^~ y) s.
+
+Lemma le_low x y : x <= y -> low x <= low y.
+Proof.
+rewrite {1}/Order.le /= /le_ivl (le_eqVlt (low _)).
+by case/orP; [move=>->; rewrite orbT|case/andP=>->].
+Qed.
 
 (* interval trees = trees of intervals augmented with maximal values *)
 
@@ -678,7 +684,7 @@ Fixpoint delete_i x (t : ivl_tree) : ivl_tree :=
 
 Lemma inorder_ivl_insert_list x t :
   sorted <%O (inorder_a t) ->
-  inorder_a (insert_i x t ) = ins_list x (inorder_a t).
+  inorder_a (insert_i x t) = ins_list x (inorder_a t).
 Proof.
 elim: t=>//=l IHl [a m] r IHr.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
@@ -764,7 +770,7 @@ Corollary inorder_ivl_insert_list_set x (t : ivl_tree) :
   perm_eq (inorder_a (insert_i x t))
           (if x \in inorder_a t then inorder_a t else x :: inorder_a t).
 Proof.
-rewrite /invar => /andP [_ Hs].
+rewrite /invar =>/andP [_ Hs].
 rewrite inorder_ivl_insert_list //.
 by apply: inorder_ins_list.
 Qed.
@@ -774,7 +780,7 @@ Corollary inorder_ivl_delete_list_set x (t : ivl_tree) :
   perm_eq (inorder_a (delete_i x t))
           (filter (predC1 x) (inorder_a t)).
 Proof.
-rewrite /invar => /andP [_ Hs].
+rewrite /invar =>/andP [_ Hs].
 rewrite inorder_ivl_delete_list //.
 by apply: inorder_del_list.
 Qed.
@@ -782,7 +788,7 @@ Qed.
 Corollary invar_insert x (t : ivl_tree) :
   invar t -> invar (insert_i x t).
 Proof.
-rewrite /invar => /andP [Hi Hs].
+rewrite /invar =>/andP [Hi Hs].
 rewrite inv_max_hi_insert //= inorder_ivl_insert_list //.
 by apply: ins_list_sorted.
 Qed.
@@ -790,7 +796,7 @@ Qed.
 Corollary invar_delete x (t : ivl_tree) :
   invar t -> invar (delete_i x t).
 Proof.
-rewrite /invar => /andP [Hi Hs].
+rewrite /invar =>/andP [Hi Hs].
 rewrite inv_max_hi_delete //= inorder_ivl_delete_list //.
 by apply: del_list_sorted.
 Qed.
@@ -803,5 +809,43 @@ Fixpoint search (t : ivl_tree) (x : ivl) : bool :=
       else if is_node l && (low x <= max_hi l)
         then search l x else search r x
     else false.
+
+Lemma search_correct t x :
+  invar t -> search t x = has_overlap (inorder_a t) x.
+Proof.
+rewrite /invar; elim: t=>//=.
+move=>l IHl [a _] r IHr /andP [/and3P [_ Hl Hr] Hs].
+rewrite /has_overlap has_cat /= overlapC.
+case: ifP=>/=; first by rewrite orbT.
+move=>_; case: ifP.
+- case/andP=>Hnl H2.
+  rewrite IHl /has_overlap; last by rewrite Hl (cat_sorted2 Hs).
+  case Hol: (has (overlap^~ x) (inorder_a l))=>//=; symmetry; apply/negbTE.
+  case/hasP: (max_hi_mem Hl Hnl)=>/= p Hp /eqP Ep; rewrite -{}Ep in H2.
+  move/negbT: Hol; rewrite -all_predC=>/allP /(_ _ Hp) /=.
+  rewrite {1}/overlap negb_and H2 /= -ltNge => Hxp.
+  apply/hasPn=>rp Hrp; rewrite /overlap negb_and -!ltNge.
+  apply/orP; right; apply: (lt_le_trans Hxp).
+  move: Hs; rewrite (sorted_pairwise lt_trans) pairwise_cat =>/and3P [+ _ _].
+  rewrite allrel_consr=>/andP [_ /allP /(_ _ Hp) /= /allP /(_ _ Hrp)].
+  by move/ltW/le_low.
+rewrite IHr /has_overlap; last by rewrite -cat1s catA in Hs; rewrite Hr (cat_sorted2 Hs).
+move/negbT; rewrite negb_and; case/orP; first by move/not_node_leaf=>->.
+rewrite -ltNge=>Hlx.
+suff: ~~has (overlap^~ x) (inorder_a l) by move/negbTE=>->.
+apply/hasPn=>/= lp Hlp; rewrite /overlap negb_and -!ltNge; apply/orP; left.
+by apply/le_lt_trans/Hlx/max_hi_max.
+Qed.
+
+(* Exercise 5.4 *)
+
+Definition in_ivl (x : T) (iv : ivl) : bool := low iv <= x <= high iv.
+
+Fixpoint search1 (t : ivl_tree) (x : T) : bool := false. (* FIXME *)
+
+Lemma search1_correct t x :
+  invar t -> search1 t x = has (in_ivl x) (inorder_a t).
+Proof.
+Admitted.
 
 End IntervalTrees.

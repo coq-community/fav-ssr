@@ -11,6 +11,9 @@ Inductive tree A := Leaf | Node of (tree A) & A & (tree A).
 Definition is_node {A} (t : tree A) :=
   if t is Node _ _ _ then true else false.
 
+Lemma not_node_leaf {A} t : ~~ is_node t -> t = @Leaf A.
+Proof. by case: t. Qed.
+
 Section BasicFunctions.
 Context {A B : Type}.
 
