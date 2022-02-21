@@ -8,3 +8,4 @@ src/sorting.v
 src/selection.v
 src/bintree.v
 src/bst.v
+src/adt.v

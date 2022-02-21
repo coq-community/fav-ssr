@@ -13,7 +13,7 @@ Besides Mathcomp, this also requires the [Equations](https://mattam82.github.io/
 ### Part II: Search Trees
 4. [Binary Trees](src/bintree.v)
 5. [Binary Search Trees](src/bst.v)
-6. Abstract Data Types
+6. [Abstract Data Types](src/adt.v)
 7. 2-3 Trees
 8. Red-Black Trees
 9. AVL Trees
