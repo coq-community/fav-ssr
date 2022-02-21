@@ -46,18 +46,26 @@ Context {disp : unit} {T : orderType disp}.
 
 Variant cmp_val := LT | EQ | GT.
 
+(* TODO a spec lemma would be useful *)
+
 Definition cmp (x y : T) : cmp_val :=
   if x < y then LT else if x == y then EQ else GT.
 
-Lemma cmp_lt x y : cmp x y = LT -> x < y.
+Lemma cmp_lt x y : cmp x y = LT <-> x < y.
 Proof. by rewrite /cmp; case: ltP=>//; case: eqP. Qed.
 
-Lemma cmp_eq x y : cmp x y = EQ -> x == y.
-Proof. by rewrite /cmp; case: ltP=>//; case: eqP. Qed.
-
-Lemma cmp_gt x y : cmp x y = GT -> y < x.
+Lemma cmp_eq x y : cmp x y = EQ <-> x == y.
 Proof.
-rewrite /cmp; case: ltP=>//; case: ifP=>//.
+rewrite /cmp; case: ltP=>//; case: eqP=>//=.
+by move=>->; rewrite ltxx.
+Qed.
+
+Lemma cmp_gt x y : cmp x y = GT <-> y < x.
+Proof.
+rewrite /cmp; case: ltP.
+- by rewrite ltNge le_eqVlt =>->; rewrite orbT.
+case: ifP.
+- by move/eqP=>->; rewrite ltxx.
 by rewrite lt_neqAle eq_sym=>->->.
 Qed.
 
@@ -79,7 +87,7 @@ Fixpoint insert x (t : tree T) : tree T :=
            | EQ => Node l a r
            | GT => Node l a (insert x r)
          end
-  else Node (@Leaf T) x (@Leaf T).
+  else Node empty x empty.
 
 Fixpoint split_min (l : tree T) (a : T) (r : tree T) : T * tree T :=
   if l is Node ll al rl then
@@ -91,8 +99,7 @@ Lemma inorder_split_min (l r t : tree T) a x :
   split_min l a r = (x, t) ->
   x :: inorder t = inorder l ++ a :: inorder r.
 Proof.
-elim: l a r t=>/=; first by move=>a r t; case=>->->.
-move=>ll IHl al rl _ a r t.
+elim: l a r t=>/= [|ll IHl al rl _] a r t; first by case=>->->.
 case Hsm: (split_min ll al rl)=>[x0 l'][Hx <-] /=.
 rewrite {}Hx in Hsm; rewrite -cat_cons.
 by rewrite (IHl _ _ _ Hsm).
@@ -108,7 +115,7 @@ Fixpoint delete x (t : tree T) : tree T :=
                      else l
            | GT => Node l a (delete x r)
          end
-  else @Leaf T.
+  else empty.
 
 Definition UASet := ASet.make empty insert delete isin.
 
@@ -118,7 +125,7 @@ join Leaf           t              => t;
 join (Node l1 a r1) (Node l2 b r2) =>
   if join r1 l2 is Node l3 c r3
     then Node (Node l1 a l3) c (Node r3 b r2)
-    else Node l1 a (Node (@Leaf T) b r2).
+    else Node l1 a (Node empty b r2).
 
 Lemma join_characteristic l r : inorder (join l r) = inorder l ++ inorder r.
 Proof.
@@ -135,7 +142,7 @@ Fixpoint delete2 x (t : tree T) : tree T :=
            | EQ => join l r
            | GT => Node l a (delete2 x r)
          end
-  else @Leaf T.
+  else empty.
 
 Equations join0 (t1 t2 : tree T) : tree T :=
 join0 t              Leaf           => t;
@@ -478,6 +485,8 @@ move=>H; rewrite /bst_list inorder_delete_list //.
 by apply: del_list_sorted.
 Qed.
 
+Definition LASet := ASet.make [::] ins_list del_list (fun xs s => s \in xs).
+
 End CorrectnessProofs.
 
 Section IntervalTrees.
@@ -661,8 +670,7 @@ Lemma inorder_ivl_split_min (l r t : ivl_tree) a x :
   split_min_i l a r = (x, t) ->
   x :: inorder_a t = inorder_a l ++ a :: inorder_a r.
 Proof.
-elim: l a r t=>/=; first by move=>a r t; case=>->->.
-move=>ll IHl [al _] rl _ a r t.
+elim: l a r t=>/= [|ll IHl [al _] rl _] a r t; first by case=>->->.
 case Hsm: (split_min_i ll al rl)=>[x' l'][Hx <-] /=.
 rewrite {}Hx in Hsm; rewrite -cat_cons.
 by rewrite (IHl _ _ _ Hsm).
@@ -737,12 +745,9 @@ Lemma inv_max_split_min (l r t : ivl_tree) a x :
   inv_max_hi l -> inv_max_hi r ->
   inv_max_hi t.
 Proof.
-elim: l a r t=>/=.
-- by move=>a r t; case=>_->.
-move=>ll IHl [al ml] rl _ a r t.
+elim: l a r t=>/= [|ll IHl [al ml] rl _] a r t; first by case=>_->.
 case Hsm: (split_min_i ll al rl)=>[x' l'] [Hx <-] /=; rewrite {}Hx in Hsm.
-case/and3P=>He Hll Hrl Har.
-rewrite eq_refl Har /= andbT.
+case/and3P=>_ Hll Hrl ->; rewrite eq_refl andbT /=.
 by rewrite (IHl _ _ _ Hsm Hll Hrl).
 Qed.
 

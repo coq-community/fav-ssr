@@ -37,11 +37,13 @@ Fixpoint postorder (t : tree A) : seq A :=
     then postorder l ++ postorder r ++ [:: x]
   else [::].
 
+(* number of nodes *)
 Fixpoint size_tree (t : tree A) : nat :=
   if t is Node l _ r
     then size_tree l + size_tree r + 1
   else 0.
 
+(* number of leaves *)
 Fixpoint size1_tree (t : tree A) : nat :=
   if t is Node l _ r
     then size1_tree l + size1_tree r
@@ -468,8 +470,7 @@ Admitted.
 End AlmostCompleteTrees.
 
 Section AugmentedTrees.
-
-Context {A : Type} {B : eqType}.
+Context {A B : Type}.
 
 Fixpoint inorder_a (t : tree (A * B)) : seq A :=
   if t is Node l (x, _) r
@@ -506,6 +507,15 @@ Fixpoint invar_sz (t : tree (A*nat)) : bool :=
 Lemma size_invar t : invar_sz t -> sz t = size_tree t.
 Proof. by elim: t=>//=l IHl [a n] r IHr /and3P [/eqP -> /IHl <- /IHr <-]. Qed.
 
+End AugmentedTrees.
+
+(* generalized form *)
+(* we don't always need a meaningful invariant (and thus an eqType constraint) *)
+(* e.g. if B is the value in a KV map *)
+
+Section AugmentedTreesGen.
+Context {A : Type} {B : eqType}.
+
 Variables (zero : B) (f : B -> A -> B -> B).
 
 Fixpoint F (t : tree (A*B)) : B :=
@@ -525,7 +535,7 @@ Fixpoint invar_f (t : tree (A*B)) : bool :=
 Lemma F_invar t : invar_f t -> b_val t = F t.
 Proof. by elim: t=>//=l IHl [a n] r IHr /and3P [/eqP -> /IHl <- /IHr <-]. Qed.
 
-End AugmentedTrees.
+End AugmentedTreesGen.
 
 From mathcomp Require Import order bigop.
 Import Order.TotalTheory.
