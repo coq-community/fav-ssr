@@ -8,3 +8,4 @@
 CoqMakefile
 CoqMakefile.conf
 .CoqMakefile.d
+.vscode
