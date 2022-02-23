@@ -42,6 +42,7 @@ End ASetM.
 Section Specification.
 Context {disp : unit} {T : orderType disp}.
 
+(* direct proofs for unbalanced trees work *)
 Definition UASetM :=
   @ASetM.make _ _ (tree T)
     empty insert delete isin
@@ -51,9 +52,7 @@ Definition UASetM :=
     bst_delete inorder_delete
     inorder_isin.
 
-Lemma sorted_nil : sorted <%O ([::] : seq T).
-Proof. by []. Qed.
-
+(* sorted lists implement sets *)
 Definition LASetM :=
   @ASetM.make _ _ (seq T)
     [::] ins_list del_list (fun xs s => s \in xs)
@@ -62,6 +61,16 @@ Definition LASetM :=
     ins_list_sorted inorder_ins_list
     del_list_sorted inorder_del_list
     (fun x s H => erefl).
+
+(* unbalanced trees via sorted lists implement sets *)
+Definition ULASetM :=
+  @ASetM.make _ _ (tree T)
+    empty insert delete isin
+    inorder bst_list
+    bst_list_empty erefl
+    bst_list_insert inorder_insert_list_set
+    bst_list_delete inorder_delete_list_set
+    inorder_isin_list.
 
 End Specification.
 

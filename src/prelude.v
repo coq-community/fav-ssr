@@ -80,14 +80,17 @@ Section Sorted.
 Variable (T : Type) (leT : rel T).
 Hypothesis (leT_tr : transitive leT).
 
-Lemma sorted_rcons (xs : seq T) x :
-  sorted leT xs -> all (leT^~ x) xs -> sorted leT (rcons xs x).
+Lemma sorted_rconsE (xs : seq T) x :
+  sorted leT (rcons xs x) = all (leT^~ x) xs && sorted leT xs.
 Proof.
-move=>Hs Ha.
 rewrite -(revK (rcons _ _)) rev_rcons rev_sorted /= path_sortedE; last first.
 - by move=>a b c Hab /leT_tr; apply.
-by rewrite all_rev rev_sorted /=; apply/andP.
+by rewrite all_rev rev_sorted.
 Qed.
+
+Corollary sorted_rcons (xs : seq T) x :
+  sorted leT xs -> all (leT^~ x) xs -> sorted leT (rcons xs x).
+Proof. by rewrite sorted_rconsE=>->->. Qed.
 
 End Sorted.
 

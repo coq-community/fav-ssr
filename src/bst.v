@@ -382,6 +382,8 @@ Qed.
 
 Definition bst_list (t : tree T) : bool := sorted <%O (inorder t).
 
+(* mapping to lists *)
+
 Lemma inorder_insert_list x t :
   bst_list t ->
   inorder (insert x t) = ins_list x (inorder t).
@@ -447,6 +449,8 @@ move: H1; rewrite (sorted_pairwise lt_trans) pairwise_cat /= allrel1r andbT.
 case/andP=>+ _ =>/allP/(_ z)/[apply] Hz.
 by move: (lt_trans Hz Hx); rewrite lt_neqAle eq_sym=>/andP [/negbTE].
 Qed.
+
+ (* rest is trivial *)
 
 Corollary inorder_insert_list_set x (t : tree T) :
   bst_list t ->
