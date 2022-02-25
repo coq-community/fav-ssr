@@ -1,3 +1,4 @@
+From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
 From mathcomp Require Import eqtype ssrnat seq path order.
 From favssr Require Import prelude bst adt.
@@ -69,6 +70,38 @@ by rewrite -addnA; apply: leq_addl.
 Qed.
 
 End Intro.
+
+Section EqType.
+Context {T : eqType}.
+
+Fixpoint eqtree23 (t1 t2 : tree23 T) :=
+  match t1, t2 with
+  | Leaf, Leaf => true
+  | Node2 l1 x1 r1, Node2 l2 x2 r2 =>
+      [&& x1 == x2, eqtree23 l1 l2 & eqtree23 r1 r2]
+  | Node3 l1 x1 m1 y1 r1, Node3 l2 x2 m2 y2 r2 =>
+      [&& x1 == x2, y1 == y2, eqtree23 l1 l2, eqtree23 m1 m2 & eqtree23 r1 r2]
+  | _, _ => false
+  end.
+
+Lemma eqtree23P : Equality.axiom eqtree23.
+Proof.
+move; elim=>[|l1 IHl x1 r1 IHr|l1 IHl x1 m1 IHm y1 r1 IHr]
+  [|l2 x2 r2|l2 x2 m2 y2 r2] /=; try by constructor.
+- have [<-/=|neqx] := x1 =P x2; last by apply: ReflectF; case.
+  apply: (iffP andP).
+  - by case=>/IHl->/IHr->.
+  by case=><-<-; split; [apply/IHl|apply/IHr].
+have [<-/=|neqx] := x1 =P x2; have [<-/=|neqy] := y1 =P y2; try by apply: ReflectF; case.
+apply: (iffP and3P).
+- by case=>/IHl->/IHm->/IHr->.
+by case=><-<-<-; split; [apply/IHl|apply/IHm|apply/IHr].
+Qed.
+
+Canonical tree23_eqMixin := EqMixin eqtree23P.
+Canonical tree23_eqType := Eval hnf in EqType (tree23 T) tree23_eqMixin.
+
+End EqType.
 
 (* Exercise 7.1 *)
 
@@ -1034,3 +1067,178 @@ Definition Set23 :=
     inv_isin_list.
 
 End FunctionalCorrectness.
+
+Section ConvertingList.
+Context {A : eqType}.
+
+Inductive tree23s A := Tr of (tree23 A)
+                     | Trs of (tree23 A) & A & (tree23s A).
+
+Fixpoint len (ts : tree23s A) : nat :=
+  if ts is Trs _ _ ts then (len ts).+1 else 1.
+
+Fixpoint inorder2 (ts : tree23s A) : seq A :=
+  match ts with
+  | Tr t => inorder23 t
+  | Trs t a ts => inorder23 t ++ a :: inorder2 ts
+  end.
+
+Equations join_adj : tree23 A -> A -> tree23s A -> tree23s A :=
+join_adj t1 a (Tr  t2)                 => Tr (Node2 t1 a t2);
+join_adj t1 a (Trs t2 b (Tr t3))       => Tr (Node3 t1 a t2 b t3);
+join_adj t1 a (Trs t2 b (Trs t3 c ts)) => Trs (Node2 t1 a t2) b (join_adj t3 c ts).
+
+Equations? join_all (ts : tree23s A) : tree23 A by wf (len ts) lt :=
+join_all (Tr t)       => t;
+join_all (Trs t a ts) => join_all (join_adj t a ts).
+Proof.
+apply: ssrnat.ltP=>{join_all}.
+funelim (join_adj t a ts); simp join_adj=>//=.
+rewrite -addn1 -[X in (_<=X)%N]addn1 leq_add2r.
+by apply/ltn_trans/ltnSn/H.
+Qed.
+
+Lemma len_join_all t a ts : (len (join_adj t a ts) <= uphalf (len ts))%N.
+Proof. by funelim (join_adj t a ts); simp join_adj. Qed.
+
+Fixpoint leaves (xs : seq A) : tree23s A :=
+  if xs is x::xs
+    then Trs empty x (leaves xs)
+    else Tr empty.
+
+Definition tree23_of_list (xs : seq A) : tree23 A :=
+  join_all (leaves xs).
+
+(* Functional correctness *)
+
+Lemma inorder_join_adj t a ts :
+  inorder2 (join_adj t a ts) = inorder23 t ++ a :: inorder2 ts.
+Proof.
+funelim (join_adj t a ts); simp join_adj=>//=.
+by rewrite H -catA.
+Qed.
+
+Lemma inorder_join_all (ts : tree23s A) :
+  inorder23 (join_all ts) = inorder2 ts.
+Proof.
+funelim (join_all ts); simp join_all=>//=.
+by rewrite H inorder_join_adj.
+Qed.
+
+Lemma inorder_of_list (xs : seq A) :
+  inorder23 (tree23_of_list xs) = xs.
+Proof.
+rewrite /tree23_of_list inorder_join_all.
+by elim: xs=>//=x xs ->.
+Qed.
+
+Fixpoint trees (ts : tree23s A) : seq (tree23 A) :=
+  match ts with
+  | Tr t => [::t]
+  | Trs t _ ts => t :: trees ts
+  end.
+
+Lemma trees_height t a ts n :
+  (forall t', t' \in t :: trees ts -> complete23 t' && (height23 t' == n)) ->
+  forall t', t' \in trees (join_adj t a ts) -> complete23 t' && (height23 t' == n.+1).
+Proof.
+move=>H t'; funelim (join_adj t a ts); simp join_adj=>/=.
+- rewrite inE=>/eqP->/=; rewrite -!andbA.
+  rewrite /= in H.
+  move: (H t1); rewrite inE eq_refl /= =>/(_ erefl); case/andP=>->/eqP->.
+  move: (H t2); rewrite !inE eq_refl orbT /= =>/(_ erefl); case/andP=>->/eqP->.
+  by rewrite maxnn addn1 !eq_refl.
+- rewrite inE=>/eqP->/=; rewrite -!andbA.
+  rewrite /= in H.
+  move: (H t1); rewrite inE eq_refl /= =>/(_ erefl); case/andP=>->/eqP->.
+  move: (H t2); rewrite !inE eq_refl orbT /= =>/(_ erefl); case/andP=>->/eqP->.
+  move: (H t3); rewrite !inE eq_refl !orbT /= =>/(_ erefl); case/andP=>->/eqP->.
+  by rewrite !maxnn addn1 !eq_refl.
+rewrite inE; rewrite /= in H0; case/orP.
+- move/eqP=>->/=.
+  move: (H0 t1); rewrite inE eq_refl /= =>/(_ erefl); case/andP=>->/eqP->.
+  move: (H0 t2); rewrite !inE eq_refl orbT /= =>/(_ erefl); case/andP=>->/eqP->.
+  by rewrite maxnn addn1 !eq_refl.
+apply: H=>t'' H''; apply: H0.
+by rewrite !inE in H'' *; rewrite H'' !orbT.
+Qed.
+
+Lemma complete_joinall ts n :
+  (forall t', t' \in trees ts -> complete23 t' && (height23 t' == n)) ->
+  complete23 (join_all ts).
+Proof.
+move=>H; funelim (join_all ts).
+- rewrite /= in H.
+  by move: (H t); rewrite inE eq_refl=>/(_ erefl); case/andP.
+by rewrite /= in H0; apply: H; apply: trees_height; apply: H0.
+Qed.
+
+Lemma trees_leaves t xs :
+  t \in trees (leaves xs) -> complete23 t && (height23 t == 0).
+Proof.
+elim: xs=>/=; first by rewrite inE=>/eqP->.
+by move=>_ xs IH; rewrite inE; case/orP=>// /eqP->.
+Qed.
+
+Lemma complete_tree_of_list xs : complete23 (tree23_of_list xs).
+Proof. by apply: complete_joinall=>t; apply: trees_leaves. Qed.
+
+(* Running Time Analysis *)
+
+Equations T_join_adj : tree23s A -> nat :=
+T_join_adj (Tr  _)                => 1;
+T_join_adj (Trs _ _ (Tr _))       => 1;
+T_join_adj (Trs _ _ (Trs _ _ ts)) => T_join_adj ts + 1.
+
+Lemma T_join_adj_bound ts : (T_join_adj ts <= uphalf (len ts))%N.
+Proof.
+rewrite /=.
+funelim (T_join_adj ts)=>//=.
+rewrite -[X in (_<=X)%N]addn1 leq_add2r.
+by apply: (leq_trans H); set n := len ts; elim: n.
+Qed.
+
+Equations? T_join_all (ts : tree23s A) : nat by wf (len ts) lt :=
+T_join_all (Tr t)       => 1;
+T_join_all (Trs t a ts) => T_join_adj ts + T_join_all (join_adj t a ts) + 1.
+Proof.
+apply: ssrnat.ltP=>{T_join_all}.
+funelim (join_adj t a ts); simp join_adj=>//=.
+rewrite -addn1 -[X in (_<=X)%N]addn1 leq_add2r.
+by apply/ltn_trans/ltnSn/H.
+Qed.
+
+Lemma T_join_all_bound ts : (T_join_all ts <= 2*(len ts))%N.
+Proof.
+funelim (T_join_all ts)=>//=.
+apply: (leq_trans (n := (uphalf (len ts) + 2*uphalf (len ts) + 1))).
+- rewrite leq_add2r; apply: leq_add; first by exact: T_join_adj_bound.
+  by apply: (leq_trans H); rewrite leq_mul2l /=; exact: len_join_all.
+rewrite -[X in (_<=2*X)%N]addn1 mulnDr muln1 {3}(_ : 2 = 1+1) // addnA.
+rewrite leq_add2r [X in (_<=X+1)%N]mul2n -addnn -addnA.
+apply: leq_add; first by exact: uphalf_le.
+rewrite uphalf_half mulnDr mul2n mul2n -addnn -addnA odd_double_half addnC leq_add2l.
+by case: (odd _).
+Qed.
+
+Fixpoint T_leaves (xs : seq A) : nat :=
+  if xs is x::xs then (T_leaves xs).+1 else 1%N.
+
+Lemma T_leaves_size xs : T_leaves xs = (size xs).+1.
+Proof. by elim: xs=>//=_ xs ->. Qed.
+
+Definition T_tree23_of_list (xs : seq A) : nat :=
+  T_leaves xs + T_join_all (leaves xs) + 1.
+
+Lemma T_tree23_of_list_bound xs :
+  (T_tree23_of_list xs <= 3 * size xs + 4)%N.
+Proof.
+rewrite /T_tree23_of_list (_ : 4 = 3 + 1) // addnA leq_add2r.
+rewrite T_leaves_size (_ : 3 = 1 + 2) // mulnDl mul1n addnCA 2!addnA.
+rewrite [X in (_ <= X + _ + _)%N]addnC addn1 -addnA leq_add2l.
+apply: leq_trans; first by apply: T_join_all_bound.
+rewrite -{3}(muln1 2) -mulnDr leq_mul2l /=.
+by elim: xs.
+Qed.
+
+End ConvertingList.
