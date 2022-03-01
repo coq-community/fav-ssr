@@ -1,6 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import eqtype ssrnat seq path order.
+From mathcomp Require Import eqtype order ssrnat seq path.
 From favssr Require Import prelude bst adt.
 
 Set Implicit Arguments.
@@ -762,8 +762,7 @@ Lemma inorder_insert23 x t :
   bst_list t ->
   inorder23 (insert x t) = ins_list x (inorder23 t).
 Proof.
-rewrite /bst_list /insert.
-elim: t=>//=.
+rewrite /bst_list /insert; elim: t=>//=.
 - move=>l IHl a r IHr.
   rewrite sorted_cat_cons_cat=>/andP [H1 /path_sorted H2].
   rewrite inslist_sorted_cat_cons_cat //.

@@ -150,7 +150,6 @@ join0 Leaf           t              => t;
 join0 (Node l1 a r1) (Node l2 b r2) => Node l1 a (Node (join0 r1 l2) b r2).
 
 (* Exercise 5.2 *)
-
 Lemma join_behaves l r : (height (join l r) <= maxn (height l) (height r) + 1)%N.
 Proof.
 Admitted.
@@ -388,8 +387,7 @@ Lemma inorder_insert_list x t :
   bst_list t ->
   inorder (insert x t) = ins_list x (inorder t).
 Proof.
-rewrite /bst_list /=.
-elim: t=>//=l IHl a r IHr.
+rewrite /bst_list /=; elim: t=>//=l IHl a r IHr.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
 rewrite inslist_sorted_cat_cons_cat //.
 case Hc: (cmp x a)=>/=.
@@ -406,8 +404,7 @@ Lemma inorder_delete_list x t :
   bst_list t ->
   inorder (delete x t) = del_list x (inorder t).
 Proof.
-rewrite /bst_list /=.
-elim: t=>//=l IHl a r IHr /[dup] H.
+rewrite /bst_list /=; elim: t=>//=l IHl a r IHr /[dup] H.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
 rewrite dellist_sorted_cat_cons_cat //.
 case Hc: (cmp x a)=>/=.
@@ -450,7 +447,7 @@ case/andP=>+ _ =>/allP/(_ z)/[apply] Hz.
 by move: (lt_trans Hz Hx); rewrite lt_neqAle eq_sym=>/andP [/negbTE].
 Qed.
 
- (* rest is trivial *)
+(* rest is trivial *)
 
 Corollary inorder_insert_list_set x (t : tree T) :
   bst_list t ->
@@ -492,6 +489,22 @@ Qed.
 Definition LASet := ASet.make [::] ins_list del_list (fun xs s => s \in xs).
 
 End CorrectnessProofs.
+
+(* TODO move to bintree? *)
+Section AugmentedOrd.
+Context {disp : unit} {T : orderType disp} {A : Type}.
+
+Definition empty_a {A} : tree (T*A) := @Leaf (T*A).
+
+Fixpoint isin_a {A} (t : tree (T*A)) x : bool :=
+  if t is Node l (a,_) r
+    then match cmp x a with
+           | LT => isin_a l x
+           | EQ => true
+           | GT => isin_a r x
+         end
+  else false.
+End AugmentedOrd.
 
 Section IntervalTrees.
 Context {disp : unit} {T : orderType disp}.
@@ -593,15 +606,6 @@ Qed.
 
 (* interval trees = trees of intervals augmented with maximal values *)
 
-Fixpoint isin_a {A} (t : tree (T*A)) x : bool :=
-  if t is Node l (a,_) r
-    then match cmp x a with
-           | LT => isin_a l x
-           | EQ => true
-           | GT => isin_a r x
-         end
-  else false.
-
 Definition ivl_tree := tree (ivl * T).
 
 (* TODO construct a proper bLattice? *)
@@ -662,7 +666,7 @@ Fixpoint insert_i x (t : ivl_tree) : ivl_tree :=
            | EQ => Node l (a,m) r
            | GT => node_i l a (insert_i x r)
          end
-  else Node (@Leaf (ivl*T)) (x, high x) (@Leaf (ivl*T)).
+  else Node empty_a (x, high x) empty_a.
 
 Fixpoint split_min_i (l : ivl_tree) (a : ivl) (r : ivl_tree) : ivl * ivl_tree :=
   if l is Node ll (al, _) rl then
@@ -690,7 +694,7 @@ Fixpoint delete_i x (t : ivl_tree) : ivl_tree :=
                      else l
            | GT => node_i l a (delete_i x r)
          end
-  else @Leaf (ivl*T).
+  else empty_a.
 
 (* functional correctness *)
 
