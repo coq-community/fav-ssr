@@ -1083,8 +1083,8 @@ Fixpoint inorder2 (ts : tree23s A) : seq A :=
   end.
 
 Equations join_adj : tree23 A -> A -> tree23s A -> tree23s A :=
-join_adj t1 a (Tr  t2)                 => Tr (Node2 t1 a t2);
-join_adj t1 a (Trs t2 b (Tr t3))       => Tr (Node3 t1 a t2 b t3);
+join_adj t1 a (Tr  t2)                 => Tr  (Node2 t1 a t2);
+join_adj t1 a (Trs t2 b (Tr t3))       => Tr  (Node3 t1 a t2  b  t3);
 join_adj t1 a (Trs t2 b (Trs t3 c ts)) => Trs (Node2 t1 a t2) b (join_adj t3 c ts).
 
 Equations? join_all (ts : tree23s A) : tree23 A by wf (len ts) lt :=
@@ -1169,7 +1169,7 @@ Proof.
 move=>H; funelim (join_all ts).
 - rewrite /= in H.
   by move: (H t); rewrite inE eq_refl=>/(_ erefl); case/andP.
-by rewrite /= in H0; apply: H; apply: trees_height; apply: H0.
+by rewrite /= in H0; apply/H/trees_height/H0.
 Qed.
 
 Lemma trees_leaves t xs :
