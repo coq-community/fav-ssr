@@ -31,7 +31,6 @@ Canonical col_eqType := Eval hnf in EqType col col_eqMixin.
 Definition rbt A := tree (A * col).
 
 Definition R l a r : rbt A := Node l (a, Red) r.
-
 Definition B l a r : rbt A := Node l (a, Black) r.
 
 Definition color (t : rbt A) : col :=
@@ -968,3 +967,40 @@ Definition SetRBTj :=
     inv_isin_list.
 
 End SetImplementation.
+
+Section Exercises.
+
+(* Exercise 8.1 *)
+
+Lemma log_height_inv {A} (t : rbt A) :
+  invc t -> invh t ->
+  (height t)./2 <= up_log 2 (size1_tree t) + 1.
+Proof.
+Admitted.
+
+(* Exercise 8.2 *)
+
+Fixpoint bhs {A} (t : rbt A) : seq nat :=
+  if t is Node l (_,c) r then
+    let: H := bhs l ++ bhs r in
+    if c == Black then map S H else H
+  else [::0].
+
+Lemma same_black {T : eqType} (t : rbt T) : invh t <-> undup (bhs t) = [::bh t].
+Proof.
+Admitted.
+
+(* Exercise 8.3 *)
+
+Definition rbt_of_list {A} (xs : seq A) : rbt A :=
+  Leaf (A*col).  (* FIXME *)
+
+Lemma inorder_rol {A} (xs : seq A) : inorder_a (rbt_of_list xs) = xs.
+Proof.
+Admitted.
+
+Lemma rbt_rol {T : eqType} (xs : seq T) : rbt_inv (rbt_of_list xs).
+Proof.
+Admitted.
+
+End Exercises.

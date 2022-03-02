@@ -18,6 +18,29 @@ case: a; case: b=>//; split=>//.
 by case=>_ /(_ isT).
 Qed.
 
+Inductive and6 (P1 P2 P3 P4 P5 P6 : Prop) : Prop :=
+  And6 of P1 & P2 & P3 & P4 & P5 & P6.
+Inductive and7 (P1 P2 P3 P4 P5 P6 P7 : Prop) : Prop :=
+  And7 of P1 & P2 & P3 & P4 & P5 & P6 & P7.
+
+Notation "[ /\ P1 , P2 , P3 , P4 , P5 & P6 ]" := (and6 P1 P2 P3 P4 P5 P6) : type_scope.
+Notation "[ /\ P1 , P2 , P3 , P4 , P5 , P6 & P7 ]" := (and7 P1 P2 P3 P4 P5 P6 P7) : type_scope.
+
+Section ReflectConnectives.
+Variable b1 b2 b3 b4 b5 b6 b7 : bool.
+
+Lemma and6P : reflect [/\ b1, b2, b3, b4, b5 & b6] [&& b1, b2, b3, b4, b5 & b6].
+Proof.
+by case b1; case b2; case b3; case b4; case b5; case b6; constructor; try by case.
+Qed.
+
+Lemma and7P : reflect [/\ b1, b2, b3, b4, b5, b6 & b7] [&& b1, b2, b3, b4, b5, b6 & b7].
+Proof.
+by case b1; case b2; case b3; case b4; case b5; case b6; case: b7; constructor; try by case.
+Qed.
+
+End ReflectConnectives.
+
 Section Arith.
 
 Lemma uphalf_addn n m :
