@@ -16,7 +16,7 @@ Besides Mathcomp, this also requires the [Equations](https://mattam82.github.io/
 6. [Abstract Data Types](src/adt.v)
 7. [2-3 Trees](src/twothree.v)
 8. [Red-Black Trees](src/redblack.v)
-9. AVL Trees
+9. [AVL Trees](src/avl.v)
 10. Beyond Insert and Delete: \cup, \cap and -
 11. Arrays via Braun Trees
 12. Tries
