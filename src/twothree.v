@@ -887,8 +887,7 @@ Lemma inorder_delete23 x t :
   complete23 t -> bst_list t ->
   inorder23 (delete x t) = del_list x (inorder23 t).
 Proof.
-rewrite /bst_list /delete.
-elim: t=>//=.
+rewrite /bst_list /delete; elim: t=>//=.
 - move=>l IHl a r IHr /and3P [/eqP E Hcl Hcr] /[dup] H.
   case/cat_sorted2=>H1 /path_sorted H2.
   rewrite dellist_sorted_cat_cons_cat //.
