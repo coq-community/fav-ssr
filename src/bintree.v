@@ -72,6 +72,12 @@ Fixpoint height (t : tree A) : nat :=
     then maxn (height l) (height r) + 1
   else 0.
 
+Lemma heightE (t : tree A) : reflect (t = @Leaf A) (height t == 0).
+Proof.
+apply: (iffP idP); last by move=>->.
+by case: t=>//= l a r; rewrite addn1 => /eqP.
+Qed.
+
 Fixpoint min_height (t : tree A) : nat :=
   if t is Node l _ r
     then minn (min_height l) (min_height r) + 1

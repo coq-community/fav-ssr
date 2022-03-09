@@ -80,11 +80,20 @@ Proof.
 by move=>H1 H2; apply: (leq_ltn_trans (n:=n1 + m2)); rewrite ?ltn_add2l ?leq_add2r.
 Qed.
 
+Lemma maxn_eq0 m n : (maxn m n == 0) = (m == 0) && (n == 0).
+Proof. by rewrite maxnE addn_eq0; case: m=>//=; rewrite subn0. Qed.
+
 Lemma leq_max2l m n p : m <= n -> maxn p m <= maxn p n.
 Proof. by move=>H; rewrite !maxnE leq_add2l; apply: leq_sub2r. Qed.
 
 Lemma leq_max2r m n p : m <= n -> maxn m p <= maxn n p.
 Proof. by move=>H; rewrite maxnC (maxnC n); apply: leq_max2l. Qed.
+
+Lemma maxn_addl n m : maxn (n + m) n = n + m.
+Proof. by apply/maxn_idPl/leq_addr. Qed.
+
+Lemma maxn_addr n m : maxn n (n + m) = n + m.
+Proof. by apply/maxn_idPr/leq_addr. Qed.
 
 End Arith.
 

@@ -150,6 +150,7 @@ join0 Leaf           t              => t;
 join0 (Node l1 a r1) (Node l2 b r2) => Node l1 a (Node (join0 r1 l2) b r2).
 
 (* Exercise 5.2 *)
+
 Lemma join_behaves l r : (height (join l r) <= maxn (height l) (height r) + 1)%N.
 Proof.
 Admitted.
@@ -491,12 +492,11 @@ Definition LASet := ASet.make [::] ins_list del_list (fun xs s => s \in xs).
 End CorrectnessProofs.
 
 (* TODO move to bintree? *)
-Section AugmentedOrd.
-Context {disp : unit} {T : orderType disp} {A : Type}.
+Section Augmented.
 
-Definition empty_a {A} : tree (T*A) := @Leaf (T*A).
+Definition empty_a {A B : Type} : tree (A*B) := @Leaf (A*B).
 
-Fixpoint isin_a {A} (t : tree (T*A)) x : bool :=
+Fixpoint isin_a {disp : unit} {T : orderType disp} {A} (t : tree (T*A)) x : bool :=
   if t is Node l (a,_) r
     then match cmp x a with
            | LT => isin_a l x
@@ -504,7 +504,8 @@ Fixpoint isin_a {A} (t : tree (T*A)) x : bool :=
            | GT => isin_a r x
          end
   else false.
-End AugmentedOrd.
+
+End Augmented.
 
 Section IntervalTrees.
 Context {disp : unit} {T : orderType disp}.

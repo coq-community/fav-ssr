@@ -37,7 +37,7 @@ Definition color (t : rbt A) : col :=
   if t is Node _ (_, c) _ then c else Black.
 
 Definition paint (c : col) (t : rbt A) : rbt A :=
-  if t is Node l (a, _) r then Node l (a,c) r else @Leaf (A * col).
+  if t is Node l (a, _) r then Node l (a,c) r else empty_a.
 
 Lemma paint2 c1 c2 t : paint c2 (paint c1 t) = paint c2 t.
 Proof. by case: t=>//= l [a c] r. Qed.
