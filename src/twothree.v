@@ -69,7 +69,29 @@ rewrite addnAC -3!addnA; apply: leq_trans; first by apply: (leq_add Hm Hr).
 by rewrite -addnA; apply: leq_addl.
 Qed.
 
+(* a helper induction principle to simplify proofs a bit *)
+Lemma complete23_ind (P : tree23 A -> Prop) :
+  P (Leaf A) ->
+  (forall l a r,
+   height23 l == height23 r -> complete23 l -> complete23 r ->
+   P l -> P r ->
+   P (Node2 l a r)) ->
+  (forall l a m b r,
+   height23 l == height23 m -> height23 m == height23 r ->
+   complete23 l -> complete23 m -> complete23 r ->
+   P l -> P m -> P r -> P (Node3 l a m b r)) ->
+  forall t, complete23 t -> P t.
+Proof.
+move=>Pl P2 P3; elim=>//=.
+- move=>l IHl a r IHr /and3P [E Hl Hr].
+  by apply: P2=>//; [apply: IHl | apply: IHr].
+move=>l IHl a m IHm b r IHr /and5P [E1 E2 Hl Hm Hr].
+by apply: P3=>//; [apply: IHl | apply: IHm | apply: IHr].
+Qed.
+
 End Intro.
+
+Arguments complete23_ind [A P].
 
 Section EqType.
 Context {T : eqType}.
@@ -149,35 +171,43 @@ Definition treeI {A} (r : upI A) : tree23 A :=
 Fixpoint ins (x : T) (t : tree23 T) : upI T :=
   match t with
     | Leaf => OF empty x empty
-    | Node2 l a r => match cmp x a with
-                     | LT => match ins x l with
-                             | TI l'      => TI (Node2 l' a r)
-                             | OF l1 b l2 => TI (Node3 l1 b l2 a r)
-                             end
-                     | EQ => TI (Node2 l a r)
-                     | GT => match ins x r with
-                             | TI r'      => TI (Node2 l a r')
-                             | OF r1 b r2 => TI (Node3 l a r1 b r2)
-                             end
-                     end
-    | Node3 l a m b r => match cmp x a with
-                         | LT => match ins x l with
-                                 | TI l'      => TI (Node3 l' a m b r)
-                                 | OF l1 c l2 => OF (Node2 l1 c l2) a (Node2 m b r)
-                                 end
-                         | EQ => TI (Node3 l a m b r)
-                         | GT => match cmp x b with
-                                 | LT => match ins x m with
-                                         | TI m'      => TI (Node3 l a m' b r)
-                                         | OF m1 c m2 => OF (Node2 l a m1) c (Node2 m2 b r)
-                                         end
-                                 | EQ => TI (Node3 l a m b r)
-                                 | GT => match ins x r with
-                                         | TI r'      => TI (Node3 l a m b r')
-                                         | OF r1 c r2 => OF (Node2 l a m) b (Node2 r1 c r2)
-                                         end
-                                 end
-                         end
+    | Node2 l a r =>
+      match cmp x a with
+      | LT =>
+        match ins x l with
+        | TI l'      => TI (Node2 l' a r)
+        | OF l1 b l2 => TI (Node3 l1 b l2 a r)
+        end
+      | EQ => TI (Node2 l a r)
+      | GT =>
+        match ins x r with
+        | TI r'      => TI (Node2 l a r')
+        | OF r1 b r2 => TI (Node3 l a r1 b r2)
+        end
+      end
+    | Node3 l a m b r =>
+      match cmp x a with
+      | LT =>
+        match ins x l with
+        | TI l'      => TI (Node3 l' a m b r)
+        | OF l1 c l2 => OF (Node2 l1 c l2) a (Node2 m b r)
+        end
+      | EQ => TI (Node3 l a m b r)
+      | GT =>
+        match cmp x b with
+        | LT =>
+          match ins x m with
+          | TI m'      => TI (Node3 l a m' b r)
+          | OF m1 c m2 => OF (Node2 l a m1) c (Node2 m2 b r)
+          end
+        | EQ => TI (Node3 l a m b r)
+        | GT =>
+          match ins x r with
+          | TI r'      => TI (Node3 l a m b r')
+          | OF r1 c r2 => OF (Node2 l a m) b (Node2 r1 c r2)
+          end
+        end
+      end
   end.
 
 Definition insert (x : T) (t : tree23 T) : tree23 T :=
@@ -257,78 +287,85 @@ Variant upD A := TD of (tree23 A)
 
 Definition treeD {A} (r : upD A) : tree23 A :=
   match r with
-    | TD t => t
-    | UF t => t
+  | TD t => t
+  | UF t => t
   end.
 
 Definition node21 {A} (u1 : upD A) (a : A) (n2 : n23 A) : upD A :=
   match u1 with
     | TD t1 => TD (Node2 t1 a (embed n2))
-    | UF t1 => match n2 with
-               | N2 t2 b t3      => UF (Node3 t1 a t2 b t3)
-               | N3 t2 b t3 c t4 => TD (Node2 (Node2 t1 a t2) b (Node2 t3 c t4))
-               end
+    | UF t1 =>
+      match n2 with
+      | N2 t2 b t3      => UF (Node3 t1 a t2 b t3)
+      | N3 t2 b t3 c t4 => TD (Node2 (Node2 t1 a t2) b (Node2 t3 c t4))
+      end
   end.
 
 Definition node22 {A} (n1 : n23 A) (a : A) (u2 : upD A) : upD A :=
   match u2 with
     | TD t2 => TD (Node2 (embed n1) a t2)
-    | UF t' => match n1 with
-               | N2 t1 b t2      => UF (Node3 t1 b t2 a t')
-               | N3 t1 b t2 c t3 => TD (Node2 (Node2 t1 b t2) c (Node2 t3 a t'))
-               end
+    | UF t' =>
+      match n1 with
+      | N2 t1 b t2      => UF (Node3 t1 b t2 a t')
+      | N3 t1 b t2 c t3 => TD (Node2 (Node2 t1 b t2) c (Node2 t3 a t'))
+      end
   end.
 
 Definition node31 {A} (u1 : upD A) (a : A) (n2 : n23 A) (z : A) (t' : tree23 A) : upD A :=
   match u1 with
     | TD t1 => TD (Node3 t1 a (embed n2) z t')
-    | UF t1 => match n2 with
-               | N2 t2 b t3      => TD (Node2 (Node3 t1 a t2 b t3) z t')
-               | N3 t2 b t3 c t4 => TD (Node3 (Node2 t1 a t2) b (Node2 t3 c t4) z t')
-               end
+    | UF t1 =>
+      match n2 with
+      | N2 t2 b t3      => TD (Node2 (Node3 t1 a t2 b t3) z t')
+      | N3 t2 b t3 c t4 => TD (Node3 (Node2 t1 a t2) b (Node2 t3 c t4) z t')
+      end
   end.
 
 Definition node32 {A} (t1 : tree23 A) (a : A) (u2 : upD A) (b : A) (n3 : n23 A) : upD A :=
   match u2 with
     | TD t2 => TD (Node3 t1 a t2 b (embed n3))
-    | UF t2 => match n3 with
-               | N2 t3 c t4      => TD (Node2 t1 a (Node3 t2 b t3 c t4))
-               | N3 t3 c t4 d t5 => TD (Node3 t1 a (Node2 t2 b t3) c (Node2 t4 d t5))
-               end
+    | UF t2 =>
+      match n3 with
+      | N2 t3 c t4      => TD (Node2 t1 a (Node3 t2 b t3 c t4))
+      | N3 t3 c t4 d t5 => TD (Node3 t1 a (Node2 t2 b t3) c (Node2 t4 d t5))
+      end
   end.
 
 Definition node33 {A} (t1 : tree23 A) (a : A) (n2 : n23 A) (z : A) (u3 : upD A) : upD A :=
   match u3 with
     | TD t' => TD (Node3 t1 a (embed n2) z t')
-    | UF t' => match n2 with
-               | N2 t2 b t3      => TD (Node2 t1 a (Node3 t2 b t3 z t'))
-               | N3 t2 b t3 c t4 => TD (Node3 t1 a (Node2 t2 b t3) c (Node2 t4 z t'))
-               end
+    | UF t' =>
+      match n2 with
+      | N2 t2 b t3      => TD (Node2 t1 a (Node3 t2 b t3 z t'))
+      | N3 t2 b t3 c t4 => TD (Node3 t1 a (Node2 t2 b t3) c (Node2 t4 z t'))
+      end
   end.
 
 Fixpoint split_min2 {A} (l : tree23 A) (a : A) (r : tree23 A) : A * upD A :=
-  let: def := (a, UF empty)
-  in match lift r with
+  let: def := (a, UF empty) in
+  match lift r with
   | None => def
-  | Some r' => match l with
-               | Leaf => def
-               | Node2 ll al rl => let: (x, l') := split_min2 ll al rl in
-                                   (x, node21 l' a r')
-               | Node3 ll al ml bl rl => let: (x, l') := split_min3 ll al ml bl rl in
-                                   (x, node21 l' a r')
-               end
+  | Some r' =>
+    match l with
+    | Leaf => def
+    | Node2 ll al rl => let: (x, l') := split_min2 ll al rl in
+                        (x, node21 l' a r')
+    | Node3 ll al ml bl rl => let: (x, l') := split_min3 ll al ml bl rl in
+                              (x, node21 l' a r')
+    end
   end
 with split_min3 {A} (l : tree23 A) (a : A) (m : tree23 A) (b : A) (r : tree23 A) : A * upD A :=
   let: def := (a, TD (Node2 empty b empty))
   in match lift m with
   | None => def
-  | Some m' => match l with
-               | Leaf => def
-               | Node2 ll al rl => let: (x, l') := split_min2 ll al rl in
-                                   (x, node31 l' a m' b r)
-               | Node3 ll al ml bl rl => let: (x, l') := split_min3 ll al ml bl rl in
-                                   (x, node31 l' a m' b r)
-               end
+  | Some m' =>
+    match l with
+    | Leaf => def
+    | Node2 ll al rl => let: (x, l') := split_min2 ll al rl in
+                        (x, node31 l' a m' b r)
+    | Node3 ll al ml bl rl => let: (x, l') := split_min3 ll al ml bl rl in
+                              (x, node31 l' a m' b r)
+    end
   end.
 
 Definition split_min {A} (n : n23 A) : A * upD A :=
@@ -346,21 +383,23 @@ Fixpoint del (x : T) (t : tree23 T) : upD T :=
     in match lift l with
        | None => def
        | Some l0 =>
-          match lift r with
-          | None => def
-          | Some r0 =>
-            match cmp x a with
-            | LT => node21 (del x l) a r0
-            | EQ => let: (a', r') := split_min r0
-                    in node22 l0 a' r'
-            | GT => node22 l0 a (del x r)
-            end
-          end
+         match lift r with
+         | None => def
+         | Some r0 =>
+           match cmp x a with
+           | LT => node21 (del x l) a r0
+           | EQ => let: (a', r') := split_min r0
+                   in node22 l0 a' r'
+           | GT => node22 l0 a (del x r)
+           end
+         end
        end
   | Node3 l a m b r =>
-    let def := TD (if x == a then Node2 empty b empty
-                    else if x == b then Node2 empty a empty
-                      else Node3 empty a empty b empty)
+    let def := TD (if x == a
+                     then Node2 empty b empty
+                     else if x == b
+                            then Node2 empty a empty
+                            else Node3 empty a empty b empty)
     in match lift m with
        | None => def
        | Some m0 =>
@@ -369,12 +408,12 @@ Fixpoint del (x : T) (t : tree23 T) : upD T :=
          | Some r0 =>
            match cmp x a with
            | LT => node31 (del x l) a m0 b r
-           | EQ => let: (a', m') := split_min m0
-                   in node32 l a' m' b r0
+           | EQ => let: (a', m') := split_min m0 in
+                   node32 l a' m' b r0
            | GT => match cmp x b with
                    | LT => node32 l a (del x m) b r0
-                   | EQ => let: (b', r') := split_min r0
-                           in node33 l a m0 b' r'
+                   | EQ => let: (b', r') := split_min r0 in
+                           node33 l a m0 b' r'
                    | GT => node33 l a m0 b (del x r)
                    end
            end
@@ -396,39 +435,38 @@ Definition hI {A} (u : upI A) : nat :=
   | OF l _ _ => height23 l
   end.
 
-Lemma complete_ins (x : T) t : complete23 t ->
-  complete23 (treeI (ins x t)) /\ hI (ins x t) = height23 t.
+Lemma complete_ins (x : T) t :
+  complete23 t ->
+  complete23 (treeI (ins x t)) && (hI (ins x t) == height23 t).
 Proof.
-elim: t=>//=.
-- move=>l IHl a r IHr /and3P [/eqP E Hcl Hcr].
-  case: (IHl Hcl)=>{IHl}[Hl1 Hl2]; case: (IHr Hcr)=>{IHr}[Hr1 Hr2].
+elim/complete23_ind=>{t}//=.
+- move=>l a r /eqP E Hcl Hcr /andP [Hl1 /eqP Hl2] /andP [Hr1 /eqP Hr2].
   case Hxa: (cmp x a)=>/=.
   - case Hxl: (ins x l)=>[t|tl ta tm] /=; rewrite {}Hxl /= in Hl1 Hl2.
-    - by rewrite Hl2 E Hl1 Hcr eq_refl.
-    by case/and3P: Hl1=>/eqP<- ->->; rewrite Hl2 E Hcr eq_refl !maxnn.
-  - by rewrite E Hcl Hcr eq_refl.
+    - by rewrite Hl2 E Hl1 Hcr !eq_refl.
+    by case/and3P: Hl1=>/eqP<- ->->; rewrite Hl2 E Hcr !maxnn !eq_refl.
+  - by rewrite E Hcl Hcr !eq_refl.
   - case Hxr: (ins x r)=>[t|tl ta tm] /=; rewrite {}Hxr /= in Hr1 Hr2.
-    - by rewrite Hr2 E Hr1 Hcl eq_refl.
-    by case/and3P: Hr1=>/eqP<- ->->; rewrite Hr2 E Hcl eq_refl !maxnn.
-move=>l IHl a m IHm b r IHr /and5P [/eqP E1 /eqP E2 Hcl Hcm Hcr].
-case: (IHl Hcl)=>{IHl}[Hl1 Hl2]; case: (IHm Hcm)=>{IHm}[Hm1 Hm2]; case: (IHr Hcr)=>{IHr}[Hr1 Hr2].
+    - by rewrite Hr2 E Hr1 Hcl !eq_refl.
+    by case/and3P: Hr1=>/eqP<- ->->; rewrite Hr2 E Hcl !maxnn !eq_refl.
+move=>l a m b r /eqP E1 /eqP E2 Hcl Hcm Hcr /andP [Hl1 /eqP Hl2] /andP [Hm1 /eqP Hm2] /andP [Hr1 /eqP Hr2].
 case Hxa: (cmp x a)=>/=.
 - case Hxl: (ins x l)=>[t|tl ta tm] /=; rewrite {}Hxl /= in Hl1 Hl2.
-  - by rewrite Hl2 E1 E2 Hl1 Hcm Hcr eq_refl.
-  by case/and3P: Hl1=>/eqP<- ->->; rewrite Hl2 E1 E2 Hcm Hcr !eq_refl !maxnn.
-- by rewrite E1 E2 Hcl Hcm Hcr eq_refl.
+  - by rewrite Hl2 E1 E2 Hl1 Hcm Hcr !eq_refl.
+  by case/and3P: Hl1=>/eqP<- ->->; rewrite Hl2 E1 E2 Hcm Hcr !maxnn !eq_refl.
+- by rewrite E1 E2 Hcl Hcm Hcr !eq_refl.
 case Hxb: (cmp x b)=>/=.
 - case Hxm: (ins x m)=>[t|tl ta tm] /=; rewrite {}Hxm /= in Hm1 Hm2.
-  - by rewrite Hm2 E1 E2 Hcl Hm1 Hcr eq_refl.
-  by case/and3P: Hm1=>/eqP<- ->->; rewrite Hm2 E1 E2 Hcl Hcr !eq_refl !maxnn.
-- by rewrite E1 E2 Hcl Hcm Hcr eq_refl.
+  - by rewrite Hm2 E1 E2 Hcl Hm1 Hcr !eq_refl.
+  by case/and3P: Hm1=>/eqP<- ->->; rewrite Hm2 E1 E2 Hcl Hcr !maxnn !eq_refl.
+- by rewrite E1 E2 Hcl Hcm Hcr !eq_refl.
 case Hxr: (ins x r)=>[t|tl ta tm] /=; rewrite {}Hxr /= in Hr1 Hr2.
-- by rewrite Hr2 E1 E2 Hcl Hcm Hr1 eq_refl.
-by case/and3P: Hr1=>/eqP<- ->->; rewrite Hr2 E1 E2 Hcl Hcm !eq_refl !maxnn.
+- by rewrite Hr2 E1 E2 Hcl Hcm Hr1 !eq_refl.
+by case/and3P: Hr1=>/eqP<- ->->; rewrite Hr2 E1 E2 Hcl Hcm !maxnn !eq_refl.
 Qed.
 
 Lemma complete_insert x (t : tree23 T) : complete23 t -> complete23 (insert x t).
-Proof. by case/(complete_ins x). Qed.
+Proof. by case/(complete_ins x)/andP. Qed.
 
 Definition hD {A} (u : upD A) : nat :=
   match u with
@@ -481,10 +519,11 @@ case: m=>/=.
 by move=>lm _ mm _ rm; rewrite !addn_maxl !maxnA.
 Qed.
 
-Lemma complete21 {A} (l' : upD A) a r : hD l' = heightn23 r ->
-                                        complete23 (treeD l') ->
-                                        completen23 r ->
-                                        complete23 (treeD (node21 l' a r)).
+Lemma complete21 {A} (l' : upD A) a r :
+  hD l' = heightn23 r ->
+  complete23 (treeD l') ->
+  completen23 r ->
+  complete23 (treeD (node21 l' a r)).
 Proof.
 case: l'=>/= t.
 - by rewrite height_embed complete_embed=>->->->; rewrite eq_refl.
@@ -495,10 +534,11 @@ move=>l _ m _ r; rewrite !addn1 =>/succn_inj ->-> /and5P [/eqP -> /eqP ->->->->]
 by rewrite !maxnn !eq_refl.
 Qed.
 
-Lemma complete22 {A} (l : n23 A) a r' : heightn23 l = hD r' ->
-                                        completen23 l ->
-                                        complete23 (treeD r') ->
-                                        complete23 (treeD (node22 l a r')).
+Lemma complete22 {A} (l : n23 A) a r' :
+  heightn23 l = hD r' ->
+  completen23 l ->
+  complete23 (treeD r') ->
+  complete23 (treeD (node22 l a r')).
 Proof.
 case: r'=>/= t.
 - by rewrite height_embed complete_embed=>->->->; rewrite eq_refl.
@@ -509,12 +549,13 @@ move=>l _ m _ r; rewrite !addn1 =>/succn_inj <- /and5P [/eqP -> /eqP ->->->->] -
 by rewrite !maxnn !eq_refl.
 Qed.
 
-Lemma complete31 {A} (l' : upD A) a m b r : hD l' = heightn23 m ->
-                                            heightn23 m = height23 r ->
-                                            complete23 (treeD l') ->
-                                            completen23 m ->
-                                            complete23 r ->
-                                            complete23 (treeD (node31 l' a m b r)).
+Lemma complete31 {A} (l' : upD A) a m b r :
+  hD l' = heightn23 m ->
+  heightn23 m = height23 r ->
+  complete23 (treeD l') ->
+  completen23 m ->
+  complete23 r ->
+  complete23 (treeD (node31 l' a m b r)).
 Proof.
 case: l'=>/= t.
 - by rewrite height_embed complete_embed=>->->->->->; rewrite eq_refl.
@@ -525,12 +566,13 @@ move=>lm _ mm _ rm; rewrite !addn1 =>/succn_inj -> <- -> /and5P [/eqP -> /eqP ->
 by rewrite !maxnn !eq_refl.
 Qed.
 
-Lemma complete32 {A} (l : tree23 A) a m' b r : height23 l = hD m' ->
-                                               hD m' = heightn23 r ->
-                                               complete23 l ->
-                                               complete23 (treeD m') ->
-                                               completen23 r ->
-                                               complete23 (treeD (node32 l a m' b r)).
+Lemma complete32 {A} (l : tree23 A) a m' b r :
+  height23 l = hD m' ->
+  hD m' = heightn23 r ->
+  complete23 l ->
+  complete23 (treeD m') ->
+  completen23 r ->
+  complete23 (treeD (node32 l a m' b r)).
 Proof.
 case: m'=>/= t.
 - by rewrite height_embed complete_embed=>->->->->->; rewrite eq_refl.
@@ -541,12 +583,13 @@ move=>lm _ mm _ rm ->; rewrite !addn1 =>/succn_inj ->->-> /and5P [/eqP -> /eqP -
 by rewrite !maxnn !eq_refl.
 Qed.
 
-Lemma complete33 {A} (l : tree23 A) a m b r' : height23 l = heightn23 m ->
-                                               heightn23 m = hD r' ->
-                                               complete23 l ->
-                                               completen23 m ->
-                                               complete23 (treeD r') ->
-                                               complete23 (treeD (node33 l a m b r')).
+Lemma complete33 {A} (l : tree23 A) a m b r' :
+  height23 l = heightn23 m ->
+  heightn23 m = hD r' ->
+  complete23 l ->
+  completen23 m ->
+  complete23 (treeD r') ->
+  complete23 (treeD (node33 l a m b r')).
 Proof.
 case: r'=>/= t.
 - by rewrite height_embed complete_embed=>->->->->->; rewrite eq_refl.
@@ -643,18 +686,20 @@ apply: complete31=>//.
 by rewrite -(complete_lift Hlm).
 Qed.
 
-Lemma split_min_hD {A} (t : n23 A) x t' : split_min t = (x, t') ->
-                                          completen23 t ->
-                                          hD t' = heightn23 t.
+Lemma split_min_hD {A} (t : n23 A) x t' :
+  split_min t = (x, t') ->
+  completen23 t ->
+  hD t' = heightn23 t.
 Proof.
 case: t=>/=.
 - by move=>l a r H /and3P [/eqP E Hl Hr]; apply: (split_min_hD2 H).
 by move=>l a m b r H /and5P [/eqP E1 /eqP E2 Hl Hm Hr]; apply: (split_min_hD3 H).
 Qed.
 
-Lemma split_min_completeD {A} (t : n23 A) x t' : split_min t = (x, t') ->
-                                                 completen23 t ->
-                                                 complete23 (treeD t').
+Lemma split_min_completeD {A} (t : n23 A) x t' :
+  split_min t = (x, t') ->
+  completen23 t ->
+  complete23 (treeD t').
 Proof.
 case: t=>/=.
 - by move=>l a r H /and3P [/eqP E Hl Hr]; apply: (split_min_completeD2 H).
@@ -663,10 +708,9 @@ Qed.
 
 Lemma hD_del t (x : T) : complete23 t -> hD (del x t) = height23 t.
 Proof.
-elim: t=>//=.
-- move=>l IHl a r IHr /and3P [/eqP E Hl Hr].
-  move/IHl: (Hl)=>{}IHl; move/IHr: (Hr)=>{}IHr.
-  case Hll: (lift l)=>[l'|]; last by case: {IHl Hl}l E Hll=>//= <- _; case: ifP.
+elim/complete23_ind=>{t}//=.
+- move=>l a r /eqP E _ Hr IHl IHr.
+  case Hll: (lift l)=>[l'|]; last by case: {IHl}l E Hll=>//=<- _; case: ifP.
   case Hlr: (lift r)=>[r'|]; last by case: {IHr Hr}r E Hlr=>//=-> _; case: ifP.
   case Hxa: (cmp x a).
   - by rewrite hD21 IHl (height_lift Hlr).
@@ -674,12 +718,11 @@ elim: t=>//=.
     rewrite hD22 (height_lift Hll) (height_lift Hlr) (split_min_hD Hsm) //.
     by rewrite -(complete_lift Hlr).
   by rewrite hD22 IHr (height_lift Hll).
-move=>l IHl a m IHm b r IHr /and5P [/eqP E1 /eqP E2 Hl Hm Hr].
-move/IHl: (Hl)=>{}IHl; move/IHm: (Hm)=>{}IHm; move/IHr: (Hr)=>{}IHr.
+move=>l a m b r /eqP E1 /eqP E2 _ Hm Hr IHl IHm IHr.
 case Hlm: (lift m)=>[m'|]; last first.
 - by case: {IHm Hm}m E1 E2 Hlm=>//= -> <- _; case: ifP=>// _; case: ifP.
 case Hlr: (lift r)=>[r'|]; last first.
-- by case: {IHr Hr}r E1 E2 Hlr=>//= -> -> _; case: ifP=>//= _; case: ifP.
+- by case: {IHr Hr}r E1 E2 Hlr=>//= -> -> _; case: ifP=>// _; case: ifP.
 case Hxa: (cmp x a).
 - by rewrite hD31 IHl (height_lift Hlm).
 - case Hsm: (split_min m')=>[x0 t0].
@@ -695,55 +738,46 @@ Qed.
 
 Lemma complete_treeD t (x : T) : complete23 t -> complete23 (treeD (del x t)).
 Proof.
-elim: t=>//=.
-- move=>l IHl a r IHr /and3P [/eqP E Hl Hr].
-  move/IHl: (Hl)=>{}IHl; move/IHr: (Hr)=>{}IHr.
+elim/complete23_ind=>{t}//=.
+- move=>l a r /eqP E Hl Hr IHl IHr.
   case Hll: (lift l)=>[l'|]; last by case: ifP.
   case Hlr: (lift r)=>[r'|]; last by case: ifP.
   case Hxa: (cmp x a).
-  - apply: complete21=>//.
-    - by rewrite hD_del // -(height_lift Hlr) E.
-    by rewrite -(complete_lift Hlr).
+  - apply: complete21=>//; last by rewrite -(complete_lift Hlr).
+    by rewrite hD_del // -(height_lift Hlr) E.
   - case Hsm: (split_min r')=>[x0 t0].
     apply: complete22.
     - rewrite (split_min_hD Hsm); last by rewrite -(complete_lift Hlr).
       by rewrite -(height_lift Hll) -(height_lift Hlr).
     - by rewrite -(complete_lift Hll).
     by apply: (split_min_completeD Hsm); rewrite -(complete_lift Hlr).
-  apply: complete22=>//.
-  - by rewrite hD_del // -(height_lift Hll).
-  by rewrite -(complete_lift Hll).
-move=>l IHl a m IHm b r IHr /and5P [/eqP E1 /eqP E2 Hl Hm Hr].
-move/IHl: (Hl)=>{}IHl; move/IHm: (Hm)=>{}IHm; move/IHr: (Hr)=>{}IHr.
+  apply: complete22=>//; last by rewrite -(complete_lift Hll).
+  by rewrite hD_del // -(height_lift Hll).
+move=>l a m b r /eqP E1 /eqP E2 Hl Hm Hr IHl IHm IHr.
 case Hlm: (lift m)=>[m'|]; last by case: ifP=>//= _; case: ifP.
 case Hlr: (lift r)=>[r'|]; last by case: ifP=>//= _; case: ifP.
 case Hxa: (cmp x a).
-- apply: complete31=>//.
+- apply: complete31=>//; last by rewrite -(complete_lift Hlm).
   - by rewrite hD_del // -(height_lift Hlm) E1.
-  - by rewrite -(height_lift Hlm) E2.
-  by rewrite -(complete_lift Hlm).
+  by rewrite -(height_lift Hlm) E2.
 - case Hsm: (split_min m')=>[x0 t0].
-  apply: complete32=>//.
+  apply: complete32=>//; last by by rewrite -(complete_lift Hlr).
   - rewrite (split_min_hD Hsm); last by rewrite -(complete_lift Hlm).
     by rewrite -(height_lift Hlm).
   - rewrite (split_min_hD Hsm); last by rewrite -(complete_lift Hlm).
     by rewrite -(height_lift Hlm) -(height_lift Hlr).
-  - by apply: (split_min_completeD Hsm); rewrite -(complete_lift Hlm).
-  by rewrite -(complete_lift Hlr).
+  by apply: (split_min_completeD Hsm); rewrite -(complete_lift Hlm).
 case Hxb: (cmp x b).
-- apply: complete32=>//.
-  - by rewrite hD_del.
+- apply: complete32=>//; first by rewrite hD_del.
   - by rewrite hD_del // -(height_lift Hlr).
   by rewrite -(complete_lift Hlr).
 - case Hsm: (split_min r')=>[x0 t0].
-  apply: complete33=>//.
-  - by rewrite -(height_lift Hlm).
+  apply: complete33=>//; first by rewrite -(height_lift Hlm).
   - rewrite (split_min_hD Hsm); last by rewrite -(complete_lift Hlr).
     by rewrite -(height_lift Hlm) -(height_lift Hlr).
   - by rewrite -(complete_lift Hlm).
   by apply: (split_min_completeD Hsm); rewrite -(complete_lift Hlr).
-apply: complete33=>//.
-- by rewrite -(height_lift Hlm).
+apply: complete33=>//; first by rewrite -(height_lift Hlm).
 - by rewrite hD_del // -(height_lift Hlm).
 by rewrite -(complete_lift Hlm).
 Qed.
@@ -887,27 +921,27 @@ Lemma inorder_delete23 x t :
   complete23 t -> bst_list t ->
   inorder23 (delete x t) = del_list x (inorder23 t).
 Proof.
-rewrite /bst_list /delete; elim: t=>//=.
-- move=>l IHl a r IHr /and3P [/eqP E Hcl Hcr] /[dup] H.
+rewrite /bst_list /delete; elim/complete23_ind=>{t}//=.
+- move=>l a r /eqP E Hcl Hcr IHl IHr /[dup] H.
   case/cat_sorted2=>H1 /path_sorted H2.
   rewrite dellist_sorted_cat_cons_cat //.
   case Hfl: (lift l)=>[l'|]; last first.
   - case: {H H1 IHl Hcl}l E Hfl =>//= /eqP; rewrite eq_sym => /height_empty -> _.
-    case: ifP =>/=; first by move/eqP=>->; rewrite ltxx.
-    by case: ifP.
+    case: ifP=>/=; last by rewrite if_same.
+    by move/eqP=>->; rewrite ltxx.
   case Hfr: (lift r)=>[r'|]; last first.
   - case: {H H2 IHr Hcr}r E Hfr =>//= /eqP/height_empty -> _.
-    case: ifP =>/=; first by move/eqP=>->; rewrite ltxx.
-    by case: ifP.
+    case: ifP=>/=; last by rewrite if_same.
+    by move/eqP=>->; rewrite ltxx.
   case Hc: (cmp x a)=>/=.
-  - by move/cmp_lt: Hc=>->; rewrite inorderD21 (IHl Hcl H1) (inorder_lift Hfr).
+  - by move/cmp_lt: Hc=>->; rewrite inorderD21 (IHl H1) (inorder_lift Hfr).
   - move/cmp_eq: Hc=>/eqP ->; rewrite ltxx eq_refl.
     case Hsm: (split_min r')=>[x0 t0].
     rewrite inorderD22 (split_minD Hsm); last by rewrite -(complete_lift Hfr).
     by rewrite -(inorder_lift Hfl) -(inorder_lift Hfr).
   move/cmp_gt: Hc; rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
-  by rewrite inorderD22 (IHr Hcr H2) (inorder_lift Hfl).
-move=>l IHl a m IHm b r IHr /and5P [/eqP E1 /eqP E2 Hcl Hcm Hcr] /[dup] H.
+  by rewrite inorderD22 (IHr H2) (inorder_lift Hfl).
+move=>l a m b r /eqP E1 /eqP E2 Hcl Hcm Hcr IHl IHm IHr /[dup] H.
 case/cat_sorted2=>H1 /=; rewrite (path_sortedE lt_trans); case/andP.
 rewrite all_cat=>/= /and3P [_ Hab _] /[dup] H0; case/cat_sorted2=>H2 /path_sorted H3.
 rewrite dellist_sorted_cat_cons_cat // -/cat.
@@ -915,16 +949,16 @@ case Hfm: (lift m)=>[m'|]; last first.
 - case: {H H0 H1 H2 IHm Hcm}m E1 E2 Hfm =>//=.
   move/eqP/height_empty => -> /eqP; rewrite eq_sym => /height_empty ->_ /=.
   case: ifP=>/=; first by move/eqP=>->; rewrite ltxx.
-  case: ifP =>/=; first by move/eqP=>-> _; rewrite ltNge le_eqVlt Hab orbT.
-  by case: ifP.
+  case: ifP=>/=; last by rewrite if_same.
+  by move/eqP=>-> _; rewrite ltNge le_eqVlt Hab orbT.
 case Hfr: (lift r)=>[r'|]; last first.
 - case: {H H0 H3 IHr Hcr}r E2 Hfr =>//= /[dup] Hhm /eqP/height_empty -> _ /=.
   move: E1; rewrite Hhm=>/eqP/height_empty -> /=.
   case: ifP =>/=; first by move/eqP=>->; rewrite ltxx.
-  case: ifP=>/=; first by move/eqP=>-> _; rewrite ltNge le_eqVlt Hab orbT.
-  by case: ifP.
+  case: ifP=>/=; last by rewrite if_same.
+  by move/eqP=>-> _; rewrite ltNge le_eqVlt Hab orbT.
 case Hc: (cmp x a)=>/=.
-- by move/cmp_lt: Hc=>->; rewrite inorderD31 (IHl Hcl H1) (inorder_lift Hfm).
+- by move/cmp_lt: Hc=>->; rewrite inorderD31 (IHl H1) (inorder_lift Hfm).
 - move/cmp_eq: Hc=>/eqP ->; rewrite ltxx eq_refl.
   case Hsm: (split_min m')=>[x0 t0].
   rewrite inorderD32 -cat_cons (split_minD Hsm); last by rewrite -(complete_lift Hfm).
@@ -932,21 +966,20 @@ case Hc: (cmp x a)=>/=.
 move/cmp_gt: Hc; rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
 rewrite dellist_sorted_cat_cons_cat //.
 case Hc': (cmp x b)=>/=.
-- by move/cmp_lt: Hc'=>->; rewrite inorderD32 (IHm Hcm H2) (inorder_lift Hfr).
+- by move/cmp_lt: Hc'=>->; rewrite inorderD32 (IHm H2) (inorder_lift Hfr).
 - move/cmp_eq: Hc'=>/eqP ->; rewrite ltxx eq_refl.
   case Hsm: (split_min r')=>[x0 t0].
   rewrite inorderD33 (split_minD Hsm); last by rewrite -(complete_lift Hfr).
   by rewrite -(inorder_lift Hfm) -(inorder_lift Hfr).
 move/cmp_gt: Hc'; rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
-by rewrite inorderD33 (IHr Hcr H3) (inorder_lift Hfm).
+by rewrite inorderD33 (IHr H3) (inorder_lift Hfm).
 Qed.
 
 Lemma inorder_isin_list x (t : tree23 T) :
   bst_list t ->
   isin23 t x = (x \in inorder23 t).
 Proof.
-rewrite /bst_list /=.
-elim: t=>//=.
+rewrite /bst_list /=; elim: t=>//=.
 - move=>l IHl a r IHr.
   rewrite mem_cat inE sorted_cat_cons_cat=>/andP [H1 H2].
   case Hc: (cmp x a)=>/=.

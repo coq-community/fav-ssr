@@ -26,6 +26,19 @@ Fixpoint avl (t : tree_ht A) : bool :=
     then [&& `|height l - height r| <= 1%N, n == maxn (height l) (height r) + 1, avl l & avl r]
     else true.
 
+Lemma avl_ind (P : tree_ht A -> Prop) :
+  P (Leaf (A*nat)) ->
+  (forall l a r,
+   `|height l - height r| <= 1%N ->
+   avl l -> avl r ->
+   P l -> P r ->
+   P (Node l (a,maxn (height l) (height r) + 1) r)) ->
+  forall t, avl t -> P t.
+Proof.
+move=>Pl Pn; elim=>//= l IHl [a n] r IHr /and4P [D /eqP -> Hcl Hcr].
+by apply: Pn=>//; [apply: IHl| apply: IHr].
+Qed.
+
 Lemma ht_height (t : tree_ht A) : avl t -> ht t = height t.
 Proof. by case: t=>//=l [a x] r /and4P [_ /eqP E _ _]. Qed.
 
@@ -48,6 +61,8 @@ by case: t1=>//= l [a n] r _; apply: Nd.
 Qed.
 
 End Intro.
+
+Arguments avl_ind [A P].
 
 (* TODO: move to prelude? *)
 (* distance helpers *)
@@ -110,7 +125,7 @@ Qed.
 
 Lemma avl_fib (t : tree_ht A) : avl t -> (fib (height t + 2) <= size1_tree t)%N.
 Proof.
-elim: t=>//= l IHl [_ n] r IHr /and4P [H _ /IHl Hl /IHr Hr] {IHl IHr}.
+elim/avl_ind=>{t}//=l _ r H Hal Har Hl Hr.
 case: (leqP (height l) (height r))=>Hlr; rewrite addn2; simp fib.
 - rewrite addnC; apply: leq_add; last by rewrite -addnA.
   apply/leq_trans/Hl/fib_monotone; rewrite (_ : 2 = 1 + 1) // addnA leq_add2r.
@@ -338,8 +353,7 @@ Theorem avl_insert x t :
   avl t ->
   avl (insert x t) && ((height (insert x t) == height t) || (height (insert x t) == height t + 1)).
 Proof.
-elim: t=>//=l IHl [a n] r IHr /and4P [H E Hal Har].
-case/IHl/andP: (Hal)=>Hail {}IHl; case/IHr/andP: (Har)=>Hair {}IHr.
+elim/avl_ind=>//=l a r H Hal Har /andP [Hail IHl] /andP [Hair IHr].
 case: (cmp x a)=>/=.
 - apply/andP; split.
   - apply: avl_balL=>//; rewrite leq_subLR addnC.
@@ -365,7 +379,7 @@ case: (cmp x a)=>/=.
   - by move=>/eqP Ehl; move: H; rewrite -{}Ehl distn_Dl.
   rewrite (_: 2= 1+1) // addnA eqn_add2r =>/eqP<-; rewrite maxn_addl.
   by case/orP: (height_balL a Hail Har (eqP Hil))=>/eqP->; rewrite -!addnA eq_refl ?orbT.
-- by rewrite H E Hal Har eq_refl.
+- by rewrite H Hal Har eq_refl.
 apply/andP; split.
 - apply: avl_balR=>//; rewrite leq_subLR addnC.
   case/dist_leq/orP: H=>/andP [H1 H2]; case/orP: IHr=>/eqP->.
@@ -457,8 +471,7 @@ Theorem avl_delete x t :
   avl t ->
   avl (delete x t) && ((height t == height (delete x t)) || (height t == height (delete x t) + 1)).
 Proof.
-elim: t=>//=l IHl [a n] r IHr /and4P [H E Hal Har].
-case/IHl/andP: (Hal)=>Hail {}IHl; case/IHr/andP: (Har)=>Hair {}IHr.
+elim/avl_ind=>//=l a r H Hal Har /andP [Hail IHl] /andP [Hair IHr].
 case: (cmp x a)=>/=.
 - apply/andP; split.
   - apply: avl_balR=>//; rewrite leq_subLR addnC.
@@ -488,8 +501,8 @@ case: (cmp x a)=>/=.
   - by right; rewrite eqn_add2r; apply/eqP/maxn_idPr; rewrite (_ : 2= 1+1) // addnA; apply: leq_addr.
   - by left; rewrite (_ : 3= 2+1) // addnA eqn_add2r maxn_addr eq_refl.
   by left; rewrite (_ : 3= 2+1) // addnA eqn_add2r; apply/eqP/maxn_idPr; rewrite (_ : 2= 1+1) // addnA; apply: leq_addr.
-- case: {Hail IHl}l H E Hal=>/=; first by move=>_ _ _; rewrite Har max0n eq_refl orbT.
-  move=>ll [al nl] rl H E /and4P [Hl El Hall Harl].
+- case: {Hail IHl}l H Hal=>/=; first by rewrite Har max0n eq_refl orbT.
+  move=>ll [al nl] rl H /and4P [Hl El Hall Harl].
   case Hsm: (split_max ll al rl)=>[l' a'].
   case/andP: (avl_split_max Hsm Hl Hall Harl)=>Hal' Hl'.
   apply/andP; split.
@@ -800,6 +813,21 @@ Fixpoint avl_b {A} (t : tree_bal A) : bool :=
     [&& bal_inv (height l) b (height r), avl_b l & avl_b r]
     else true.
 
+Lemma avl_b_ind {A} (P : tree_bal A -> Prop) :
+  P (Leaf (A*bal)) ->
+  (forall l a b r,
+   bal_inv (height l) b (height r) ->
+   avl_b l -> avl_b r ->
+   P l -> P r ->
+   P (Node l (a,b) r)) ->
+  forall t, avl_b t -> P t.
+Proof.
+move=>Pl Pn; elim=>//= l IHl [a n] r IHr /and3P [H Hal Har].
+by apply: Pn=>//; [apply: IHl| apply: IHr].
+Qed.
+
+Arguments avl_b_ind [A P].
+
 Definition is_bal {A} (t : tree_bal A) : bool :=
   if t is Node _ (_, b) _ then b == Bal else false.
 
@@ -884,8 +912,7 @@ Lemma avl_insert_b x t :
   avl_b t ->
   avl_b (insert_b x t) && (height (insert_b x t) == height t + incr t (insert_b x t)).
 Proof.
-elim: t=>//=l IHl [a b] r IHr /and3P [E Hl Hr].
-case/IHl/andP: (Hl)=>{IHl} Hal Hhl; case/IHr/andP: (Hr)=>{IHr} Har Hhr.
+elim/avl_b_ind=>//= l a b r E Hl Hr /andP [Hal Hhl] /andP [Har Hhr].
 case: (cmp x a)=>/=.
 - (* x < a *)
   case: ifP=>/=; last first.
@@ -1023,8 +1050,7 @@ Lemma avl_delete_b x t :
   avl_b t ->
   avl_b (delete_b x t) && (height t == height (delete_b x t) + decr t (delete_b x t)).
 Proof.
-elim: t=>//=l IHl [a b] r IHr /and3P [E Hl Hr].
-case/IHl/andP: (Hl)=>{IHl} Hal Hhl; case/IHr/andP: (Hr)=>{IHr} Har Hhr.
+elim/avl_b_ind=>//=l a b r E Hl Hr /andP [Hal Hhl] /andP [Har Hhr].
 case: (cmp x a)=>/=.
 - (* x < a *)
   case: ifP=>/=; last first.
