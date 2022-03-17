@@ -89,10 +89,12 @@ Fixpoint insert x (t : tree T) : tree T :=
          end
   else Node empty x empty.
 
+(* deletion by replacing *)
+
 Fixpoint split_min (l : tree T) (a : T) (r : tree T) : T * tree T :=
   if l is Node ll al rl then
-    let '(x, l') := split_min ll al rl in
-        (x, Node l' a r)
+    let: (x, l') := split_min ll al rl in
+      (x, Node l' a r)
     else (a, r).
 
 Lemma inorder_split_min (l r t : tree T) a x :
@@ -118,6 +120,8 @@ Fixpoint delete x (t : tree T) : tree T :=
   else empty.
 
 Definition UASet := ASet.make empty insert delete isin.
+
+(* deletion by joining *)
 
 Equations join (t1 t2 : tree T) : tree T :=
 join t              Leaf           => t;
@@ -150,7 +154,6 @@ join0 Leaf           t              => t;
 join0 (Node l1 a r1) (Node l2 b r2) => Node l1 a (Node (join0 r1 l2) b r2).
 
 (* Exercise 5.2 *)
-
 Lemma join_behaves l r : (height (join l r) <= maxn (height l) (height r) + 1)%N.
 Proof.
 Admitted.
@@ -496,7 +499,8 @@ Section Augmented.
 
 Definition empty_a {A B : Type} : tree (A*B) := @Leaf (A*B).
 
-Fixpoint isin_a {disp : unit} {T : orderType disp} {A} (t : tree (T*A)) x : bool :=
+Fixpoint isin_a {disp : unit} {T : orderType disp} {A}
+                (t : tree (T*A)) x : bool :=
   if t is Node l (a,_) r
     then match cmp x a with
            | LT => isin_a l x
@@ -504,6 +508,12 @@ Fixpoint isin_a {disp : unit} {T : orderType disp} {A} (t : tree (T*A)) x : bool
            | GT => isin_a r x
          end
   else false.
+
+Fixpoint bst_a {disp : unit} {T : orderType disp} {A}
+                (t : tree (T*A)) : bool :=
+  if t is Node l (a, _) r
+    then [&& all (< a) (inorder_a l), all (> a) (inorder_a r), bst_a l & bst_a r]
+    else true.
 
 End Augmented.
 

@@ -441,7 +441,7 @@ Lemma complete_ins (x : T) t :
 Proof.
 elim/complete23_ind=>{t}//=.
 - move=>l a r /eqP E Hcl Hcr /andP [Hl1 /eqP Hl2] /andP [Hr1 /eqP Hr2].
-  case Hxa: (cmp x a)=>/=.
+  case: (cmp x a)=>/=.
   - case Hxl: (ins x l)=>[t|tl ta tm] /=; rewrite {}Hxl /= in Hl1 Hl2.
     - by rewrite Hl2 E Hl1 Hcr !eq_refl.
     by case/and3P: Hl1=>/eqP<- ->->; rewrite Hl2 E Hcr !maxnn !eq_refl.
@@ -450,7 +450,7 @@ elim/complete23_ind=>{t}//=.
     - by rewrite Hr2 E Hr1 Hcl !eq_refl.
     by case/and3P: Hr1=>/eqP<- ->->; rewrite Hr2 E Hcl !maxnn !eq_refl.
 move=>l a m b r /eqP E1 /eqP E2 Hcl Hcm Hcr /andP [Hl1 /eqP Hl2] /andP [Hm1 /eqP Hm2] /andP [Hr1 /eqP Hr2].
-case Hxa: (cmp x a)=>/=.
+case: (cmp x a)=>/=.
 - case Hxl: (ins x l)=>[t|tl ta tm] /=; rewrite {}Hxl /= in Hl1 Hl2.
   - by rewrite Hl2 E1 E2 Hl1 Hcm Hcr !eq_refl.
   by case/and3P: Hl1=>/eqP<- ->->; rewrite Hl2 E1 E2 Hcm Hcr !maxnn !eq_refl.
@@ -712,7 +712,7 @@ elim/complete23_ind=>{t}//=.
 - move=>l a r /eqP E _ Hr IHl IHr.
   case Hll: (lift l)=>[l'|]; last by case: {IHl}l E Hll=>//=<- _; case: ifP.
   case Hlr: (lift r)=>[r'|]; last by case: {IHr Hr}r E Hlr=>//=-> _; case: ifP.
-  case Hxa: (cmp x a).
+  case: (cmp x a).
   - by rewrite hD21 IHl (height_lift Hlr).
   - case Hsm: (split_min r')=>[x0 t0].
     rewrite hD22 (height_lift Hll) (height_lift Hlr) (split_min_hD Hsm) //.
@@ -723,7 +723,7 @@ case Hlm: (lift m)=>[m'|]; last first.
 - by case: {IHm Hm}m E1 E2 Hlm=>//= -> <- _; case: ifP=>// _; case: ifP.
 case Hlr: (lift r)=>[r'|]; last first.
 - by case: {IHr Hr}r E1 E2 Hlr=>//= -> -> _; case: ifP=>// _; case: ifP.
-case Hxa: (cmp x a).
+case: (cmp x a).
 - by rewrite hD31 IHl (height_lift Hlm).
 - case Hsm: (split_min m')=>[x0 t0].
   rewrite hD32 (height_lift Hlm) (height_lift Hlr) (split_min_hD Hsm) //.
@@ -742,7 +742,7 @@ elim/complete23_ind=>{t}//=.
 - move=>l a r /eqP E Hl Hr IHl IHr.
   case Hll: (lift l)=>[l'|]; last by case: ifP.
   case Hlr: (lift r)=>[r'|]; last by case: ifP.
-  case Hxa: (cmp x a).
+  case: (cmp x a).
   - apply: complete21=>//; last by rewrite -(complete_lift Hlr).
     by rewrite hD_del // -(height_lift Hlr) E.
   - case Hsm: (split_min r')=>[x0 t0].
@@ -756,7 +756,7 @@ elim/complete23_ind=>{t}//=.
 move=>l a m b r /eqP E1 /eqP E2 Hl Hm Hr IHl IHm IHr.
 case Hlm: (lift m)=>[m'|]; last by case: ifP=>//= _; case: ifP.
 case Hlr: (lift r)=>[r'|]; last by case: ifP=>//= _; case: ifP.
-case Hxa: (cmp x a).
+case: (cmp x a).
 - apply: complete31=>//; last by rewrite -(complete_lift Hlm).
   - by rewrite hD_del // -(height_lift Hlm) E1.
   by rewrite -(height_lift Hlm) E2.

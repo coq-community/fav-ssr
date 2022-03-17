@@ -180,111 +180,84 @@ Definition invc2 (t : rbt T) := invc (paint Black t).
 Lemma invc2I t : invc t -> invc2 t.
 Proof. by rewrite /invc2; case: t=>//=l [a c] r /= /and3P [_ ->->]. Qed.
 
+Lemma invc_baliL l a r :
+  invc2 l -> invc r -> invc (baliL l a r).
+Proof.
+rewrite /invc2.
+funelim (baliL l a r); simp baliL=>/= /[swap] ->; rewrite !andbT //.
+- by case/and3P=>_->->.
+- by case/andP; case/and3P=>_->->->.
+by case/and4P; case/andP=>->->_->->.
+Qed.
+
+Lemma bh_baliL l a r :
+  bh l == bh r -> bh (baliL l a r) == bh l + 1.
+Proof. by funelim (baliL l a r). Qed.
+
+Lemma invh_baliL l a r :
+  invh l -> invh r -> bh l == bh r ->
+  invh (baliL l a r).
+Proof.
+funelim (baliL l a r); simp baliL=>/= /[swap] ->; rewrite !andbT //.
+- by case/and4P=>/eqP<-/eqP<- ->->->; rewrite !eq_refl.
+- by case/and4P; rewrite addn1.
+- by case/andP=>->->->.
+- by case/and3P=>/eqP->/and3P [/eqP->->->] ->->; rewrite !eq_refl.
+- by case/and3P=>->/and3P[->->->]->->.
+- by case/and3P; rewrite addn1.
+- by case/and5P=>/eqP<-/and3P[/eqP->->->] /eqP<- ->->->; rewrite !eq_refl.
+- by case/and5P=>->/and3P [->->->] ->->->->.
+by case/and3P=>->/and3P[->->->]->->.
+Qed.
+
 Lemma inv_baliL l a r :
   invh l -> invh r -> invc2 l -> invc r -> bh l == bh r ->
   [&& invc (baliL l a r), invh (baliL l a r) & (bh (baliL l a r) == bh l + 1)].
 Proof.
-move=>Hhl Hhr Hcl Hcr E.
-funelim (baliL l a r); simp baliL=>/=.
-- (* l = Leaf *)
-  by rewrite Hhr Hcr E eq_refl.
-- (* l = R Leaf s0 Leaf *)
-  by rewrite Hhr Hcr E eq_refl.
-- (* l = R Leaf a (R t2 b t3) *)
-  rewrite /= in Hhl E; rewrite /invc2 /= in Hcl.
-  case/and4P: Hhl=>/eqP E2 /eqP <- ->->.
-  case/and3P: Hcl=>_ ->->.
-  by rewrite -E2 Hhr Hcr E !eq_refl.
-- (* l = R Leaf s0 (B t s1 t0) *)
-  rewrite /= in Hhl E; rewrite /invc2 /= in Hcl.
-  case/and4P: Hhl=>/eqP <- /eqP <- ->->.
-  case/andP: Hcl=>->->.
-  by rewrite E Hhr Hcr !eq_refl.
-- (* l = B Leaf s0 t0 *)
-  rewrite /= in Hhl E; rewrite /invc2 /= in Hcl.
-  case/andP: Hhl=>->->.
-  by rewrite Hcl Hcr Hhr E eq_refl.
-- (* l = R (R t1 a t2) b t3 *)
-  rewrite /= -!andbA in Hhl E; rewrite /invc2 /= -!andbA in Hcl.
-  case/and5P: Hhl=>/eqP <-; rewrite E=>->->->->.
-  case/and5P: Hcl=>_ _ ->->->.
-  by rewrite Hhr Hcr eq_refl.
-- (* l = B (R t s0 t1) s1 t0 *)
-  rewrite /= -!andbA in Hhl E; rewrite /invc2 /= -!andbA in Hcl.
-  case/and5P: Hhl=>->->->->->.
-  case/and5P: Hcl=>->->->->->.
-  by rewrite E Hhr Hcr eq_refl.
-- (* l = R (B t s0 t1) s1 Leaf *)
-  rewrite /= -!andbA in Hhl E; rewrite /invc2 /= -!andbA in Hcl.
-  case/and5P: Hhl=>->->->->_.
-  case/and3P: Hcl=>->->_.
-  by rewrite E Hhr Hcr eq_refl.
-- (* l = R (B t s0 t1) a (R t2 b t3) *)
-  rewrite /= -!andbA in Hhl E; rewrite /invc2 /= -!andbA in Hcl.
-  move/eqP: E=><-.
-  case/and7P: Hhl=>/eqP ->->->->/eqP->->->.
-  case/and6P: Hcl=>->->_ _ ->->.
-  by rewrite Hhr Hcr !eq_refl.
-- (* l = R (B t s0 t1) s1 (B t0 s2 t2) *)
-  rewrite /= -!andbA in Hhl E; rewrite /invc2 /= -!andbA in Hcl.
-  case/and7P: Hhl=>->->->->->->->.
-  case/and4P: Hcl=>->->->->.
-  by rewrite E Hhr Hcr eq_refl.
-- (* l = B (B t s0 t1) s1 t0 *)
-  rewrite /= -!andbA in Hhl E; rewrite /invc2 /= -!andbA in Hcl.
-  case/and5P: Hhl=>->->->->->.
-  case/and3P: Hcl=>->->->.
-  by rewrite E Hhr Hcr eq_refl.
+move=>Hhl Hhr Hcl Hcr E; apply/and3P; split.
+- by apply: invc_baliL.
+- by apply: invh_baliL.
+by apply: bh_baliL.
+Qed.
+
+Lemma invc_baliR l a r :
+  invc l -> invc2 r -> invc (baliR l a r).
+Proof.
+rewrite /invc2; funelim (baliR l a r); simp baliR=>/=->//.
+- by rewrite andbT; case/and3P=>_->->.
+- by case/and4P=>-> _ ->->.
+by case/and3P=>/and3P [_->->]->->.
+Qed.
+
+Lemma bh_baliR l a r :
+  bh l == bh r -> bh (baliR l a r) == bh l + 1.
+Proof. by funelim (baliR l a r). Qed.
+
+Lemma invh_baliR l a r :
+  invh l -> invh r -> bh l == bh r ->
+  invh (baliR l a r).
+Proof.
+funelim (baliR l a r); simp baliR=>/=->/=; rewrite ?andbT //.
+- by case/and4P=>/eqP->/eqP<-->->/eqP->; rewrite !eq_refl.
+- by case/and4P; rewrite addn1.
+- by case/and5P=>/eqP->->/eqP->->->/eqP->; rewrite !eq_refl.
+- by case/and4P; rewrite addn1.
+- by case/and5P=>/eqP->/and3P [/eqP<- ->->] /eqP->->->/eqP->; rewrite !eq_refl.
+- by case/and5P=>->/and3P [->->->] ->->->->.
+by case/and3P=>->->->->.
 Qed.
 
 Lemma inv_baliR l a r :
   invh l -> invh r -> invc l -> invc2 r -> bh l == bh r ->
   [&& invc (baliR l a r), invh (baliR l a r) & (bh (baliR l a r) == bh l + 1)].
 Proof.
-move=>Hhl Hhr Hcl Hcr E.
-funelim (baliR l a r); simp baliR=>/=.
-- (* l = Leaf *)
-   by rewrite Hhl Hcl E eq_refl.
-- (* l = R Leaf s0 Leaf *)
-  by rewrite Hhl Hcl E eq_refl.
-- (* l = R (R t2 b t3) c Leaf *)
-  rewrite /= -!andbA in Hhr E; rewrite /invc2 /= -!andbA in Hcr.
-  case/and5P: Hhr=>/eqP E2 /eqP <- ->->_.
-  case/and5P: Hcr=>_ _->->_.
-  by move/eqP: E=>->; rewrite E2 Hhl Hcl !eq_refl.
-- (* l = R (B t s1 t0) s0 Leaf *)
-  rewrite /= -!andbA in Hhr E; rewrite /invc2 /= -!andbA in Hcr.
-  case/and5P: Hhr=>->->->->_.
-  case/and3P: Hcr=>->->_.
-  by rewrite E Hhl Hcl eq_refl.
-- (* l = R t2 b (R t3 c t4) *)
-  rewrite /= in Hhr E; rewrite /invc2 /= -!andbA in Hcr.
-  case/and5P: Hhr=>/eqP E2 ->->->->; rewrite -{}E2.
-  case/and5P: Hcr=>->_ _->->.
-  by move/eqP: E=>->; rewrite Hhl Hcl !eq_refl.
-- (* l = R Leaf s0 (B t0 s1 t1) *)
-  rewrite /= in Hhr E; rewrite /invc2 /= in Hcr.
-  case/and4P: Hhr=>->->->->.
-  case/andP: Hcr=>->->.
-  by rewrite Hhl Hcl E eq_refl.
-- (* l = R (R t2 b t3) c (B t0 s1 t4) *)
-  rewrite /= -!andbA in Hhr E; rewrite /invc2 /= -!andbA in Hcr.
-  move/eqP: E=>->.
-  case/and7P: Hhr=>/eqP <- /eqP ->->->->->->.
-  case/and6P: Hcr=>_ _->->->->.
-  by rewrite Hhl Hcl !eq_refl.
-- (* l = R (B t s2 t2) s0 (B t0 s1 t1) *)
-  rewrite /= -!andbA in Hhr E; rewrite /invc2 /= -!andbA in Hcr.
-  case/and7P: Hhr=>->->->->->->->.
-  case/and4P: Hcr=>->->->->.
-  by rewrite E Hhl Hcl eq_refl.
-- (* l = B t s0 t0 *)
-  rewrite /= in Hhr E; rewrite /invc2 /= in Hcr.
-  case/and3P: Hhr=>->->->.
-  case/andP: Hcr=>->->.
-  by rewrite E Hhl Hcl eq_refl.
+move=>Hhl Hhr Hcl Hcr E; apply/and3P; split.
+- by apply: invc_baliR.
+- by apply: invh_baliR.
+by apply: bh_baliR.
 Qed.
 
+(* TODO break up the proofs for ins, bald*, del & join *)
 Lemma inv_ins x t :
   invc t && invh t ->
   [&& invc2 (ins x t), (color t == Black) ==> invc (ins x t), invh (ins x t) & bh (ins x t) == bh t].
@@ -489,7 +462,7 @@ Lemma del_inv x t : invc t && invh t ->
       (color t == Black) ==> (bh (del x t) == bh t - 1) && invc2 (del x t) ].
 Proof.
 elim/invch_ind=>{t}//= l a c r I Hcl Hcr /eqP E Hhl Hhr /and3P [Hhdl Irl Ibl] /and3P [Hhdr Irr Ibr].
-case Hxa: (cmp x a)=>/=.
+case: (cmp x a)=>/=.
 - case: eqP=>El /=.
   - rewrite El /invc2 /= in E *; rewrite -E Hhr Hcr !andbT eq_refl /=.
     by case: c I=>//= /andP [_->].
@@ -843,7 +816,7 @@ Lemma del_j_inv x t : invc t && invh t ->
       (color t == Black) ==> (bh (del_j x t) == bh t - 1) && invc2 (del_j x t) ].
 Proof.
 elim/invch_ind=>{t}//= l a c r I Hcl Hcr /eqP E Hhl Hhr /and3P [Hhdl Irl Ibl] /and3P [Hhdr Irr Ibr].
-case Hxa: (cmp x a)=>/=.
+case: (cmp x a)=>/=.
 - case: eqP=>El /=.
   - rewrite El /invc2 /= in E *; rewrite -E eq_refl Hhr Hcr !andbT /=.
     by case: c I=>//= /andP [_->].

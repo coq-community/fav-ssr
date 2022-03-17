@@ -42,11 +42,6 @@ Qed.
 Lemma ht_height (t : tree_ht A) : avl t -> ht t = height t.
 Proof. by case: t=>//=l [a x] r /and4P [_ /eqP E _ _]. Qed.
 
-(* TODO: move to bintree? *)
-Inductive non_empty_if (b : bool) (t : tree_ht A) : Type :=
-| Nd l a n r : t = Node l (a,n) r -> b -> non_empty_if b t
-| Def : ~~ b -> non_empty_if b t.
-
 Lemma ne_hplus2 (t1 t2 : tree_ht A) : non_empty_if (ht t1 == ht t2 + 2) t1.
 Proof.
 case: eqP; last by move=>_; apply: Def.
@@ -185,9 +180,9 @@ Context {disp : unit} {T : orderType disp}.
 
 Definition balL {A} (ab : tree_ht A) (u : A) (c : tree_ht A) : tree_ht A :=
   match ne_hplus2 ab c with
-  | Nd a v _ b _ _ =>
+  | Nd a (v, _) b _ _ =>
       match ne_hgt b a with
-      | Nd b1 w _ b2 _ _ => node (node a v b1) w (node b2 u c)
+      | Nd b1 (w, _) b2 _ _ => node (node a v b1) w (node b2 u c)
       | Def _            => node a v (node b u c)
       end
   | Def _ => node ab u c
@@ -195,9 +190,9 @@ Definition balL {A} (ab : tree_ht A) (u : A) (c : tree_ht A) : tree_ht A :=
 
 Definition balR {A} (a : tree_ht A) (u : A) (bc : tree_ht A) : tree_ht A :=
   match ne_hplus2 bc a with
-  | Nd b v _ c _ _ =>
+  | Nd b (v, _) c _ _ =>
       match ne_hgt b c with
-      | Nd b1 w _ b2 _ _ => node (node a u b1) w (node b2 v c)
+      | Nd b1 (w, _) b2 _ _ => node (node a u b1) w (node b2 v c)
       | Def _            => node (node a u b) v c
       end
   | Def _ => node a u bc
@@ -209,14 +204,14 @@ Lemma height_balL {A} (l : tree_ht A) a r :
   (height (balL l a r) == height r + 2) || (height (balL l a r) == height r + 3).
 Proof.
 move=>Hl Hr E; rewrite /balL.
-case (ne_hplus2 l r)=>[al vl xl bl|] /=; last by rewrite !ht_height // E eq_refl.
+case (ne_hplus2 l r)=>[al [vl xl] bl|] /=; last by rewrite !ht_height // E eq_refl.
 move=>El _; move/eqP: E; rewrite {l}El /= in Hl *;
 rewrite {1}(_ : 2 = 1+1) // {1}addnA eqn_add2r => /eqP E.
 case/and4P: Hl=>Habl _ Hal Hbl.
-case (ne_hgt bl al)=>[bl1 wl nl bl2|] /=; rewrite !ht_height //; last first.
+case (ne_hgt bl al)=>[bl1 [wl nl] bl2|] /=; rewrite !ht_height //; last first.
 - rewrite -leqNgt=>/[dup] Hbal /maxn_idPr.
   rewrite maxnC => Em; rewrite {}Em in E; rewrite E -addn_maxl maxnCA maxnn.
-  move: (dist_leqR Habl Hbal)=>/[dup] {}Habl; rewrite E leq_add2r=>/maxn_idPl->.
+  move: (dist_leqR Habl Hbal)=>/[dup] {}Habl; rewrite E leq_add2r=>/maxn_idPl ->.
   rewrite leq_eqVlt {2}addn1 ltnS E in Habl.
   case/orP: Habl; first by rewrite eqn_add2r =>/eqP->; rewrite -addnA eq_refl.
   move=>Habl; have /eqP->: height bl == height al by rewrite eqn_leq Hbal E.
@@ -236,11 +231,11 @@ Lemma height_balR {A} (l : tree_ht A) a r :
   (height (balR l a r) == height l + 2) || (height (balR l a r) == height l + 3).
 Proof.
 move=>Hl Hr E; rewrite /balR.
-case (ne_hplus2 r l)=>[br vr xr cr|] /=; last by rewrite !ht_height // E eq_refl.
+case (ne_hplus2 r l)=>[br [vr xr] cr|] /=; last by rewrite !ht_height // E eq_refl.
 move=>Er; move/eqP: E; rewrite {r}Er /= in Hr *;
 rewrite {1}(_ : 2 = 1+1) // {1}addnA eqn_add2r => /eqP E _.
 case/and4P: Hr=>Hbcr _ Hbr Hcr.
-case (ne_hgt br cr)=>[br1 wr nr br2|] /=; rewrite !ht_height //; last first.
+case (ne_hgt br cr)=>[br1 [wr nr] br2|] /=; rewrite !ht_height //; last first.
 - rewrite -leqNgt=>/[dup] Hcbr /maxn_idPr Em; rewrite {}Em in E.
   rewrite E -addn_maxl maxnAC maxnn.
   move: (dist_leqL Hbcr Hcbr)=>/[dup] {Hbcr}Hcbr'; rewrite E leq_add2r=>/maxn_idPr->.
@@ -263,7 +258,7 @@ Lemma height_balL2 {A} (l : tree_ht A) a r :
   height (balL l a r) = maxn (height l) (height r) + 1.
 Proof.
 move=>Hl Hr E; rewrite /balL.
-case (ne_hplus2 l r)=>[al vl xl bl _|_] //=.
+case (ne_hplus2 l r)=>[al [vl _] bl _|_] //=.
 by rewrite !ht_height //; move/negbTE: E=>->.
 Qed.
 
@@ -272,7 +267,7 @@ Lemma height_balR2 {A} (l : tree_ht A) a r :
   height (balR l a r) = maxn (height l) (height r) + 1.
 Proof.
 move=>Hl Hr E; rewrite /balR.
-case (ne_hplus2 r l)=>[al vl xl bl _|_] //=.
+case (ne_hplus2 r l)=>[al [vl _] bl _|_] //=.
 by rewrite !ht_height //; move/negbTE: E=>->.
 Qed.
 
@@ -281,7 +276,7 @@ Lemma avl_balL {A} (l : tree_ht A) a r :
   avl (balL l a r).
 Proof.
 move=>Hl Hr I; rewrite /balL.
-case (ne_hplus2 l r)=>[al vl xl bl|] /=; last first.
+case (ne_hplus2 l r)=>[al [vl xl] bl|] /=; last first.
 - rewrite Hl Hr !ht_height // eq_refl /= andbT => N.
   case/andP: I; rewrite leq_subLR addnC=>Hrl.
   rewrite leq_eqVlt; move/negbTE: N=>->/=; rewrite (_ : 2= 1+1) // addnA addn1 ltnS.
@@ -290,7 +285,7 @@ case (ne_hplus2 l r)=>[al vl xl bl|] /=; last first.
 rewrite !ht_height // => {I}El; rewrite {l}El /= in Hl *.
 rewrite (_ : 2= 1+1) // addnA eqn_add2r => /eqP E.
 case/and4P: Hl=>Habl _ Hal Hbl.
-case (ne_hgt bl al)=>[bl1 wl nl bl2|] /=; last first.
+case (ne_hgt bl al)=>[bl1 [wl nl] bl2|] /=; last first.
 - rewrite !ht_height // !eq_refl Hr Hal Hbl /= andbT.
   rewrite -leqNgt =>/[dup] Hbal /maxn_idPr; rewrite maxnC =>Em; rewrite {}Em in E.
   move: (dist_leqR Habl Hbal); rewrite E leq_add2r=>/[dup] {}Habl /maxn_idPl->.
@@ -312,7 +307,7 @@ Lemma avl_balR {A} (l : tree_ht A) a r :
   avl (balR l a r).
 Proof.
 move=>Hl Hr I; rewrite /balR.
-case (ne_hplus2 r l)=>[br vr xr cr|] /=; last first.
+case (ne_hplus2 r l)=>[br [vr xr] cr|] /=; last first.
 - rewrite Hl Hr !ht_height // eq_refl /= andbT => N.
   case/andP: I; rewrite leq_subLR addnC=>Hrl.
   rewrite leq_eqVlt; move/negbTE: N=>->/=; rewrite (_ : 2= 1+1) // addnA addn1 ltnS.
@@ -321,7 +316,7 @@ case (ne_hplus2 r l)=>[br vr xr cr|] /=; last first.
 rewrite !ht_height // => {I}Er; rewrite {r}Er /= in Hr *.
 rewrite (_ : 2= 1+1) // addnA eqn_add2r => /eqP E.
 case/and4P: Hr=>Hbcr _ Hbr Hcr.
-case (ne_hgt br cr)=>[br1 wr nr br2|] /=; last first.
+case (ne_hgt br cr)=>[br1 [wr nr] br2|] /=; last first.
 - rewrite !ht_height // !eq_refl Hl Hbr Hcr /= !andbT.
   rewrite -leqNgt =>/[dup] Hcbr /maxn_idPr Em; rewrite {}Em in E.
   move: (dist_leqL Hbcr Hcbr); rewrite E leq_add2r=>/[dup] {}Hbcr /maxn_idPr->.
@@ -567,8 +562,8 @@ Lemma inorder_balL {A} (l : tree_ht A) a r :
   inorder_a (balL l a r) = inorder_a l ++ a :: inorder_a r.
 Proof.
 rewrite /balL.
-case (ne_hplus2 l r)=>// al vl xl bl {l}->/= _.
-case (ne_hgt bl al)=>[bl1 wl nl bl2|] /=; last by rewrite -catA.
+case (ne_hplus2 l r)=>// al [vl _] bl {l}->/= _.
+case (ne_hgt bl al)=>[bl1 [wl nl] bl2|] /=; last by rewrite -catA.
 by move=>{bl}->/= _; rewrite -!catA !cat_cons -catA.
 Qed.
 
@@ -576,8 +571,8 @@ Lemma inorder_balR {A} (l : tree_ht A) a r :
   inorder_a (balR l a r) = inorder_a l ++ a :: inorder_a r.
 Proof.
 rewrite /balR.
-case (ne_hplus2 r l)=>// br vr xr cr {r}->/= _.
-case (ne_hgt br cr)=>[br1 wr nr br2|] /=; last by rewrite -catA.
+case (ne_hplus2 r l)=>// br [vr _] cr {r}->/= _.
+case (ne_hgt br cr)=>[br1 [wr nr] br2|] /=; last by rewrite -catA.
 by move=>{br}->/= _; rewrite -!catA !cat_cons.
 Qed.
 

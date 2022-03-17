@@ -14,6 +14,11 @@ Definition is_node {A} (t : tree A) :=
 Lemma not_node_leaf {A} t : ~~ is_node t -> t = @Leaf A.
 Proof. by case: t. Qed.
 
+(* dependent helper for irrefutable pattern matching *)
+Inductive non_empty_if {A} (b : bool) (t : tree A) : Type :=
+| Nd l a r : t = Node l a r -> b -> non_empty_if b t
+| Def : ~~ b -> non_empty_if b t.
+
 Section BasicFunctions.
 Context {A B : Type}.
 
