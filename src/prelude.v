@@ -22,21 +22,175 @@ Inductive and6 (P1 P2 P3 P4 P5 P6 : Prop) : Prop :=
   And6 of P1 & P2 & P3 & P4 & P5 & P6.
 Inductive and7 (P1 P2 P3 P4 P5 P6 P7 : Prop) : Prop :=
   And7 of P1 & P2 & P3 & P4 & P5 & P6 & P7.
+Inductive and8 (P1 P2 P3 P4 P5 P6 P7 P8 : Prop) : Prop :=
+  And8 of P1 & P2 & P3 & P4 & P5 & P6 & P7 & P8.
+Inductive and9 (P1 P2 P3 P4 P5 P6 P7 P8 P9 : Prop) : Prop :=
+  And9 of P1 & P2 & P3 & P4 & P5 & P6 & P7 & P8 & P9.
+Inductive and10 (P1 P2 P3 P4 P5 P6 P7 P8 P9 P10 : Prop) : Prop :=
+  And10 of P1 & P2 & P3 & P4 & P5 & P6 & P7 & P8 & P9 & P10.
+Inductive and11 (P1 P2 P3 P4 P5 P6 P7 P8 P9 P10 P11 : Prop) : Prop :=
+  And11 of P1 & P2 & P3 & P4 & P5 & P6 & P7 & P8 & P9 & P10 & P11.
+Inductive and12 (P1 P2 P3 P4 P5 P6 P7 P8 P9 P10 P11 P12 : Prop) : Prop :=
+  And12 of P1 & P2 & P3 & P4 & P5 & P6 & P7 & P8 & P9 & P10 & P11 & P12.
+Inductive and13 (P1 P2 P3 P4 P5 P6 P7 P8 P9 P10 P11 P12 P13 : Prop) : Prop :=
+  And13 of P1 & P2 & P3 & P4 & P5 & P6 & P7 & P8 & P9 & P10 & P11 & P12 & P13.
+Inductive and14 (P1 P2 P3 P4 P5 P6 P7 P8 P9 P10 P11 P12 P13 P14 : Prop) : Prop :=
+  And14 of P1 & P2 & P3 & P4 & P5 & P6 & P7 & P8 & P9 & P10 & P11 & P12 & P13 & P14.
 
 Notation "[ /\ P1 , P2 , P3 , P4 , P5 & P6 ]" := (and6 P1 P2 P3 P4 P5 P6) : type_scope.
 Notation "[ /\ P1 , P2 , P3 , P4 , P5 , P6 & P7 ]" := (and7 P1 P2 P3 P4 P5 P6 P7) : type_scope.
+Notation "[ /\ P1 , P2 , P3 , P4 , P5 , P6 , P7 & P8 ]" := (and8 P1 P2 P3 P4 P5 P6 P7 P8) : type_scope.
+Notation "[ /\ P1 , P2 , P3 , P4 , P5 , P6 , P7 , P8 & P9 ]" := (and9 P1 P2 P3 P4 P5 P6 P7 P8 P9) : type_scope.
+Notation "[ /\ P1 , P2 , P3 , P4 , P5 , P6 , P7 , P8 , P9 & P10 ]" := (and10 P1 P2 P3 P4 P5 P6 P7 P8 P9 P10) : type_scope.
+Notation "[ /\ P1 , P2 , P3 , P4 , P5 , P6 , P7 , P8 , P9 , P10 & P11 ]" :=
+  (and11 P1 P2 P3 P4 P5 P6 P7 P8 P9 P10 P11) : type_scope.
+Notation "[ /\ P1 , P2 , P3 , P4 , P5 , P6 , P7 , P8 , P9 , P10 , P11 & P12 ]" :=
+  (and12 P1 P2 P3 P4 P5 P6 P7 P8 P9 P10 P11 P12) : type_scope.
+Notation "[ /\ P1 , P2 , P3 , P4 , P5 , P6 , P7 , P8 , P9 , P10 , P11 , P12 & P13 ]" :=
+  (and13 P1 P2 P3 P4 P5 P6 P7 P8 P9 P10 P11 P12 P13) : type_scope.
+Notation "[ /\ P1 , P2 , P3 , P4 , P5 , P6 , P7 , P8 , P9 , P10 , P11 , P12 , P13 & P14 ]" :=
+  (and14 P1 P2 P3 P4 P5 P6 P7 P8 P9 P10 P11 P12 P13 P14) : type_scope.
 
 Section ReflectConnectives.
-Variable b1 b2 b3 b4 b5 b6 b7 : bool.
+Variable b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 : bool.
 
 Lemma and6P : reflect [/\ b1, b2, b3, b4, b5 & b6] [&& b1, b2, b3, b4, b5 & b6].
 Proof.
-by case b1; case b2; case b3; case b4; case b5; case b6; constructor; try by case.
+case: b1=>/=; last by constructor; case.
+case: b2=>/=; last by constructor; case.
+case: b3=>/=; last by constructor; case.
+case: b4=>/=; last by constructor; case.
+case: b5=>/=; last by constructor; case.
+case: b6=>/=; last by constructor; case.
+by constructor.
 Qed.
 
 Lemma and7P : reflect [/\ b1, b2, b3, b4, b5, b6 & b7] [&& b1, b2, b3, b4, b5, b6 & b7].
 Proof.
-by case b1; case b2; case b3; case b4; case b5; case b6; case: b7; constructor; try by case.
+case: b1=>/=; last by constructor; case.
+case: b2=>/=; last by constructor; case.
+case: b3=>/=; last by constructor; case.
+case: b4=>/=; last by constructor; case.
+case: b5=>/=; last by constructor; case.
+case: b6=>/=; last by constructor; case.
+case: b7=>/=; last by constructor; case.
+by constructor.
+Qed.
+
+Lemma and8P : reflect [/\ b1, b2, b3, b4, b5, b6, b7 & b8] [&& b1, b2, b3, b4, b5, b6, b7 & b8].
+Proof.
+case: b1=>/=; last by constructor; case.
+case: b2=>/=; last by constructor; case.
+case: b3=>/=; last by constructor; case.
+case: b4=>/=; last by constructor; case.
+case: b5=>/=; last by constructor; case.
+case: b6=>/=; last by constructor; case.
+case: b7=>/=; last by constructor; case.
+case: b8=>/=; last by constructor; case.
+by constructor.
+Qed.
+
+Lemma and9P : reflect [/\ b1, b2, b3, b4, b5, b6, b7, b8 & b9] [&& b1, b2, b3, b4, b5, b6, b7, b8 & b9].
+Proof.
+case: b1=>/=; last by constructor; case.
+case: b2=>/=; last by constructor; case.
+case: b3=>/=; last by constructor; case.
+case: b4=>/=; last by constructor; case.
+case: b5=>/=; last by constructor; case.
+case: b6=>/=; last by constructor; case.
+case: b7=>/=; last by constructor; case.
+case: b8=>/=; last by constructor; case.
+case: b9=>/=; last by constructor; case.
+by constructor.
+Qed.
+
+Lemma and10P : reflect [/\ b1, b2, b3, b4, b5, b6, b7, b8, b9 & b10] [&& b1, b2, b3, b4, b5, b6, b7, b8, b9 & b10].
+Proof.
+case: b1=>/=; last by constructor; case.
+case: b2=>/=; last by constructor; case.
+case: b3=>/=; last by constructor; case.
+case: b4=>/=; last by constructor; case.
+case: b5=>/=; last by constructor; case.
+case: b6=>/=; last by constructor; case.
+case: b7=>/=; last by constructor; case.
+case: b8=>/=; last by constructor; case.
+case: b9=>/=; last by constructor; case.
+case: b10=>/=; last by constructor; case.
+by constructor.
+Qed.
+
+Lemma and11P : reflect [/\ b1, b2, b3, b4, b5, b6, b7, b8, b9, b10 & b11]
+                       [&& b1, b2, b3, b4, b5, b6, b7, b8, b9, b10 & b11].
+Proof.
+case: b1=>/=; last by constructor; case.
+case: b2=>/=; last by constructor; case.
+case: b3=>/=; last by constructor; case.
+case: b4=>/=; last by constructor; case.
+case: b5=>/=; last by constructor; case.
+case: b6=>/=; last by constructor; case.
+case: b7=>/=; last by constructor; case.
+case: b8=>/=; last by constructor; case.
+case: b9=>/=; last by constructor; case.
+case: b10=>/=; last by constructor; case.
+case: b11=>/=; last by constructor; case.
+by constructor.
+Qed.
+
+Lemma and12P : reflect [/\ b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11 & b12]
+                       [&& b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11 & b12].
+Proof.
+case: b1=>/=; last by constructor; case.
+case: b2=>/=; last by constructor; case.
+case: b3=>/=; last by constructor; case.
+case: b4=>/=; last by constructor; case.
+case: b5=>/=; last by constructor; case.
+case: b6=>/=; last by constructor; case.
+case: b7=>/=; last by constructor; case.
+case: b8=>/=; last by constructor; case.
+case: b9=>/=; last by constructor; case.
+case: b10=>/=; last by constructor; case.
+case: b11=>/=; last by constructor; case.
+case: b12=>/=; last by constructor; case.
+by constructor.
+Qed.
+
+Lemma and13P : reflect [/\ b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12 & b13]
+                       [&& b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12 & b13].
+Proof.
+case: b1=>/=; last by constructor; case.
+case: b2=>/=; last by constructor; case.
+case: b3=>/=; last by constructor; case.
+case: b4=>/=; last by constructor; case.
+case: b5=>/=; last by constructor; case.
+case: b6=>/=; last by constructor; case.
+case: b7=>/=; last by constructor; case.
+case: b8=>/=; last by constructor; case.
+case: b9=>/=; last by constructor; case.
+case: b10=>/=; last by constructor; case.
+case: b11=>/=; last by constructor; case.
+case: b12=>/=; last by constructor; case.
+case: b13=>/=; last by constructor; case.
+by constructor.
+Qed.
+
+Lemma and14P : reflect [/\ b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13 & b14]
+                       [&& b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13 & b14].
+Proof.
+case: b1=>/=; last by constructor; case.
+case: b2=>/=; last by constructor; case.
+case: b3=>/=; last by constructor; case.
+case: b4=>/=; last by constructor; case.
+case: b5=>/=; last by constructor; case.
+case: b6=>/=; last by constructor; case.
+case: b7=>/=; last by constructor; case.
+case: b8=>/=; last by constructor; case.
+case: b9=>/=; last by constructor; case.
+case: b10=>/=; last by constructor; case.
+case: b11=>/=; last by constructor; case.
+case: b12=>/=; last by constructor; case.
+case: b13=>/=; last by constructor; case.
+case: b14=>/=; last by constructor; case.
+by constructor.
 Qed.
 
 End ReflectConnectives.
@@ -125,6 +279,18 @@ Corollary sorted_rcons (xs : seq T) x :
 Proof. by rewrite sorted_rconsE=>->->. Qed.
 
 End Sorted.
+
+Section Allrel.
+
+Lemma perm_allrell {A B : eqType} r (s : seq A) (s1 s2 : seq B) :
+  perm_eq s1 s2 -> allrel r s1 s = allrel r s2 s.
+Proof. by move=>H; apply: perm_all. Qed.
+
+Lemma perm_allrelr {A B : eqType} r (s : seq A) (s1 s2 : seq B) :
+  perm_eq s1 s2 -> allrel r s s1 = allrel r s s2.
+Proof. by move=>H; apply: eq_all=>z /=; apply: perm_all. Qed.
+
+End Allrel.
 
 Section TruncLog.
 
