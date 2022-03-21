@@ -585,13 +585,11 @@ case Hsm: (split_max lr ar rr)=>[r' a'][<- Hx] /=; rewrite {}Hx in Hsm.
 by rewrite inorder_balL -(IHr _ _ _ Hsm) -catA.
 Qed.
 
-Definition bst_list (t : tree_ht T) : bool := sorted <%O (inorder_a t).
-
 Theorem inorder_insert x t :
-  bst_list t ->
+  bst_list_a t ->
   inorder_a (insert x t) = ins_list x (inorder_a t).
 Proof.
-rewrite /bst_list; elim: t=>//=l IHl [a n] r IHr.
+rewrite /bst_list_a; elim: t=>//=l IHl [a n] r IHr.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
 rewrite inslist_sorted_cat_cons_cat //.
 case Hc: (cmp x a)=>/=.
@@ -604,10 +602,10 @@ by rewrite inorder_balR IHr // (cat_sorted2 H2).
 Qed.
 
 Theorem inorder_delete x t :
-  bst_list t ->
+  bst_list_a t ->
   inorder_a (delete x t) = del_list x (inorder_a t).
 Proof.
-rewrite /bst_list /=; elim: t=>//=l IHl [a c] r IHr /[dup] H.
+rewrite /bst_list_a /=; elim: t=>//=l IHl [a c] r IHr /[dup] H.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
 rewrite dellist_sorted_cat_cons_cat //.
 case Hc: (cmp x a)=>/=.
@@ -623,43 +621,16 @@ rewrite -cat1s in H2.
 by rewrite inorder_balL IHr // (cat_sorted2 H2).
 Qed.
 
-(* TODO holds for all augmented trees (i.e. copied from RBT), move to bintree? *)
-
-Lemma inorder_isin_list x t :
-  bst_list t ->
-  isin_a t x = (x \in inorder_a t).
-Proof.
-rewrite /bst_list /=; elim: t=>//= l IHl [a c] r IHr.
-rewrite mem_cat inE sorted_cat_cons_cat=>/andP [H1 H2].
-case Hc: (cmp x a)=>/=.
-- move/cmp_lt: Hc=>Hx; rewrite IHl; last by rewrite (cat_sorted2 H1).
-  have ->: (x==a)=false by move: Hx; rewrite lt_neqAle=>/andP [/negbTE].
-  have ->: x \in inorder_a r = false; last by rewrite /= orbF.
-  apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder_a r)).
-  apply/eq_in_count=>z; move: H2=>/= /(order_path_min lt_trans)/allP/(_ z)/[apply] Hz.
-  by move: (lt_trans Hx Hz); rewrite lt_neqAle eq_sym=>/andP [/negbTE].
-- by move/cmp_eq: Hc=>/eqP->; rewrite eq_refl /= orbT.
-move/cmp_gt: Hc=>Hx; rewrite IHr; last first.
-- by rewrite -cat1s in H2; rewrite (cat_sorted2 H2).
-have ->: (x==a)=false by move: Hx; rewrite lt_neqAle eq_sym=>/andP [/negbTE].
-suff: x \in inorder_a l = false by move=>->.
-apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder_a l)).
-apply/eq_in_count=>z /=.
-move: H1; rewrite (sorted_pairwise lt_trans) pairwise_cat /= allrel1r andbT.
-case/andP=>+ _ =>/allP/(_ z)/[apply] Hz.
-by move: (lt_trans Hz Hx); rewrite lt_neqAle eq_sym=>/andP [/negbTE].
-Qed.
-
 (* corollaries *)
 
-Definition invariant t := bst_list t && avl t.
+Definition invariant (t : tree_ht T) := bst_list_a t && avl t.
 
 Corollary inorder_insert_list x t :
   invariant t ->
   perm_eq (inorder_a (insert x t))
           (if x \in inorder_a t then inorder_a t else x :: inorder_a t).
 Proof.
-rewrite /invariant /bst_list => /andP [H1 _].
+rewrite /invariant /bst_list_a => /andP [H1 _].
 by rewrite inorder_insert //; apply: inorder_ins_list.
 Qed.
 
@@ -668,7 +639,7 @@ Corollary inorder_delete_list x t :
   perm_eq (inorder_a (delete x t))
           (filter (predC1 x) (inorder_a t)).
 Proof.
-rewrite /invariant /bst_list => /andP [H1 H2].
+rewrite /invariant /bst_list_a => /andP [H1 H2].
 by rewrite inorder_delete //; apply: inorder_del_list.
 Qed.
 
@@ -678,7 +649,7 @@ Proof. by []. Qed.
 Corollary invariant_insert x t :
   invariant t -> invariant (insert x t).
 Proof.
-rewrite /invariant /bst_list => /andP [H1 H2].
+rewrite /invariant /bst_list_a => /andP [H1 H2].
 apply/andP; split; last by case/andP: (avl_insert x H2).
 by rewrite inorder_insert //; apply: ins_list_sorted.
 Qed.
@@ -686,15 +657,15 @@ Qed.
 Corollary invariant_delete x t :
   invariant t -> invariant (delete x t).
 Proof.
-rewrite /invariant /bst_list => /andP [H1 H2].
+rewrite /invariant /bst_list_a => /andP [H1 H2].
 apply/andP; split; last by case/andP: (avl_delete x H2).
 by rewrite inorder_delete //; apply: del_list_sorted.
 Qed.
 
-Lemma inv_isin_list x t :
+Corollary inv_isin_list x t :
   invariant t ->
   isin_a t x = (x \in inorder_a t).
-Proof. by rewrite /invariant => /andP [H1 _]; apply: inorder_isin_list. Qed.
+Proof. by rewrite /invariant => /andP [H1 _]; apply: inorder_isin_list_a. Qed.
 
 Definition SetAVL :=
   @ASetM.make _ _ (tree_ht T)

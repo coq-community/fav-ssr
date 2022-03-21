@@ -536,7 +536,7 @@ Lemma invc2_joinL l x r :
   invc2 (joinL l x r) && ((bh l != bh r) && (color r == Black) ==> invc (joinL l x r)).
 Proof.
 funelim (joinL l x r); simp joinL; rewrite {}Heq /=.
-- rewrite /invc2; rewrite {}e /= in i *.
+- rewrite /invc2; rewrite {}e /= addn0 in i *.
   have/negbTE->: (Red != Black) by [].
   rewrite andbF /= andbT=> Hcl /and3P [/andP [Hlrb _] Hclr -> E]; rewrite andbT.
   case/andP: (H Hcl Hclr E)=>_; rewrite Hlrb !andbT /= => /implyP; apply.
@@ -557,14 +557,14 @@ Lemma bh_joinL l x r :
   bh (joinL l x r) == bh r.
 Proof.
 funelim (joinL l x r); simp joinL; rewrite {}Heq /=.
-- move=>Hl; rewrite {}e /= => /and3P [_ Hlr _] E.
+- move=>Hl; rewrite {}e /= !addn0 => /and3P [_ Hlr _] E.
   by apply: H.
 - move=>Hl; rewrite {}e /= in i *; case/and3P=>E1 Hlr _ _.
   move: i; rewrite {1}addn1 ltnS=>E.
   move/eqP: (H Hl Hlr E)=>E2; rewrite -E2.
   by apply: bh_baliL; rewrite E2.
 move=>_ _; move: i0; rewrite -leqNgt=>Hrl Hlr.
-by rewrite eqn_leq Hlr Hrl.
+by rewrite addn0 eqn_leq Hlr Hrl.
 Qed.
 
 Lemma invh_joinL l x r :
@@ -572,7 +572,7 @@ Lemma invh_joinL l x r :
   invh (joinL l x r).
 Proof.
 funelim (joinL l x r); simp joinL; rewrite {}Heq /=.
-- move=>Hl; rewrite {Heqcall r}e /= in i *.
+- move=>Hl; rewrite {Heqcall r}e /= addn0 in i *.
   case/and3P=>/eqP<- Hlr -> E; rewrite andbT.
   by apply/andP; split; [apply: bh_joinL | apply: H].
 - move=>Hl; rewrite {Heqcall r}e /= in i *; case/and3P=>/eqP E1 Hlr Hrr _.
@@ -631,7 +631,7 @@ Lemma bst_joinL l a r :
   bst_a (joinL l a r).
 Proof.
 funelim (joinL l a r); simp joinL; rewrite {}Heq /=; last by move=>->->->->.
-- rewrite {}e /= all_cat /= => Hal /and3P [Halr Hx _] Hbl /and4P [Halr' -> Hblr ->] E /=.
+- rewrite {}e /= addn0 all_cat /= => Hal /and3P [Halr Hx _] Hbl /and4P [Halr' -> Hblr ->] E /=.
   rewrite andbT; apply/andP; split; last by apply: H.
   rewrite (perm_all _ (joinL_inorder l x lr)) all_cat /= Hx Halr' /= andbT.
   by apply/sub_all/Hal=>z /= Hz; apply/lt_trans/Hx.
@@ -650,7 +650,7 @@ Lemma invc2_joinR l x r :
   invc2 (joinR l x r) && ((bh l != bh r) && (color l == Black) ==> invc (joinR l x r)).
 Proof.
 funelim (joinR l x r); simp joinR; rewrite {}Heq /=.
-- rewrite /invc2; rewrite {}e /= in i *.
+- rewrite /invc2; rewrite {}e /= addn0 in i *.
   have/negbTE->: (Red != Black) by [].
   rewrite andbF /= andbT => /and3P [/andP [_ Hrlb] -> Hcrl] Hcr /and3P [/eqP E1 Hhll Hhrl] Hhr E /=.
   rewrite E1 in E i.
@@ -672,8 +672,8 @@ Lemma bh_joinR l x r :
   invh l -> invh r -> (bh r <= bh l)%N ->
   bh (joinR l x r) == bh l.
 Proof.
-funelim (joinR l x r); simp joinR; rewrite {}Heq //=.
-- by rewrite {}e.
+funelim (joinR l x r); simp joinR; rewrite {}Heq /= ?addn0 //.
+- by rewrite {}e /= addn0.
 rewrite {}e /= in i *; case/and3P=>/eqP E1 Hll Hrl Hr ?.
 move: i; rewrite {1}addn1 ltnS E1=>E.
 move/eqP: (H Hrl Hr E)=>E2; rewrite -E1.
@@ -685,7 +685,7 @@ Lemma invh_joinR l x r :
   invh (joinR l x r).
 Proof.
 funelim (joinR l x r); simp joinR; rewrite {}Heq /=.
-- rewrite {Heqcall l i}e /=; case/and3P=>/eqP E1 -> Hrl Hr E /=; rewrite E1 in E *.
+- rewrite {Heqcall l i}e /= addn0; case/and3P=>/eqP E1 -> Hrl Hr E /=; rewrite E1 in E *.
   by rewrite eq_sym; apply/andP; split; [apply: bh_joinR | apply: H].
 - rewrite {Heqcall l}e /= in i *; case/and3P=>/eqP E1 Hll Hrl ? ?.
   move: i; rewrite addn1 ltnS E1=>E.

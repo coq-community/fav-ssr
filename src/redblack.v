@@ -60,9 +60,7 @@ Fixpoint invc (t : rbt A) : bool :=
 (* all paths from the root to a leaf have the same number of black nodes *)
 
 Fixpoint bh (t : rbt A) : nat :=
-  if t is Node l (_, c) _
-    then if c == Black then bh l + 1 else bh l
-    else 0.
+  if t is Node l (_, c) _ then bh l + (c == Black) else 0.
 
 Fixpoint invh (t : rbt A) : bool :=
   if t is Node l _ r
@@ -76,8 +74,14 @@ Lemma bh_paint_red t :
   color t = Black -> bh (paint Red t) = bh t - 1.
 Proof.
 case: t=>//= l [a c] r -> /=.
-by rewrite addnK.
+by rewrite addn0 addnK.
 Qed.
+
+Lemma bh_gt0 t : t <> empty_a -> color t = Black -> (0 < bh t)%N.
+Proof. by case: t=>//=l [a c] r _ -> /=; rewrite addn1. Qed.
+
+(* TODO separate induction principles for invc/invh? *)
+Definition invch (t : rbt A) : bool := invc t && invh t.
 
 Lemma invch_ind (P : rbt A -> Prop) :
   P (Leaf (A*col)) ->
@@ -86,7 +90,7 @@ Lemma invch_ind (P : rbt A -> Prop) :
    bh l == bh r -> invh l -> invh r ->
    P l -> P r ->
    P (Node l (a,c) r)) ->
-  forall t, invc t && invh t -> P t.
+  forall t, invch t -> P t.
 Proof.
 move=>Pl Pn; elim=>//= l IHl [a c] r IHr /andP [/and3P [I Hcl Hcr] /and3P [E Hhl Hhr]].
 by apply: Pn=>//; [apply: IHl| apply: IHr]; apply/andP; split.
@@ -95,17 +99,17 @@ Qed.
 Arguments invch_ind [P].
 
 Definition rbt_inv (t : rbt A) : bool :=
-  [&& invc t, invh t & color t == Black].
+  invch t && (color t == Black).
 
 (* Logarithmic Height *)
 
 Lemma height_black_height t :
-  invc t && invh t -> (height t <= 2 * bh t + (color t == Red))%N.
+  invch t -> (height t <= 2 * bh t + (color t == Red))%N.
 Proof.
 elim/invch_ind=>{t}//=l _ c r H1 Hcl Hcr /eqP E Hhl Hhr Hl Hr.
 case: c H1=>/= [/andP [/eqP Hcll /eqP Hclr]|_].
 - rewrite Hcll E /= addn0 in Hl *; rewrite Hclr /= addn0 in Hr.
-  by rewrite leq_add2r geq_max Hl Hr.
+  by rewrite leq_add2r addn0 geq_max Hl Hr.
 rewrite addn0 mulnDr muln1 {2}(_ : 2 = 1 + 1) // addnA leq_add2r geq_max.
 apply/andP; split.
 - by apply: (leq_trans Hl); rewrite leq_add2l; case: eqP.
@@ -115,16 +119,16 @@ Qed.
 Corollary bound_bht t :
   rbt_inv t -> (height t)./2 <= bh t.
 Proof.
-rewrite /rbt_inv andbA; case/andP=>Hch /eqP Hb.
+case/andP=>Hch /eqP Hb.
 rewrite -(doubleK (bh t)); apply: half_leq; rewrite -muln2 mulnC.
 by move: (height_black_height Hch); rewrite Hb /= addn0.
 Qed.
 
 Lemma bh_size1 t :
-  invc t && invh t -> (2 ^ (bh t) <= size1_tree t)%N.
+  invch t -> (2 ^ (bh t) <= size1_tree t)%N.
 Proof.
 elim/invch_ind=>{t}//=l _ c r _ _ _ /eqP E _ _ Hl Hr.
-case: c=>/=; first by apply/(leq_trans Hl)/leq_addr.
+case: c=>/=; first by rewrite addn0; apply/(leq_trans Hl)/leq_addr.
 rewrite expnD expn1 muln2 -addnn; apply: leq_add=>//.
 by rewrite E.
 Qed.
@@ -132,7 +136,7 @@ Qed.
 Lemma rbt_log_height t :
   rbt_inv t -> ((height t)./2 <= up_log 2 (size1_tree t))%N.
 Proof.
-move=>/[dup] H; rewrite /rbt_inv andbA =>/andP [H12 _]; apply: leq_trans; first by exact: bound_bht.
+move=>/[dup] H; case/andP=>[H12 _]; apply: leq_trans; first by exact: bound_bht.
 rewrite -(@leq_exp2l 2 _ _ (isT : 1%N < 2)).
 by apply/(leq_trans (bh_size1 H12))/up_logP.
 Qed.
@@ -192,13 +196,13 @@ Qed.
 
 Lemma bh_baliL l a r :
   bh l == bh r -> bh (baliL l a r) == bh l + 1.
-Proof. by funelim (baliL l a r). Qed.
+Proof. by funelim (baliL l a r); simp baliL=>//=; rewrite !addn0. Qed.
 
 Lemma invh_baliL l a r :
   invh l -> invh r -> bh l == bh r ->
   invh (baliL l a r).
 Proof.
-funelim (baliL l a r); simp baliL=>/= /[swap] ->; rewrite !andbT //.
+funelim (baliL l a r); simp baliL=>/= /[swap] ->; rewrite !andbT ?addn0 //.
 - by case/and4P=>/eqP<-/eqP<- ->->->; rewrite !eq_refl.
 - by case/and4P; rewrite addn1.
 - by case/andP=>->->->.
@@ -208,16 +212,6 @@ funelim (baliL l a r); simp baliL=>/= /[swap] ->; rewrite !andbT //.
 - by case/and5P=>/eqP<-/and3P[/eqP->->->] /eqP<- ->->->; rewrite !eq_refl.
 - by case/and5P=>->/and3P [->->->] ->->->->.
 by case/and3P=>->/and3P[->->->]->->.
-Qed.
-
-Lemma inv_baliL l a r :
-  invh l -> invh r -> invc2 l -> invc r -> bh l == bh r ->
-  [&& invc (baliL l a r), invh (baliL l a r) & (bh (baliL l a r) == bh l + 1)].
-Proof.
-move=>Hhl Hhr Hcl Hcr E; apply/and3P; split.
-- by apply: invc_baliL.
-- by apply: invh_baliL.
-by apply: bh_baliL.
 Qed.
 
 Lemma invc_baliR l a r :
@@ -231,13 +225,13 @@ Qed.
 
 Lemma bh_baliR l a r :
   bh l == bh r -> bh (baliR l a r) == bh l + 1.
-Proof. by funelim (baliR l a r). Qed.
+Proof. by funelim (baliR l a r); simp baliR=>//=; rewrite !addn0. Qed.
 
 Lemma invh_baliR l a r :
   invh l -> invh r -> bh l == bh r ->
   invh (baliR l a r).
 Proof.
-funelim (baliR l a r); simp baliR=>/=->/=; rewrite ?andbT //.
+funelim (baliR l a r); simp baliR=>/=->/=; rewrite ?andbT ?addn0 //.
 - by case/and4P=>/eqP->/eqP<-->->/eqP->; rewrite !eq_refl.
 - by case/and4P; rewrite addn1.
 - by case/and5P=>/eqP->->/eqP->->->/eqP->; rewrite !eq_refl.
@@ -247,43 +241,56 @@ funelim (baliR l a r); simp baliR=>/=->/=; rewrite ?andbT //.
 by case/and3P=>->->->->.
 Qed.
 
-Lemma inv_baliR l a r :
-  invh l -> invh r -> invc l -> invc2 r -> bh l == bh r ->
-  [&& invc (baliR l a r), invh (baliR l a r) & (bh (baliR l a r) == bh l + 1)].
+Lemma invc_ins x t :
+  invc t ->
+  invc2 (ins x t) && ((color t == Black) ==> invc (ins x t)).
 Proof.
-move=>Hhl Hhr Hcl Hcr E; apply/and3P; split.
-- by apply: invc_baliR.
-- by apply: invh_baliR.
-by apply: bh_baliR.
+elim: t=>//= l IHl [a c] r IHr /and3P [E Hl Hr].
+case/andP: (IHl Hl)=>{IHl} H2l Hil; case/andP: (IHr Hr)=>{IHr} H2r Hir.
+case: c E=>/= [/andP [Hcll Hclr]|_].
+- rewrite {}Hcll /= in Hil; rewrite {}Hclr /= in Hir.
+  rewrite andbT; case: (cmp x a); rewrite /invc2 /=.
+  - by rewrite Hil Hr.
+  - by rewrite Hl Hr.
+  by rewrite Hl Hir.
+case: (cmp x a)=>/=.
+- suff: invc (baliL (ins x l) a r) by move/[dup]/invc2I=>->->.
+  by apply: invc_baliL.
+- by rewrite /invc2 /= Hl Hr.
+suff: invc (baliR l a (ins x r)) by move/[dup]/invc2I=>->->.
+by apply: invc_baliR.
 Qed.
 
-(* TODO break up the proofs for ins, bald*, del & join *)
-Lemma inv_ins x t :
-  invc t && invh t ->
-  [&& invc2 (ins x t), (color t == Black) ==> invc (ins x t), invh (ins x t) & bh (ins x t) == bh t].
+Lemma invh_ins x t :
+  invh t ->
+  invh (ins x t) && (bh (ins x t) == bh t).
 Proof.
-elim/invch_ind=>{t}//= l a c r H Hcl Hcr /eqP E Hhl Hhr.
-case/and4P=>Hi2l Hl Hhil Hbil; case/and4P=>Hi2r Hr Hhir Hbir.
-case: c H=>/= [/andP [Hcll Hclr]|_].
-- rewrite {}Hcll /= in Hl; rewrite {}Hclr /= in Hr.
-  rewrite /invc2=>{Hi2l Hi2r}; case: (cmp x a)=>/=.
-  - by rewrite -E Hl Hbil Hhil Hcr Hhr.
-  - by rewrite E eq_refl Hcl Hhl Hcr Hhr.
-  by rewrite Hcl Hr E eq_refl eq_sym Hbir Hhl Hhir.
-case: (cmp x a)=>/=.
-- rewrite E in Hbil.
-  case/and3P: (inv_baliL a Hhil Hhr Hi2l Hcr Hbil)=>/[dup] H ->-> /eqP->/=.
-  by rewrite (eqP Hbil) E eq_refl /= andbT; apply: invc2I.
-- by rewrite /invc2 /= Hcl Hcr Hhl Hhr E !eq_refl.
-rewrite -E eq_sym in Hbir.
-case/and3P: (inv_baliR a Hhl Hhir Hcl Hi2r Hbir)=>/[dup] H ->->-> /=; rewrite andbT.
-by apply: invc2I.
+elim: t=>//= l IHl [a c] r IHr /and3P [/eqP E Hl Hr].
+case/andP: (IHl Hl)=>{IHl} H2l Hil; case/andP: (IHr Hr)=>{IHr} H2r Hir.
+case: c=>/=; case: (cmp x a)=>/=; rewrite ?addn0.
+- by rewrite -E Hil H2l Hr.
+- by rewrite E Hl Hr eq_refl.
+- by rewrite E eq_sym Hir Hl H2r eq_refl.
+- apply/andP; split.
+  - by apply: invh_baliL=>//; rewrite -E.
+  by rewrite -(eqP Hil); apply: bh_baliL; rewrite -E.
+- by rewrite E Hl Hr !eq_refl.
+apply/andP; split.
+- by apply: invh_baliR=>//; rewrite eq_sym E.
+by apply: bh_baliR; rewrite eq_sym E.
+Qed.
+
+Corollary inv_insert x t : invch t -> invch (insert x t).
+Proof.
+rewrite /invch /insert; case/andP=>Hc Hh.
+case/andP: (invc_ins x Hc); rewrite /invc2=>-> _ /=.
+by rewrite invh_paint //; case/andP: (invh_ins x Hh).
 Qed.
 
 Corollary rbt_insert x t : rbt_inv t -> rbt_inv (insert x t).
 Proof.
-rewrite /rbt_inv /insert paint_black eq_refl andbT andbA =>/andP [/[swap] _].
-by case/(inv_ins x)/and4P; rewrite /invc2 => -> _ /(invh_paint Black) ->.
+rewrite /rbt_inv /insert paint_black eq_refl andbT.
+by case/andP=>/(inv_insert x).
 Qed.
 
 (* deletion by replacing *)
@@ -322,196 +329,236 @@ Fixpoint del (x : T) (t : rbt T) : rbt T :=
 
 Definition delete x t := paint Black (del x t).
 
-Lemma inv_baldL l a r :
-  invh l -> invh r -> bh l + 1 = bh r -> invc2 l -> invc r ->
-  [ && invh (baldL l a r), bh (baldL l a r) == bh r, invc2 (baldL l a r) &
-       (color r == Black) ==> invc (baldL l a r)].
+Lemma invh_baldL_invc l a r :
+  invh l -> invh r -> bh l + 1 == bh r -> invc r ->
+  invh (baldL l a r) && (bh (baldL l a r) == bh r).
 Proof.
-move=>Hhl Hhr Hbh Hc2l Hcr.
-funelim (baldL l a r); simp baldL=>//=.
-- rewrite /= -!andbA in Hhr Hbh Hcr; rewrite /invc2 /= => {Hhl Hc2l}.
-  rewrite !addn1 in Hbh; move/succn_inj: Hbh=>Hbh.
-  case/and5P: Hhr=>E4 E22 -> Hh3 Hh4.
-  rewrite -Hbh add0n !eq_refl /= andbT in E4 E22 *.
-  case/and4P: Hcr=>Ec4 -> Hc3 Hc4.
-  have Hr4 : invc2 (paint Red t4) by rewrite /invc2 paint2; apply: invc2I.
-  have Eb : bh t3 == bh (paint Red t4).
-  - rewrite bh_paint_red; last by move/eqP: Ec4.
-    by move/eqP: E4=><-; move/eqP: E22=><-.
-  case/and3P: (inv_baliR c Hh3 (invh_paint Red Hh4) Hc3 Hr4 Eb)=>->->/eqP->.
-  by move/eqP: E22=><-.
-- rewrite /= in Hhr Hbh Hcr; rewrite /invc2 /= => {Hhl Hc2l}.
-  rewrite !addn1 in Hbh; move/succn_inj: Hbh=>Hbh.
-  case/and3P: Hhr=>E2 Hh2 Hh3.
-  case/andP: Hcr=>Hc2 Hc3.
-  have Hhr : invh (R t2 b t3) by rewrite /= E2 Hh2 Hh3.
-  have Hc2r : invc2 (R t2 b t3) by rewrite /invc2 /= Hc2 Hc3.
-  have Hbb : bh (Leaf (T * col)) == bh (R t2 b t3) by rewrite /= -Hbh.
-  case/and3P: (inv_baliR a (isT : invh empty_a) Hhr (isT : invc empty_a) Hc2r Hbb)=>/[dup] Hcb -> -> /eqP -> /=.
-  by rewrite -Hbh /= andbT; apply: invc2I.
-- rewrite /= in Hhl Hbh; rewrite /invc2 /= in Hc2l *.
-  case/and3P: Hhl=>->->->.
-  case/andP: Hc2l=>->->.
-  by rewrite Hbh Hhr Hcr eq_refl /= andbT implybb.
-- by rewrite /= addn1 in Hbh.
-- by rewrite /= addn1 in Hbh.
-- rewrite /= -!andbA in Hhl Hhr Hbh Hcr; rewrite /invc2 /= in Hc2l *.
-  rewrite addn1 [in RHS]addn1 in Hbh; move/succn_inj: Hbh=>->.
-  case/andP: Hc2l=>->->.
-  case/and3P: Hhl=>->->->.
-  case/and5P: Hhr=>/eqP E2 E3 -> Hh3 Hh4.
-  case/and4P: Hcr=>Hcl4 -> Hc3 Hc4.
-  rewrite E2 !eq_refl /= andbT.
-  have Hr4 : invc2 (paint Red t4) by rewrite /invc2 paint2; apply: invc2I.
-  have Eb : bh t3 == bh (paint Red t4).
-  - rewrite bh_paint_red; last by move/eqP: Hcl4.
-    by move/eqP: E3=><-; rewrite -E2 addnK.
-  case/and3P: (inv_baliR c Hh3 (invh_paint Red Hh4) Hc3 Hr4 Eb)=>->->/eqP->.
-  by rewrite -E2; move/eqP: E3=>->; rewrite eq_refl.
-rewrite /= addn1 [in RHS]addn1 in Hbh; move/succn_inj: Hbh=>Hbh.
-have Hhr' : invh (R t2 b t3) by apply: Hhr.
-have Hcl' : invc (Node t (s0, Black) t0) by apply: Hc2l.
-have Hc2r' : invc2 (R t2 b t3) by apply: Hcr.
-have Hbh' : bh (Node t (s0, Black) t0) == bh (R t2 a t3) by rewrite /= Hbh.
-case/and3P: (inv_baliR a Hhl Hhr' Hcl' Hc2r' Hbh')=>/[dup] Hc -> -> /eqP -> /=.
-by rewrite Hbh eq_refl /= andbT; apply: invc2I.
+funelim (baldL l a r); simp baldL=>//=; rewrite ?addn0.
+- move=>_ /and3P [E24 /and3P [E23 -> H3] H4].
+  rewrite eqn_add2r=>E /and3P [/eqP Ec _ _]; rewrite E /= andbT.
+  have H': bh t3 == bh (paint Red t4).
+  - by rewrite bh_paint_red // -(eqP E23) -(eqP E24) addnK.
+  apply/andP; split.
+  - rewrite eq_sym; have {1}->: (0%N = bh t3) by rewrite -(eqP E23) (eqP E).
+    by apply: bh_baliR.
+  by apply: invh_baliR=>//; rewrite invh_paint.
+- move=>_ H; rewrite eqn_add2r=>E /andP [Hc2 Hc3].
+  apply/andP; split; first by apply: invh_baliR=>//=; rewrite addn0.
+  have->: bh t2 = bh (Leaf (T * col)) by rewrite /= -(eqP E).
+  by apply: bh_baliR=>/=; rewrite addn0.
+- by move=>->->->.
+- by move=>_ _; rewrite addn1.
+- by move=>_ _; rewrite addn1.
+- move=>-> /and3P [E24 /and3P [E23 -> H3] H4].
+  rewrite eqn_add2r=>E /and3P [/eqP Ec _ _]; rewrite E /= andbT.
+  have H': bh t3 == bh (paint Red t4).
+  - by rewrite bh_paint_red // -(eqP E23) -(eqP E24) addnK.
+  apply/andP; split.
+  - by rewrite eq_sym (eqP E) (eqP E23); apply: bh_baliR.
+  by apply: invh_baliR=>//; rewrite invh_paint.
+move=>H H2; rewrite eqn_add2r=>E2; case/andP=>Hc2 Hc3.
+apply/andP; split; first by apply: invh_baliR=>//=; rewrite addn0.
+have->: bh t2 = bh (Node t (s0, Black) t0)by  rewrite /= -(eqP E2).
+by apply: bh_baliR=>/=; rewrite addn0.
 Qed.
 
-Lemma inv_baldR l a r :
-  invh l -> invh r -> bh l = bh r +1 -> invc l -> invc2 r ->
-  [ && invh (baldR l a r), bh (baldR l a r) == bh l, invc2 (baldR l a r) &
-       (color l == Black) ==> invc (baldR l a r)].
+Lemma invc2_baldL l a r :
+  invc2 l -> invc r -> invc2 (baldL l a r).
 Proof.
-move=>Hhl Hhr Hbh Hcl Hc2r.
-funelim (baldR l a r); simp baldR=>//=.
-- by rewrite /= add0n in Hbh Hhl; rewrite Hbh in Hhl.
-- by rewrite /= andbF in Hcl.
-- rewrite /= eq_refl andbT in Hhl Hbh Hcl; rewrite /invc2 /= !andbT => {Hhr Hc2r}.
-  case/and5P: Hhl; rewrite Hbh eqn_add2r eq_sym => E2 Hh1 /eqP<- Hh2 ->.
-  case/and4P: Hcl=>/eqP C1 Hc1 Hc2 ->; rewrite (eqP E2) add0n !andbT.
-  have Hr1 : invc2 (paint Red t1) by rewrite /invc2 paint2; apply: invc2I.
-  have Eb : bh (paint Red t1) == bh t2 by rewrite bh_paint_red // Hbh addnK eq_sym.
-  case/and3P: (inv_baliL a (invh_paint Red Hh1) Hh2 Hr1 Hc2 Eb)=>->->/eqP->.
-  by rewrite bh_paint_red // Hbh.
-- rewrite /= in Hhl Hbh Hcl; rewrite /invc2 /= => {Hhr Hc2r}.
-  case/and3P: Hhl=>E1 Hh1 Hh2.
-  case/andP: Hcl=>Hc1 Hc2.
-  rewrite Hbh; rewrite addn1 add0n in Hbh; move/succn_inj: Hbh=>Hbh.
-  have Hhl : invh (R t1 a t2) by rewrite /= E1 Hh1 Hh2.
-  have Hc2l : invc2 (R t1 a t2) by rewrite /invc2 /= Hc1 Hc2.
-  have Hbb : bh (R t1 a t2) == bh (Leaf (T * col)) by rewrite /= Hbh.
-  case/and3P: (inv_baliL b Hhl (isT : invh empty_a) Hc2l (isT : invc empty_a) Hbb)=>/[dup] Hcb ->->/eqP -> /=.
-  by rewrite Hbh /= andbT; apply: invc2I.
-- rewrite /= in Hhr Hbh; rewrite /invc2 /= in Hc2r *.
-  case/and3P: Hhr=>->->->.
-  case/andP: Hc2r=>->->.
-  by rewrite Hbh Hhl Hcl !eq_refl /= !andbT; exact: implybb.
-- by rewrite /= addn1 in Hbh.
-- by move: Hhl Hbh => /= /and3P [/eqP -> _ _]; rewrite addn1.
-- by rewrite /= andbF in Hcl.
-- rewrite /= eq_refl andbT in Hhl Hhr Hbh Hcl; rewrite /invc2 /= in Hc2r *.
-  case/and5P: Hhl=>E1 Hh1 /eqP<- Hh2 ->.
-  case/and3P: Hhr=>->->->.
-  case/and4P: Hcl=>/eqP C1 Hc1 Hc2->.
-  case/andP: Hc2r=>->->.
-  rewrite Hbh eqn_add2r in E1.
-  have Hl1 : invc2 (paint Red t1) by rewrite /invc2 paint2; apply: invc2I.
-  have Eb : bh (paint Red t1) == bh t2 by rewrite bh_paint_red // Hbh addnK.
-  case/and3P: (inv_baliL a (invh_paint Red Hh1) Hh2 Hl1 Hc2 Eb)=>->-> /eqP-> /=.
-  by rewrite bh_paint_red // Hbh addnK (eqP E1) !eq_refl.
-have Hhl' : invh (R t1 a t2) by apply: Hhl.
-have Hcr' : invc (Node t (s0, Black) t0) by apply: Hc2r.
-have Hc2l' : invc2 (R t1 a t2) by apply: Hcl.
-have Hbh' : bh (R t1 a t2) == bh (Node t (s0, Black) t0).
-- by rewrite /= addn1 [in RHS]addn1 in Hbh; move/succn_inj: Hbh=>/= ->.
-case/and3P: (inv_baliL b Hhl' Hhr Hc2l' Hcr' Hbh')=>/[dup] Hc ->->/eqP -> /=.
-by rewrite eq_refl /= andbT; apply: invc2I.
+funelim (baldL l a r); simp baldL; rewrite /invc2 =>//=.
+- move=>_ /and3P [_ /andP [-> H3] H4] /=.
+  by apply: invc_baliR=>//; rewrite /invc2 paint2; apply/invc2I.
+- by move=>_ H; apply/invc2I/invc_baliR.
+- by move=>->->.
+- by move=>->.
+- by move=>->->.
+- move=>-> /and3P [_ /andP [-> H3] H4] /=.
+  by apply: invc_baliR=>//; rewrite /invc2 paint2; apply: invc2I.
+by move=>H1 H2; apply/invc2I/invc_baliR.
 Qed.
 
-Lemma split_min_inv l a c r x t' :
-  split_min l a r = (x, t') ->
-  bh l == bh r -> invh l -> invh r ->  (* invh (Node l _ r) *)
-  (c == Red) ==> (color l == Black) && (color r == Black) -> invc l -> invc r ->  (* invc (Node l (_, c) r) *)
-  [&& invh t', (c == Red) ==> (bh t' == (if c == Black then bh l + 1 else bh l)) && invc t' &   (* bh (Node l (_, c) _) *)
-               (c == Black) ==> (bh t' == (if c == Black then bh l else bh l - 1)) && invc2 t'].
+Lemma invc_baldL l a r :
+  invc2 l -> invc r -> color r == Black -> invc (baldL l a r).
 Proof.
-elim: l a c r t'=>/= [|l' IHl [a' c'] r' _] a c r t'.
-- case=>_ <- /eqP <- _ -> H _ Hcr /=.
-  case: c H=>/=; first by rewrite Hcr.
-  by move=>_; apply: invc2I.
-case Hsm: (split_min l' a' r')=>[x0 m][E0 Et'] Er /and3P [E' Hhl' Hhr' Hhr Ic] /and3P [Ic' Hcl' Hcr' Hcr].
-rewrite {x0}E0 in Hsm.
-case/and3P: (IHl _ c' _ _ Hsm E' Hhl' Hhr' Ic' Hcl' Hcr')=>Hhm Icr' Icb'.
-case: {IHl}c Ic=>/=.
-- case/andP=>[/eqP Ec' Ecr].
-  rewrite {Icr'}Ec' /= in Et' Er Icb' *.
-  case/andP: Icb'=>/eqP Em' Hcm2; rewrite -Et' andbT; rewrite -Em' in Er.
-  case/and4P: (inv_baldL a Hhm Hhr (eqP Er) Hcm2 Hcr)=>->/eqP->_.
-  by rewrite Ecr -Em' eq_sym /= =>->; rewrite andbT.
-move=>_; case: c' Et' Er Ic' Icr' Icb'=>/=.
-- move=><-/= /eqP <-; rewrite /invc2 /= => _ /andP [->->] _ /=.
-  by rewrite Hhm Hhr Hcr.
-move=><-/= /eqP Ebl' _ _ /andP [/eqP Ebm Hcm2]; rewrite -Ebm in Ebl'.
-case/and4P: (inv_baldL a Hhm Hhr Ebl' Hcm2 Hcr)=>-> /eqP-> -> _ /=.
-by rewrite -Ebl' Ebm eq_refl.
+funelim (baldL l a r); simp baldL; rewrite /invc2 =>//=.
+- by move=>_ H _; apply: invc_baliR.
+- by move=>->->->.
+- by move=>->.
+by move=>H1 H2 _; apply: invc_baliR.
 Qed.
 
-Lemma del_inv x t : invc t && invh t ->
-  [&& invh (del x t),
-      (color t == Red) ==> (bh (del x t) == bh t) && invc (del x t) &
-      (color t == Black) ==> (bh (del x t) == bh t - 1) && invc2 (del x t) ].
+Lemma invh_baldR_invc l a r :
+  invh l -> invh r -> bh l == bh r + 1 -> invc l ->
+  invh (baldR l a r) && (bh (baldR l a r) == bh l).
 Proof.
-elim/invch_ind=>{t}//= l a c r I Hcl Hcr /eqP E Hhl Hhr /and3P [Hhdl Irl Ibl] /and3P [Hhdr Irr Ibr].
-case: (cmp x a)=>/=.
-- case: eqP=>El /=.
-  - rewrite El /invc2 /= in E *; rewrite -E Hhr Hcr !andbT eq_refl /=.
-    by case: c I=>//= /andP [_->].
-  case Cl: (color l)=>/=.
-  - move: {Ibl}Irl; rewrite /invc2 Cl /= => /andP [/eqP-> ->]; rewrite E Hhr Hcr Hhdl.
-    by case: c I=>/=; [rewrite Cl | rewrite addnK eq_refl].
-  move: {Irl}Ibl; rewrite Cl /= => /andP [/eqP Ebdl Hcd2].
-  have Ebdl1 : bh (del x l) + 1 = bh r.
-  - rewrite Ebdl -E subnK //.
-    case: {I Hcl E Hhl Hhdl Ebdl Hcd2}l El Cl=>//= ? [??] ? _ ->.
-    by rewrite eq_refl addn1.
-  case/and3P: (inv_baldL a Hhdl Hhr Ebdl1 Hcd2 Hcr) =>->/eqP->/andP [-> Hcbd] /=.
-  rewrite andbT; case: c I=>/=; last by rewrite E addnK eq_refl.
-  by case/andP=>_ /(implyP Hcbd) ->; rewrite E eq_refl.
-- case: {Hhdr Irr Ibr}r Hcr Hhr E I=>[_ _ -> _|lr [ar cr] rr /and3P [Ecr Hclr Hcrr] /and3P [Ebr Hhlr Hhrr] /= E I].
-  - by rewrite Hhl Hcl (invc2I Hcl) /= !andbT; case: c.
+funelim (baldR l a r); simp baldR=>//=; rewrite ?andbT ?addn0.
+- by case/andP=>->->; rewrite eq_refl.
+- by move=>_ _ _; case/and5P; case/andP.
+- case/and5P=>E12 H1 /eqP <- H2 -> _ E1 /and4P [/eqP Ec _ _ _].
+  rewrite (eqP E12) eqn_add2r in E1.
+  rewrite E1 /= andbT andbC (eqP E12) andbA andbb.
+  have E' : bh (paint Red t1) = bh t2 by rewrite bh_paint_red // (eqP E12) addnK.
+  apply/andP; split=>//.
+  - by rewrite -E'; apply/bh_baliL; rewrite E'.
+  apply: invh_baliL=>//; first by rewrite invh_paint.
+  by rewrite E'.
+- move=>H _; rewrite eqn_add2r=>E1 _.
+  apply/andP; split; first by apply/invh_baliL=>//=; rewrite addn0.
+  have->: bh t1 = bh (R t1 a t2) by rewrite /= addn0.
+  by apply/bh_baliL=>/=; rewrite addn0.
+- by move=>->->->; rewrite eq_refl.
+- by move=>_ _; rewrite addn1.
+- by case/andP=>/eqP->_ _; rewrite addn1.
+- by move=>_ _ _; case/and5P; case/andP.
+- case/and5P=>E12 H1 /eqP <- H2 -> -> E; case/and4P=>/eqP Ec Hc1 Hc2 Hc3.
+  rewrite /= andbT andbC (eqP E12) andbA andbb.
+  have E' : bh (paint Red t1) = bh t2 by rewrite bh_paint_red // (eqP E12) addnK.
+  apply/and3P; split=>//.
+  - by rewrite -E'; apply/bh_baliL; rewrite E'.
+  - apply: invh_baliL=>//; first by rewrite invh_paint.
+    by rewrite E'.
+  by rewrite -(eqn_add2r 1) -(eqP E) eq_sym.
+move=>H1 H2; rewrite eqn_add2r=>E _.
+apply/andP; split; first by apply: invh_baliL=>//=; rewrite addn0.
+have->: bh t1 = bh (R t1 a t2) by rewrite /= addn0.
+by apply/bh_baliL=>/=; rewrite addn0.
+Qed.
+
+Lemma invc2_baldR l a r :
+  invc l -> invc2 r -> invc2 (baldR l a r).
+Proof.
+funelim (baldR l a r); simp baldR=>//=; rewrite /invc2 /= ?andbT //.
+- case/and4P=>_ H1 H2 -> _; rewrite andbT.
+  by apply/invc_baliL=>//; rewrite /invc2 paint2; apply/invc2I.
+- case/andP=>H1 H2 _.
+  by apply/invc2I/invc_baliL=>//; rewrite /invc2 /= H1 H2.
+- by move=>->->.
+- by move=>->->.
+- by case/and5P; case/andP.
+- case/and4P=>E H1 H2 ->->; rewrite /= andbT.
+  by apply/invc_baliL=>//; rewrite /invc2 paint2; apply/invc2I.
+case/andP=>H1 H2 H0.
+by apply/invc2I/invc_baliL=>//; rewrite /invc2 /= H1 H2.
+Qed.
+
+Lemma invc_baldR l a r :
+  invc l -> invc2 r -> color l == Black ->
+  invc (baldR l a r).
+Proof.
+funelim (baldR l a r); simp baldR=>//=; rewrite /invc2 /=.
+- case/andP=>H1 H2 _ _.
+  by apply/invc_baliL=>//; rewrite /invc2 /= H1 H2.
+- by move=>->->->.
+case/andP=>H1 H2 H0 _.
+by apply/invc_baliL=>//; rewrite /invc2 /= H1 H2.
+Qed.
+
+Lemma split_min_invc l a r x t :
+  split_min l a r = (x, t) ->
+  invc l -> invc r ->
+  invc2 t && ((color l == Black) && (color r == Black) ==> invc t).
+Proof.
+elim: l a r t=>/= [|l' IHl [a' c'] r' _] a r t.
+- by case =>_->_ /[dup]/invc2I->->/=; apply: implybT.
+case Hsm: (split_min l' a' r')=>[x0 m][E0 Et]; rewrite {x0}E0 in Hsm.
+case/and3P=>I Hl' Hr' Hr; case/andP: (IHl _ _ _ Hsm Hl' Hr')=>H2m /implyP Hm.
+rewrite /invc2; case: c' Et I=><- /=.
+- by move/Hm=>->; rewrite Hr.
+move=>_; apply/andP; split; first by apply/invc2_baldL.
+by apply/implyP=>Hcr; apply/invc_baldL.
+Qed.
+
+Lemma split_min_invh l a r x t :
+  split_min l a r = (x, t) ->
+  invc l -> invc r -> invh l -> invh r ->
+  bh l == bh r ->
+  invh t && (bh t == bh l).
+Proof.
+elim: l a r t=>/= [|l' IHl [a' c'] r' _] a r t.
+- by case=>_->_ _ _ ->; rewrite eq_sym.
+case Hsm: (split_min l' a' r')=>[x0 m][E0 Et]; rewrite {x0}E0 in Hsm.
+case/and3P=>_ Hcl' Hcr' Hcr; case/and3P=>E' Hhl' Hhr' Hhr.
+case/andP: (IHl _ _ _ Hsm Hcl' Hcr' Hhl' Hhr' E'); rewrite /invch=>Hhm Em.
+case: c' Et=><-/=.
+- by rewrite !addn0=>/eqP <-; rewrite Em Hhm Hhr.
+move/eqP=>E''; rewrite E''.
+by apply: invh_baldL_invc=>//; rewrite -E'' eqn_add2r.
+Qed.
+
+Lemma invc_del x t :
+  invc t ->
+  invc2 (del x t) && ((color t == Red) ==> invc (del x t)).
+Proof.
+elim: t=>//= l IHl [a c] r IHr /and3P [E Hl Hr].
+case/andP: (IHl Hl)=>{IHl} H2l Hil; case/andP: (IHr Hr)=>{IHr} H2r Hir.
+rewrite /invc2 /=; case: c E=>/= [/andP [Hcll Hclr]|_]; case: (cmp x a).
+- case: eqP=>El /=; first by rewrite El /= Hclr Hr.
+  rewrite Hcll; apply/andP; split; last by apply: invc_baldL.
+  - by apply/invc2I/invc_baldL.
+- case: {H2r Hir} r Hr Hclr=>/=.
+  - by move=>_ _; apply/andP; split=>//; apply/invc2I.
+  move=>lr [ar cr] rr /and3P [_ Hclr Hcrr] ->.
   case Hsm: (split_min lr ar rr)=>[a' r'] /=.
-  case/and3P: (split_min_inv Hsm Ebr Hhlr Hhrr Ecr Hclr Hcrr).
-  case Ccr: cr=>/=.
-  - rewrite Ccr andbF implybF /= in I E.
-    rewrite /invc2 /= Hcl => -> /andP [/eqP -> ->] _.
-    by rewrite E Hhl /= !andbT; case: c I=>//=; rewrite addnK eq_refl.
-  rewrite Ccr /= in E.
-  move=>Hhr' _ /andP [/eqP Ebr' Hc2r']; rewrite -Ebr' in E.
-  case/and4P: (inv_baldR a' Hhl Hhr' E Hcl Hc2r')=>-> /eqP->->.
-  case: c I=>/=.
-  - by case/andP=>-> /= _ ->; rewrite eq_refl.
-  by rewrite addnK eq_refl.
-case: eqP=>Er /=.
-- rewrite Er /invc2 /= in E *; rewrite E Hhl Hcl !andbT /=.
-  by case: c I=>//= /andP [->_].
-case Cr: (color r)=>/=.
-- move: {Ibr}Irr; rewrite /invc2 Cr /= => /andP [/eqP-> ->]; rewrite E Hhl Hcl Hhdr.
-  by case: c I=>/=; [rewrite Cr andbF| rewrite addnK eq_refl].
-move: {Irr}Ibr; rewrite Cr =>/andP [/eqP Ebdr Hcd2].
-have Ebdr1 : bh l = bh (del x r) + 1.
-- rewrite Ebdr subnK //.
-  case: {I Hcr E Hhr Hhdr Ebdr Hcd2}r Er Cr=>//= ? [??] ? _ ->.
-  by rewrite eq_refl addn1.
-case/and4P: (inv_baldR a Hhl Hhdr Ebdr1 Hcl Hcd2)=>->/eqP->-> /=.
-rewrite andbT; case: c I=>/=; last by rewrite addnK eq_refl.
-by case/andP=>-> _ /= ->; rewrite eq_refl.
+  case/andP: (split_min_invc Hsm Hclr Hcrr)=>H2r' Hr'.
+  apply/andP; split; last by apply: invc_baldR.
+  by apply/invc2I/invc_baldR.
+- case: eqP=>Er /=; first by rewrite Er /= Hcll Hl.
+  rewrite Hclr; apply/andP; split; last by apply: invc_baldR.
+  by apply/invc2I/invc_baldR.
+- case: eqP=>El /=; first by rewrite El /= Hr.
+  rewrite andbT; case Hcl: (color l)=>/=.
+  - by move: Hil; rewrite Hcl /= Hr => ->.
+  by apply: invc2_baldL.
+- rewrite andbT; case: {H2r Hir} r Hr=>/=.
+  - by move=>_; apply: invc2I.
+  move=>lr [ar cr] rr /and3P [E Hclr Hcrr].
+  case Hsm: (split_min lr ar rr)=>[a' r'] /=.
+  case/andP: (split_min_invc Hsm Hclr Hcrr)=>H2r' /implyP Hr'.
+  case: cr E=>/=.
+  - by move/Hr'=>->; rewrite Hl.
+  by move=>_; apply: invc2_baldR.
+case: eqP=>Er /=; first by rewrite Er /= Hl.
+rewrite andbT; case Hcr: (color r)=>/=.
+- by move: Hir; rewrite Hcr /= Hl => ->.
+by apply: invc2_baldR.
+Qed.
+
+Lemma invh_del x t :
+  invch t ->
+  invh (del x t) && (bh (del x t) == bh t - (color t == Black)).
+Proof.
+elim/invch_ind=>{t}//= l a c r I Hcl Hcr /eqP E Hhl Hhr /andP [Hhdl Icl] /andP [Hhdr Icr].
+rewrite addnK; case: (cmp x a)=>/=.
+- case: eqP=>El /=; first by rewrite El /= in E *; rewrite -E Hhr.
+  move: Icl; case Cl: (color l)=>/=.
+  - by rewrite subn0 =>/eqP->; rewrite addn0 E Hhdl Hhr eq_refl.
+  rewrite -(eqn_add2r 1) subnK; last by apply: bh_gt0.
+  by rewrite E=>Ed; apply: invh_baldL_invc.
+- case: {I Hhdr Icr}r E Hcr Hhr; first by rewrite Hhl eq_refl.
+  move=>lr [ar cr] rr /= E /and3P [Ecr Hclr Hcrr] /and3P [Ebr Hhlr Hhrr].
+  case Hsm: (split_min lr ar rr)=>[a' r'] /=.
+  case/andP: (split_min_invh Hsm Hclr Hcrr Hhlr Hhrr Ebr)=>Hhr' E'.
+  move: E; case Ccr: cr=>/=.
+  - by rewrite !addn0=>->; rewrite Hhl Hhr' eq_refl eq_sym /= !andbT.
+  by move=>E; apply: invh_baldR_invc=>//; rewrite E eqn_add2r eq_sym.
+case: eqP=>Er /=; first by rewrite Er /= in E *; rewrite E Hhl.
+move: Icr; case Cr: (color r)=>/=.
+- by rewrite subn0 =>/eqP->; rewrite addn0 E Hhdr Hhl eq_refl.
+rewrite -(eqn_add2r 1) subnK; last by apply: bh_gt0.
+by rewrite -E eq_sym=>Ed; apply: invh_baldR_invc.
+Qed.
+
+Corollary inv_delete x t : invch t -> invch (delete x t).
+Proof.
+move/[dup]=>H; rewrite /invch /delete; case/andP=>Hc _.
+case/andP: (invc_del x Hc); rewrite /invc2=>-> _ /=.
+by rewrite invh_paint //; case/andP: (invh_del x H).
 Qed.
 
 Corollary rbt_delete x t : rbt_inv t -> rbt_inv (delete x t).
 Proof.
-rewrite /rbt_inv /delete andbA; case/andP=>/[swap] /eqP Ct.
-case/(del_inv x)/and3P=>/(invh_paint Black)->.
-by rewrite Ct /= paint_black eq_refl andbT /invc2 => _ /andP [_ ->].
+rewrite /rbt_inv /delete paint_black eq_refl andbT.
+by case/andP=>/(inv_delete x).
 Qed.
 
 (* correctness via sorted lists *)
@@ -529,12 +576,10 @@ Proof.
 by funelim (baliR l x r); simp baliR=>//=; rewrite -!catA.
 Qed.
 
-Definition bst_list (t : rbt T) : bool := sorted <%O (inorder_a t).
-
 Lemma inorder_ins x t :
-  bst_list t -> inorder_a (ins x t) = ins_list x (inorder_a t).
+  bst_list_a t -> inorder_a (ins x t) = ins_list x (inorder_a t).
 Proof.
-rewrite /bst_list; elim: t=>//= l IHl [a c] r IHr.
+rewrite /bst_list_a; elim: t=>//= l IHl [a c] r IHr.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
 rewrite inslist_sorted_cat_cons_cat //.
 case Hc: (cmp x a)=>/=.
@@ -551,7 +596,7 @@ by rewrite inorder_baliR IHr // (cat_sorted2 H2).
 Qed.
 
 Corollary inorder_insert x t :
-  bst_list t ->
+  bst_list_a t ->
   inorder_a (insert x t) = ins_list x (inorder_a t).
 Proof.
 rewrite /insert => H.
@@ -584,9 +629,9 @@ by rewrite inorder_baldL -cat_cons (IHl _ _ _ Hsm).
 Qed.
 
 Lemma inorder_del x t :
-  bst_list t -> inorder_a (del x t) = del_list x (inorder_a t).
+  bst_list_a t -> inorder_a (del x t) = del_list x (inorder_a t).
 Proof.
-rewrite /bst_list /=; elim: t=>//=l IHl [a c] r IHr /[dup] H.
+rewrite /bst_list_a /=; elim: t=>//=l IHl [a c] r IHr /[dup] H.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
 rewrite dellist_sorted_cat_cons_cat //.
 case Hc: (cmp x a)=>/=.
@@ -609,49 +654,43 @@ by rewrite IHr // (cat_sorted2 H2).
 Qed.
 
 Corollary inorder_delete x t :
-  bst_list t ->
+  bst_list_a t ->
   inorder_a (delete x t) = del_list x (inorder_a t).
 Proof.
 rewrite /delete => H.
 by rewrite inorder_paint; apply: inorder_del.
 Qed.
 
-Lemma inorder_isin_list x (t : rbt T) :
-  bst_list t ->
-  isin_a t x = (x \in inorder_a t).
-Proof.
-rewrite /bst_list /=; elim: t=>//= l IHl [a c] r IHr.
-rewrite mem_cat inE sorted_cat_cons_cat=>/andP [H1 H2].
-case Hc: (cmp x a)=>/=.
-- move/cmp_lt: Hc=>Hx; rewrite IHl; last by rewrite (cat_sorted2 H1).
-  have ->: (x==a)=false by move: Hx; rewrite lt_neqAle=>/andP [/negbTE].
-  have ->: x \in inorder_a r = false; last by rewrite /= orbF.
-  apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder_a r)).
-  apply/eq_in_count=>z; move: H2=>/= /(order_path_min lt_trans)/allP/(_ z)/[apply] Hz.
-  by move: (lt_trans Hx Hz); rewrite lt_neqAle eq_sym=>/andP [/negbTE].
-- by move/cmp_eq: Hc=>/eqP->; rewrite eq_refl /= orbT.
-move/cmp_gt: Hc=>Hx; rewrite IHr; last first.
-- by rewrite -cat1s in H2; rewrite (cat_sorted2 H2).
-have ->: (x==a)=false by move: Hx; rewrite lt_neqAle eq_sym=>/andP [/negbTE].
-suff: x \in inorder_a l = false by move=>->.
-apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder_a l)).
-apply/eq_in_count=>z /=.
-move: H1; rewrite (sorted_pairwise lt_trans) pairwise_cat /= allrel1r andbT.
-case/andP=>+ _ =>/allP/(_ z)/[apply] Hz.
-by move: (lt_trans Hz Hx); rewrite lt_neqAle eq_sym=>/andP [/negbTE].
-Qed.
-
 (* corollaries *)
 
-Definition invariant t := bst_list t && rbt_inv t.
+Definition invariant (t : rbt T) := bst_list_a t && rbt_inv t.
+
+Lemma invariant_empty : invariant empty_a.
+Proof. by []. Qed.
+
+Corollary invariant_insert x (t : rbt T) :
+  invariant t -> invariant (insert x t).
+Proof.
+rewrite /invariant /bst_list_a => /andP [H1 H2].
+apply/andP; split; last by apply: rbt_insert.
+by rewrite inorder_insert //; apply: ins_list_sorted.
+Qed.
 
 Corollary inorder_insert_list x (t : rbt T) :
   invariant t ->
   perm_eq (inorder_a (insert x t))
           (if x \in inorder_a t then inorder_a t else x :: inorder_a t).
 Proof.
-rewrite /invariant /bst_list => /andP [H1 _].
+rewrite /invariant /bst_list_a => /andP [H1 _].
 by rewrite inorder_insert //; apply: inorder_ins_list.
+Qed.
+
+Corollary invariant_delete x (t : rbt T) :
+  invariant t -> invariant (delete x t).
+Proof.
+rewrite /invariant /bst_list_a => /andP [H1 H2].
+apply/andP; split; last by apply: rbt_delete.
+by rewrite inorder_delete //; apply: del_list_sorted.
 Qed.
 
 Corollary inorder_delete_list x (t : rbt T) :
@@ -659,33 +698,14 @@ Corollary inorder_delete_list x (t : rbt T) :
   perm_eq (inorder_a (delete x t))
           (filter (predC1 x) (inorder_a t)).
 Proof.
-rewrite /invariant /bst_list => /andP [H1 H2].
+rewrite /invariant /bst_list_a => /andP [H1 H2].
 by rewrite inorder_delete //; apply: inorder_del_list.
 Qed.
 
-Corollary invariant_empty : invariant empty_a.
-Proof. by []. Qed.
-
-Corollary invariant_insert x (t : rbt T) :
-  invariant t -> invariant (insert x t).
-Proof.
-rewrite /invariant /bst_list => /andP [H1 H2].
-apply/andP; split; last by apply: rbt_insert.
-by rewrite inorder_insert //; apply: ins_list_sorted.
-Qed.
-
-Corollary invariant_delete x (t : rbt T) :
-  invariant t -> invariant (delete x t).
-Proof.
-rewrite /invariant /bst_list => /andP [H1 H2].
-apply/andP; split; last by apply: rbt_delete.
-by rewrite inorder_delete //; apply: del_list_sorted.
-Qed.
-
-Lemma inv_isin_list x (t : rbt T) :
+Corollary inv_isin_list x (t : rbt T) :
   invariant t ->
   isin_a t x = (x \in inorder_a t).
-Proof. by rewrite /invariant => /andP [H1 _]; apply: inorder_isin_list. Qed.
+Proof. by rewrite /invariant => /andP [H1 _]; apply: inorder_isin_list_a. Qed.
 
 Definition SetRBT :=
   @ASetM.make _ _ (rbt T)
@@ -742,119 +762,153 @@ Fixpoint del_j (x : T) (t : rbt T) : rbt T :=
 
 Definition delete_j x t := paint Black (del_j x t).
 
-Lemma join_inv l r :
-  invh l -> invh r -> bh l = bh r -> invc l -> invc r ->
-  [&& invh (join l r), bh (join l r) == bh l, invc2 (join l r) &
-      (color l == Black) && (color r == Black) ==> invc (join l r)].
+Lemma invc_join l r :
+  invc l -> invc r ->
+  invc2 (join l r) &&
+      ((color l == Black) && (color r == Black) ==> invc (join l r)).
 Proof.
-move=>Hhl Hhr E Hcl Hcr.
 funelim (join l r); simp join=>/=.
-- rewrite /= in E; rewrite -E Hhr Hcr implybT andbT /=.
-  by apply: invc2I.
-- rewrite /invc2 /=; case: p Hhl E Hcl=>/=p c ->-> /and3P [->->->].
-  by rewrite !eq_refl /= implybT.
-- rewrite /= -!andbA in Hhl Hcl Hhr Hcr E.
-  case/and3P: Hhl=>E12 Hh1 Hh2.
-  case/and3P: Hhr=>E34 Hh3 Hh4.
-  case/and4P: Hcl=>Ec1 Ec2 Hc1 Hc2.
-  case/and4P: Hcr=>Ec3 Ec4 Hc3 Hc4.
-  rewrite E eq_sym in E12; rewrite /invc2 /= in H *.
-  case/and3P: (H Hh2 Hh3 (eqP E12) Hc2 Hc3).
-  case: (join t2 t3)=>[|l [x c'] r]/=.
-  - move=>_ /eqP Eb2 _.
-    by rewrite E -(eqP E34) -(eqP E12) -Eb2 Hh1 Hh4 Hc1 Ec4 Hc4 eq_refl.
-  case/and3P=>Eblr Hhl Hhr; rewrite Ec2 Ec3 /=.
-  case: c'=>/=.
-  - rewrite E -(eqP E34) -(eqP E12) -(eqP Eblr) -!andbA => /eqP ->.
-    by case/and6P=>->->->->_ _; rewrite eq_refl Hh1 Hhl Hhr Hh4 Hc1 Hc4 Ec1 Ec4.
-  move/eqP=>->; rewrite (eqP E12) E -!andbA.
-  by case/and4P=>->->_ _; rewrite eq_refl Hh1 E34 Eblr Hhl Hhr Hh4 Hc1 Hc4 Ec4.
-- rewrite /= -!andbA in Hhl Hhr Hcl Hcr E H.
-  rewrite /invc2 /= in H *.
-  case/and3P: Hhl=>E12 Hh1 Hh2.
-  case/andP: Hcr=>Hc0 Hc3.
-  case/and4P: Hcl=>Ec1 Ec2 Hc1 Hc2.
-  rewrite (eqP E12) in E.
-  have Hc03 : invc t0 && invc t3 by apply/andP; split.
-  case/and4P: (H Hh2 Hhr E Hc2 Hc03)=>-> /eqP-> _.
-  by rewrite E12 Hh1 Hc1 Ec2 !eq_refl /= => ->.
-- rewrite /= -!andbA in Hhl Hhr Hcl Hcr E H.
-  rewrite /invc2 /= in H *.
-  case/and3P: Hhr=>E23 Hh2 Hh3.
-  case/and4P: Hcr=>Ec2 Ec3 Hc2 Hc3.
-  case/and4P: (H Hhl Hh2 E Hcl Hc2)=>-> /eqP-> _.
-  by rewrite E E23 Hh3 Hc3 Ec2 eq_refl /= => ->.
-rewrite /= in Hhl Hcl Hhr Hcr E.
-case/and3P: Hhl=>E12 Hh1 Hh2.
-case/and3P: Hhr=>E34 Hh3 Hh4.
-case/andP: Hcl=>Hc1 Hc2.
-case/andP: Hcr=>Hc3 Hc4.
-rewrite !addn1 in E; move/succn_inj: E=>E13.
-rewrite E13 eq_sym in E12.
-case/and4P: (H Hh2 Hh3 (eqP E12) Hc2 Hc3).
-case: (join t2 t3)=>[|l [x c'] r]/=.
-- rewrite /invc2 /= => _ /eqP Eb2 _ _.
-  have Hhr: invh (B (Leaf (T * col)) c t4) by rewrite /= -(eqP E34) -(eqP E12) -Eb2 Hh4.
-  have Eb: bh t1 + 1 = bh (B (Leaf (T * col)) c t4) by rewrite /= E13 -(eqP E12) -Eb2.
-  case/and4P: (inv_baldL a Hh1 Hhr Eb (invc2I Hc1) Hc4)=>->/eqP-> /=.
-  by rewrite /invc2=>->->; rewrite Eb.
-case/and3P=>Eblr Hhl Hhr; rewrite /invc2 /=.
-case: c'=>/=.
-- rewrite E13 -(eqP E34) -(eqP E12) -(eqP Eblr) => /eqP ->.
-  by case/andP=>->->_; rewrite Hh1 Hhl Hhr Hh4 Hc1 Hc4 !eq_refl.
-move=>Ebl /andP [Hcl Hcr] ?.
-have Hhrb: invh (B (B l x r) c t4) by rewrite /= (eqP Ebl) (eqP E12) E34 Eblr Hhl Hhr Hh4.
-have Eb: bh t1 + 1 = bh (B (B l x r) c t4) by rewrite /= (eqP Ebl) E13 -(eqP E12).
-have Hhcb: invc (B (B l x r) c t4) by rewrite /= Hcl Hcr Hc4.
-case/and4P: (inv_baldL a Hh1 Hhrb Eb (invc2I Hc1) Hhcb)=>-> /eqP->.
-by rewrite /invc2=>-> /=->; rewrite (eqP Ebl) E13 -(eqP E12) eq_refl.
+- by move=>_ /[dup] /invc2I ->->/=; apply: implybT.
+- case: p=>a c; rewrite /invc2 /= =>/and3P [->->->] _; apply: implybT.
+- rewrite -!andbA andbT.
+  case/and4P=>Hc1 Hc2 H1 H2; case/and4P=>Hc3 Hc4 H3 H4.
+  rewrite /invc2; case Ej: (join t2 t3)=>[|l [x c'] r]/=.
+  - by rewrite H1 Hc4 H4.
+  move: (H H2 H3); rewrite /invc2 Ej /= -!andbA Hc2 Hc3 /=.
+  case/and5P=>Hl Hr + _ _; case: {Ej} c'=>/=; rewrite H1 Hc4 Hl Hr H4 //.
+  by case/andP=>->->; rewrite Hc1.
+- rewrite -andbA; rewrite /invc2 /= eq_refl !andbT in H *.
+  case/and4P=>_ Hc2 -> H2 H0 /=.
+  by case/andP: (H H2 H0)=>_ /implyP; apply.
+- move=>H0; rewrite -andbA; rewrite /invc2 /= andbT in H *.
+  case/and4P=>Hc2 _ H2 ->; rewrite andbT.
+  by case/andP: (H H0 H2)=>_ /implyP; apply.
+case/andP=>H1 H2; case/andP=>H3 H4.
+case Ej: (join t2 t3)=>[|l [x c'] r]/=.
+- suff: invc (baldL t1 a (B (Leaf (T * col)) c t4)) by move/[dup]/invc2I=>->->.
+  by apply: invc_baldL=>//=; apply/invc2I.
+rewrite Ej /invc2 /= in H.
+case/andP: (H H2 H3); case/andP=>Hl Hr.
+case: {Ej H}c'=>/=.
+- by rewrite /invc2 /= H1 Hl Hr H4.
+move=>_; suff: invc (baldL t1 a (B (Node l (x, Black) r) c t4)) by move/[dup]/invc2I=>->->.
+apply: invc_baldL=>//=; first by apply/invc2I.
+by rewrite Hl Hr H4.
 Qed.
 
-Lemma del_j_inv x t : invc t && invh t ->
-  [&& invh (del_j x t),
-      (color t == Red) ==> (bh (del_j x t) == bh t) && invc (del_j x t) &
-      (color t == Black) ==> (bh (del_j x t) == bh t - 1) && invc2 (del_j x t) ].
+Lemma invh_baldL_black l a r :
+  invh l -> invh r -> bh l + 1 == bh r -> color r = Black ->
+  invh (baldL l a r) && (bh (baldL l a r) == bh r).
 Proof.
-elim/invch_ind=>{t}//= l a c r I Hcl Hcr /eqP E Hhl Hhr /and3P [Hhdl Irl Ibl] /and3P [Hhdr Irr Ibr].
-case: (cmp x a)=>/=.
-- case: eqP=>El /=.
-  - rewrite El /invc2 /= in E *; rewrite -E eq_refl Hhr Hcr !andbT /=.
-    by case: c I=>//= /andP [_->].
-  case Cl: (color l)=>/=.
-  - move: {Ibl}Irl; rewrite /invc2 Cl /= => /andP [/eqP-> ->]; rewrite E Hhr Hcr Hhdl.
-    by case: c I=>/=; [rewrite Cl | rewrite addnK eq_refl].
-  move: {Irl}Ibl; rewrite Cl /= =>/andP [/eqP Ebdl Hcd2].
-  have Ebdl1 : bh (del_j x l) + 1 = bh r.
-  - rewrite Ebdl -E subnK //.
-    case: {I Hcl E Hhl Hhdl Ebdl Hcd2}l El Cl=>//= ? [??] ? _ ->.
-    by rewrite eq_refl addn1.
-  case/and3P: (inv_baldL a Hhdl Hhr Ebdl1 Hcd2 Hcr) =>->/eqP->/andP [-> Hcbd] /=.
-  rewrite andbT; case: c I=>/=; last by rewrite E addnK eq_refl.
-  by case/andP=>_ /(implyP Hcbd) ->; rewrite E eq_refl.
-- case/and4P: (join_inv Hhl Hhr E Hcl Hcr)=>-> /eqP->->.
-  case: c I=>/=; last by rewrite addnK eq_refl.
-  by case/andP=>->-> /= ->; rewrite eq_refl.
-case: eqP=>Er /=.
-- rewrite Er /invc2 /= in E *; rewrite E Hhl Hcl !andbT /=.
-  by case: c I=>//= /andP [->_].
-case Cr: (color r)=>/=.
-- move: {Ibr}Irr; rewrite /invc2 Cr /= => /andP [/eqP-> ->]; rewrite E Hhl Hcl Hhdr.
-  by case: c I=>/=; [rewrite Cr andbF| rewrite addnK eq_refl].
-move: {Irr}Ibr; rewrite Cr =>/andP [/eqP Ebdr Hcd2].
-have Ebdr1 : bh l = bh (del_j x r) + 1.
-- rewrite Ebdr subnK //.
-  case: {I Hcr E Hhr Hhdr Ebdr Hcd2}r Er Cr=>//= ? [??] ? _ ->.
-  by rewrite eq_refl addn1.
-case/and4P: (inv_baldR a Hhl Hhdr Ebdr1 Hcl Hcd2)=>->/eqP->-> /=.
-rewrite andbT; case: c I=>/=; last by rewrite addnK eq_refl.
-by case/andP=>-> _ /= ->; rewrite eq_refl.
+funelim (baldL l a r); simp baldL=>//=; rewrite ?addn0.
+- move=>_ H; rewrite eqn_add2r=> E _.
+  apply/andP; split; first by apply: invh_baliR=>//=; rewrite addn0.
+  have-> : bh t2 = bh (@Leaf (T*col)) by rewrite -(eqP E).
+  by apply: bh_baliR=>/=; rewrite addn0.
+- by move=>->->->.
+- by move=>_ _; rewrite addn1.
+move=>H1 H2; rewrite eqn_add2r=>E _.
+apply/andP; split; first by apply: invh_baliR=>//=; rewrite addn0.
+have->: bh t2 = bh (Node t (s0, Black) t0) by rewrite -(eqP E).
+by apply: bh_baliR=>/=; rewrite addn0.
+Qed.
+
+Lemma invh_join l r :
+  invh l -> invh r -> bh l == bh r ->
+  invh (join l r) && (bh (join l r) == bh l).
+Proof.
+funelim (join l r); simp join=>/=.
+- by move=>_->; rewrite eq_sym.
+- by case: p=>_ c->; rewrite eq_refl.
+- case/and3P=>/eqP E12 H1 H2; case/and3P=>/eqP E34 H3 H4.
+  rewrite eqn_add2r addn0=>E13.
+  have E23: bh t2 == bh t3 by rewrite -E12.
+  case/andP: (H H2 H3 E23); case: (join t2 t3)=>[|l [x c'] r]/=.
+  - by rewrite E12 -E34 -(eqP E23) H1 H4=>_ /eqP <-.
+  case/and3P=>/eqP E Hl Hr; case: c'=>/=; rewrite !addn0 H1 Hl Hr H4 /= !andbT E.
+  - by rewrite -E34 -(eqP E23) E12; move/eqP=>->; rewrite eq_refl.
+  by move/eqP->; rewrite E12 -E34 -(eqP E23) !eq_refl.
+- case/and3P=>/eqP E12 H1 H2 H03.
+  rewrite addn0 H1 eq_refl /= andbT =>E10.
+  have E20: bh t2 == bh t0 + 1 by rewrite -E12.
+  by case/andP: (H H2 H03 E20)=>->/eqP->; rewrite E12 eq_refl.
+- move=>H0; case/and3P=>/eqP E23 H2 H3.
+  rewrite !addn0 H3 -E23 andbC=>E2; rewrite (eqP E2) andbA andbb andbT.
+  by case/andP: (H H0 H2 E2)=>->/eqP->/=; rewrite andbT.
+case/and3P=>/eqP E12 H1 H2; case/and3P=>/eqP E34 H3 H4.
+rewrite eqn_add2r=>E13.
+have E23: bh t2 == bh t3 by rewrite -E12.
+case/andP: (H H2 H3 E23); case: (join t2 t3)=>[|l [x c'] r]/=.
+- move=>_ E2'.
+  have->: bh t1 + 1 = bh (B (Leaf (T * col)) c t4) by rewrite /= E12 -(eqP E2').
+  apply/invh_baldL_black=>//=.
+  - by rewrite H4 andbT -E34 -(eqP E23).
+  by rewrite eqn_add2r E12 eq_sym.
+case/and3P=>/eqP E Hl Hr; case: c'=>/=.
+- rewrite !addn0 H1 Hl Hr H4 /= !andbT E => /eqP ->.
+  by rewrite E12 -E34 -(eqP E23) !eq_refl.
+move=>E2.
+have->: bh t1 + 1 = bh (B (Node l (x, Black) r) c t4) by rewrite /= (eqP E2) E12.
+apply/invh_baldL_black=>//=.
+- by rewrite (eqP E2) -E34 E23 E Hl Hr H4 eq_refl.
+by rewrite (eqP E2) E12.
+Qed.
+
+Lemma invc_del_j x t :
+  invc t ->
+  invc2 (del_j x t) && ((color t == Red) ==> invc (del_j x t)).
+Proof.
+elim: t=>//= l IHl [a c] r IHr /and3P [E Hl Hr].
+case/andP: (IHl Hl)=>{IHl} H2l Hil; case/andP: (IHr Hr)=>{IHr} H2r Hir.
+rewrite /invc2 /=; case: c E=>/= [/andP [Hcll Hclr]|_]; case: (cmp x a).
+- case: eqP=>El /=; first by rewrite El /= Hclr Hr.
+  rewrite Hcll; apply/andP; split; last by apply: invc_baldL.
+  - by apply/invc2I/invc_baldL.
+- by case/andP: (invc_join Hl Hr); rewrite /invc2 Hcll Hclr =>->.
+- case: eqP=>Er /=; first by rewrite Er /= Hcll Hl.
+  rewrite Hclr; apply/andP; split; last by apply: invc_baldR.
+  by apply/invc2I/invc_baldR.
+- case: eqP=>El /=; first by rewrite El /= Hr.
+  rewrite andbT; case Hcl: (color l)=>/=.
+  - by move: Hil; rewrite Hcl /= Hr => ->.
+  by apply: invc2_baldL.
+- by rewrite andbT; case/andP: (invc_join Hl Hr).
+case: eqP=>Er /=; first by rewrite Er /= Hl.
+rewrite andbT; case Hcr: (color r)=>/=.
+- by move: Hir; rewrite Hcr /= Hl => ->.
+by apply: invc2_baldR.
+Qed.
+
+Lemma invh_del_j x t :
+  invch t ->
+  invh (del_j x t) && (bh (del_j x t) == bh t - (color t == Black)).
+Proof.
+elim/invch_ind=>{t}//= l a c r I Hcl Hcr /eqP E Hhl Hhr /andP [Hhdl Icl] /andP [Hhdr Icr].
+rewrite addnK; case: (cmp x a)=>/=.
+- case: eqP=>El /=; first by rewrite El /= in E *; rewrite -E Hhr.
+  move: Icl; case Cl: (color l)=>/=.
+  - by rewrite subn0 =>/eqP->; rewrite addn0 E Hhdl Hhr eq_refl.
+  rewrite -(eqn_add2r 1) subnK; last by apply: bh_gt0.
+  by rewrite E=>Ed; apply: invh_baldL_invc.
+- by apply: invh_join=>//; rewrite E eq_refl.
+case: eqP=>Er /=; first by rewrite Er /= in E *; rewrite E Hhl.
+move: Icr; case Cr: (color r)=>/=.
+- by rewrite subn0 =>/eqP->; rewrite addn0 E Hhdr Hhl eq_refl.
+rewrite -(eqn_add2r 1) subnK; last by apply: bh_gt0.
+by rewrite -E eq_sym=>Ed; apply: invh_baldR_invc.
+Qed.
+
+Corollary inv_delete_j x t : invch t -> invch (delete_j x t).
+Proof.
+move/[dup]=>H; rewrite /invch /delete_j; case/andP=>Hc _.
+case/andP: (invc_del_j x Hc); rewrite /invc2=>-> _ /=.
+by rewrite invh_paint //; case/andP: (invh_del_j x H).
 Qed.
 
 Corollary rbt_delete_j x t : rbt_inv t -> rbt_inv (delete_j x t).
 Proof.
-rewrite /rbt_inv /delete_j andbA; case/andP=>/[swap] /eqP Ct.
-case/(del_j_inv x)/and3P=>/(invh_paint Black)->.
-by rewrite Ct /= paint_black eq_refl andbT /invc2 => _ /andP [_ ->].
+rewrite /rbt_inv /delete_j paint_black eq_refl andbT.
+by case/andP=>/(inv_delete_j x).
 Qed.
 
 Lemma inorder_join l r :
@@ -877,9 +931,9 @@ by rewrite inorder_baldL /= H -!catA cat_cons.
 Qed.
 
 Lemma inorder_del_j x t :
-  bst_list t -> inorder_a (del_j x t) = del_list x (inorder_a t).
+  bst_list_a t -> inorder_a (del_j x t) = del_list x (inorder_a t).
 Proof.
-rewrite /bst_list /=; elim: t=>//=l IHl [a c] r IHr /[dup] H.
+rewrite /bst_list_a /=; elim: t=>//=l IHl [a c] r IHr /[dup] H.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
 rewrite dellist_sorted_cat_cons_cat //.
 case Hc: (cmp x a)=>/=.
@@ -897,7 +951,7 @@ by rewrite IHr // (cat_sorted2 H2).
 Qed.
 
 Corollary inorder_delete_j x t :
-  bst_list t ->
+  bst_list_a t ->
   inorder_a (delete_j x t) = del_list x (inorder_a t).
 Proof.
 rewrite /delete_j => H.
@@ -909,14 +963,14 @@ Corollary inorder_delete_j_list x (t : rbt T) :
   perm_eq (inorder_a (delete_j x t))
           (filter (predC1 x) (inorder_a t)).
 Proof.
-rewrite /invariant /bst_list => /andP [H1 H2].
+rewrite /invariant /bst_list_a => /andP [H1 H2].
 by rewrite inorder_delete_j //; apply: inorder_del_list.
 Qed.
 
 Corollary invariant_delete_j x (t : rbt T) :
   invariant t -> invariant (delete_j x t).
 Proof.
-rewrite /invariant /bst_list => /andP [H1 H2].
+rewrite /invariant /bst_list_a => /andP [H1 H2].
 apply/andP; split; last by apply: rbt_delete_j.
 by rewrite inorder_delete_j //; apply: del_list_sorted.
 Qed.
@@ -937,7 +991,7 @@ Section Exercises.
 (* Exercise 8.1 *)
 
 Lemma log_height_inv {A} (t : rbt A) :
-  invc t && invh t ->
+  invch t ->
   (height t)./2 <= up_log 2 (size1_tree t) + 1.
 Proof.
 Admitted.

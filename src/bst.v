@@ -154,6 +154,7 @@ join0 Leaf           t              => t;
 join0 (Node l1 a r1) (Node l2 b r2) => Node l1 a (Node (join0 r1 l2) b r2).
 
 (* Exercise 5.2 *)
+
 Lemma join_behaves l r : (height (join l r) <= maxn (height l) (height r) + 1)%N.
 Proof.
 Admitted.
@@ -385,6 +386,16 @@ Qed.
 
 Definition bst_list (t : tree T) : bool := sorted <%O (inorder t).
 
+Lemma bst_to_list (t : tree T) :
+  bst t <-> bst_list t.
+Proof.
+rewrite /bst_list; elim: t=>//=l IHl a r IHr.
+rewrite sorted_cat_cons_cat /= cats1 (sorted_rconsE lt_trans) (path_sortedE lt_trans) -andbA.
+split; case/and4P.
+- by move=>->->/IHl->/IHr->.
+by move=>->/IHl->->/IHr->.
+Qed.
+
 (* mapping to lists *)
 
 Lemma inorder_insert_list x t :
@@ -494,13 +505,11 @@ Definition LASet := ASet.make [::] ins_list del_list (fun xs s => s \in xs).
 
 End CorrectnessProofs.
 
-(* TODO move to bintree? *)
 Section Augmented.
+Context {disp : unit} {T : orderType disp} {A : Type}.
+Implicit Types (t : tree (T*A)).
 
-Definition empty_a {A B : Type} : tree (A*B) := @Leaf (A*B).
-
-Fixpoint isin_a {disp : unit} {T : orderType disp} {A}
-                (t : tree (T*A)) x : bool :=
+Fixpoint isin_a t x : bool :=
   if t is Node l (a,_) r
     then match cmp x a with
            | LT => isin_a l x
@@ -509,11 +518,44 @@ Fixpoint isin_a {disp : unit} {T : orderType disp} {A}
          end
   else false.
 
-Fixpoint bst_a {disp : unit} {T : orderType disp} {A}
-                (t : tree (T*A)) : bool :=
+Fixpoint bst_a t : bool :=
   if t is Node l (a, _) r
     then [&& all (< a) (inorder_a l), all (> a) (inorder_a r), bst_a l & bst_a r]
     else true.
+
+Definition bst_list_a t : bool := sorted <%O (inorder_a t).
+
+Lemma bst_to_list_a t :
+  bst_a t <-> bst_list_a t.
+Proof.
+rewrite /bst_list_a /=; elim: t=>//=l IHl [a b] r IHr.
+rewrite sorted_cat_cons_cat /= cats1 (sorted_rconsE lt_trans) (path_sortedE lt_trans) -andbA.
+split; case/and4P.
+- by move=>->->/IHl->/IHr->.
+by move=>->/IHl->->/IHr->.
+Qed.
+
+Lemma inorder_isin_list_a t :
+  bst_list_a t ->
+  forall x, isin_a t x = (x \in inorder_a t).  (* TODO use =i ? *)
+Proof.
+move/bst_to_list_a=>+ x; elim: t=>//= l IHl [a c] r IHr.
+case/and4P=>Hal Har /IHl Hl /IHr Hr.
+rewrite mem_cat inE; case Hc: (cmp x a)=>/=.
+- move/cmp_lt: Hc=>Hx; rewrite Hl.
+  have ->: (x==a)=false by move: Hx; rewrite lt_neqAle=>/andP [/negbTE].
+  suff: x \in inorder_a r = false by move=>->/= ; rewrite orbF.
+  apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder_a r)).
+  apply/eq_in_count=>z /= /(allP Har)/(lt_trans Hx).
+  by rewrite lt_neqAle eq_sym=>/andP [/negbTE].
+- by move/cmp_eq: Hc=>/eqP->; rewrite eq_refl /= orbT.
+move/cmp_gt: Hc=>Hx; rewrite Hr.
+have ->: (x==a)=false by move: Hx; rewrite lt_neqAle eq_sym=>/andP [/negbTE].
+suff: x \in inorder_a l = false by move=>->.
+apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder_a l)).
+apply/eq_in_count=>z /(allP Hal) /= Hz; move: (lt_trans Hz Hx).
+by rewrite lt_neqAle eq_sym=>/andP [/negbTE].
+Qed.
 
 End Augmented.
 
@@ -710,10 +752,10 @@ Fixpoint delete_i x (t : ivl_tree) : ivl_tree :=
 (* functional correctness *)
 
 Lemma inorder_ivl_insert_list x t :
-  sorted <%O (inorder_a t) ->
+  bst_list_a t ->
   inorder_a (insert_i x t) = ins_list x (inorder_a t).
 Proof.
-elim: t=>//=l IHl [a m] r IHr.
+rewrite /bst_list_a; elim: t=>//=l IHl [a m] r IHr.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
 rewrite inslist_sorted_cat_cons_cat //.
 case Hc: (cmp x a)=>/=.
@@ -727,10 +769,10 @@ by rewrite -cat1s in H2; rewrite (cat_sorted2 H2).
 Qed.
 
 Lemma inorder_ivl_delete_list x t :
-  sorted <%O (inorder_a t) ->
+  bst_list_a t ->
   inorder_a (delete_i x t) = del_list x (inorder_a t).
 Proof.
-elim: t=>//=l IHl [a m] r IHr /[dup] H.
+rewrite /bst_list_a; elim: t=>//=l IHl [a m] r IHr /[dup] H.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
 rewrite dellist_sorted_cat_cons_cat //.
 case Hc: (cmp x a)=>/=.
@@ -787,7 +829,7 @@ Qed.
 
 (* top-level correctness *)
 
-Definition invar t := inv_max_hi t && sorted <%O (inorder_a t).
+Definition invar t := inv_max_hi t && bst_list_a t.
 
 Corollary inorder_ivl_insert_list_set x (t : ivl_tree) :
   invar t ->
@@ -812,7 +854,7 @@ Qed.
 Corollary invar_insert x (t : ivl_tree) :
   invar t -> invar (insert_i x t).
 Proof.
-rewrite /invar =>/andP [Hi Hs].
+rewrite /invar /bst_list_a =>/andP [Hi Hs].
 rewrite inv_max_hi_insert //= inorder_ivl_insert_list //.
 by apply: ins_list_sorted.
 Qed.
@@ -820,7 +862,7 @@ Qed.
 Corollary invar_delete x (t : ivl_tree) :
   invar t -> invar (delete_i x t).
 Proof.
-rewrite /invar =>/andP [Hi Hs].
+rewrite /invar /bst_list_a =>/andP [Hi Hs].
 rewrite inv_max_hi_delete //= inorder_ivl_delete_list //.
 by apply: del_list_sorted.
 Qed.
@@ -837,7 +879,7 @@ Fixpoint search (t : ivl_tree) (x : ivl) : bool :=
 Lemma search_correct t x :
   invar t -> search t x = has_overlap (inorder_a t) x.
 Proof.
-rewrite /invar; elim: t=>//=.
+rewrite /invar /bst_list_a; elim: t=>//=.
 move=>l IHl [a _] r IHr /andP [/and3P [_ Hl Hr] Hs].
 rewrite /has_overlap has_cat /= overlapC.
 case: ifP=>/=; first by rewrite orbT.

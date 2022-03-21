@@ -17,7 +17,7 @@ Proof. by case: t. Qed.
 (* dependent helper for irrefutable pattern matching *)
 Inductive non_empty_if {A} (b : bool) (t : tree A) : Type :=
 | Nd l a r : t = Node l a r -> b -> non_empty_if b t
-| Def : ~~ b -> non_empty_if b t.
+| Def      :                ~~ b -> non_empty_if b t.
 
 Section BasicFunctions.
 Context {A B : Type}.
@@ -483,6 +483,8 @@ End AlmostCompleteTrees.
 Section AugmentedTrees.
 Context {A B : Type}.
 
+Definition empty_a : tree (A*B) := @Leaf (A*B).
+
 Fixpoint inorder_a (t : tree (A * B)) : seq A :=
   if t is Node l (x, _) r
     then inorder_a l ++ [:: x] ++ inorder_a r
@@ -492,15 +494,15 @@ Definition inorder_a' (t : tree (A * B)) : seq A := map fst (inorder t).
 
 Definition inorder_a'' (t : tree (A * B)) : seq A := inorder (map_tree fst t).
 
-Lemma in_a t : inorder_a t = inorder_a' t.
+Lemma in_a : inorder_a =1 inorder_a'.
 Proof.
-elim: t=>//=l -> [x y] r ->.
+elim=>//=l -> [x y] r ->.
 by rewrite /inorder_a' map_cat map_cons.
 Qed.
 
-Lemma in_a' t : inorder_a t = inorder_a'' t.
+Lemma in_a' : inorder_a =1 inorder_a''.
 Proof.
-elim: t=>//=l -> [x y] r ->.
+elim=>//=l -> [x y] r ->.
 by rewrite /inorder_a'' -!map_inorder /= map_cat map_cons.
 Qed.
 
