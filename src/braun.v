@@ -1,6 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import eqtype ssrnat seq.
+From mathcomp Require Import eqtype ssrnat seq prime.
 From favssr Require Import prelude bintree.
 
 Set Implicit Arguments.
@@ -45,14 +45,14 @@ Lemma acomplete_compose (l : tree A) x r :
   acomplete (Node l x r).
 Proof.
 move=>Hl Hr E; rewrite /acomplete.
-have/eqP->: height (Node l x r) == log2n (size1_tree r + 1) + 1.
+have/eqP->: height (Node l x r) == up_log 2 (size1_tree r + 1) + 1.
 - rewrite /= eqn_add2r (acomplete_h Hl) (acomplete_h Hr) size1_size (eqP E) -size1_size.
-  by apply/eqP/maxn_idPl/leq_log2n/leq_addr.
-have/eqP->: min_height (Node l x r) == trunc_log' 2 (size1_tree r) + 1.
+  by apply/eqP/maxn_idPl/leq_up_log/leq_addr.
+have/eqP->: min_height (Node l x r) == trunc_log 2 (size1_tree r) + 1.
 - rewrite /= eqn_add2r (acomplete_mh Hl) (acomplete_mh Hr) size1_size (eqP E) -size1_size.
   by apply/eqP/minn_idPr/leq_trunc_log/leq_addr.
 rewrite -subnBA ?addnK; last by rewrite addn1.
-rewrite log2_trunc_log; last by rewrite size1_size !addn1.
+rewrite up_log_trunc_log //; last by rewrite size1_size !addn1.
 by rewrite addn1 /= subSnn.
 Qed.
 

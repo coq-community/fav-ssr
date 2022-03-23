@@ -1,6 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import ssrnat eqtype seq path order bigop.
+From mathcomp Require Import ssrnat eqtype seq path order bigop prime.
 From favssr Require Import prelude.
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -607,11 +607,11 @@ by rewrite catA !size_cat H size_merge size_cat.
 Qed.
 
 Lemma C_merge_adj_log2 xss :
-  C_merge_all xss <= size (flatten xss) * log2n (size xss).
+  C_merge_all xss <= size (flatten xss) * up_log 2 (size xss).
 Proof.
 funelim (C_merge_all xss)=>//=; move: H; simp C_merge_adj merge_adj.
 rewrite /= !size_cat merge_adj_flat size_merge_adj size_merge size_cat =>IH.
-rewrite log2nS //= mulnS !addnA; apply: leq_add=>//.
+rewrite up_log2S //= mulnS !addnA; apply: leq_add=>//.
 by apply/leq_add/C_merge_adj_flat/C_merge_leq.
 Qed.
 
@@ -679,17 +679,17 @@ Lemma C_size_runs_leq xs : (C_runs xs <= (size xs).-1)%N.
 Proof. by case: xs=>//=x xs; case: (C_size_runs_asc_desc_leq x xs). Qed.
 
 Lemma C_merge_runs_leq xs n :
-  size xs = n -> (C_merge_all (runs xs) <= n * log2n n)%N.
+  size xs = n -> (C_merge_all (runs xs) <= n * up_log 2 n)%N.
 Proof.
 move=>H; apply: leq_trans; first by apply: C_merge_adj_log2.
 rewrite size_runs H leq_mul2l; apply/orP.
 case: n H=>[H|n H]; first by left.
-right; apply: leq_log2n; rewrite -H.
+right; apply: leq_up_log; rewrite -H.
 by apply: size_runs_leq.
 Qed.
 
 Lemma C_nmsort_leq xs n :
-  size xs = n -> (C_nmsort xs <= n + n * log2n n)%N.
+  size xs = n -> (C_nmsort xs <= n + n * up_log 2 n)%N.
 Proof.
 move=>H; rewrite /C_nmsort; apply/leq_add/C_merge_runs_leq=>//.
 apply: leq_trans; first by apply: C_size_runs_leq.

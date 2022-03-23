@@ -313,16 +313,16 @@ apply/leq_trans/(exp_h_geq t).
 by rewrite !size1_size leq_add2r.
 Qed.
 
-Lemma acomplete_h t : acomplete t -> height t = log2n (size1_tree t).
+Lemma acomplete_h t : acomplete t -> height t = up_log 2 (size1_tree t).
 Proof.
 case/boolP: (complete t).
-- by move/completeE=>->_; rewrite exp2nK.
+- by move/completeE=>->_; rewrite up_expnK.
 move=>/[dup] H /[swap] /acomplete_h1 /[apply] E; rewrite E; symmetry.
-apply: log2n_eq; rewrite (ncomplete_mh_size1 H) /= -E.
+apply: up_log_eq=>//; rewrite (ncomplete_mh_size1 H) /= -E.
 by exact: exp_h_geq.
 Qed.
 
-Lemma acomplete_mh t : acomplete t -> min_height t = trunc_log' 2 (size1_tree t).
+Lemma acomplete_mh t : acomplete t -> min_height t = trunc_log 2 (size1_tree t).
 Proof.
 case/boolP: (complete t).
 - move/[dup]/complete_mh_h/eqP=>->.
@@ -419,7 +419,7 @@ Proof. by rewrite /balance_tree bal_tree_take // take_oversize // size_inorder. 
 
 Lemma bal_h_mh n xs t ss :
   n <= size xs -> bal n xs = (t, ss) ->
-  height t = log2n n.+1 /\ min_height t = trunc_log' 2 n.+1.
+  height t = up_log 2 n.+1 /\ min_height t = trunc_log 2 n.+1.
 Proof.
 elim/ltn_ind: n xs t ss; case.
 - by move=>_ ??? _; simp bal=>/=; case=><-.
@@ -442,8 +442,8 @@ have Hmm : m' <= m.
 - rewrite /m' (half_uphalfK n) /m addnK uphalf_half.
   by apply: leq_addl.
 rewrite -(leq_add2r 1) !addn1 in Hmm.
-rewrite /maxn /minn !ltnNge leq_log2n // leq_trunc_log //=.
-rewrite (log2nS (isT : 0 < n.+1)) (trunc_log2S (isT : 1 < n.+2)); split.
+rewrite /maxn /minn !ltnNge leq_up_log // leq_trunc_log //=.
+rewrite (up_log2S (isT : 0 < n.+1)) (trunc_log2S (isT : 1 < n.+2)); split.
 - by rewrite -addn1 addn1.
 rewrite /m' /m {1}(half_uphalfK n) addnK.
 by rewrite -(addn2 n) halfD /= andbF /= add0n !addn1.
@@ -454,8 +454,8 @@ Corollary bal_acomplete n xs t ss :
 Proof.
 rewrite /acomplete.
 move/bal_h_mh => /[apply] [[->->]].
-have /andP [H1 H2] := trunc_up_log_ltn n.+1.
-by rewrite -(leq_add2r (trunc_log' 2 n.+1)) addnBAC // addnK addnC.
+have/andP [H1 H2] := trunc_up_log_ltn n.+1 (isT : 1 < 2).
+by rewrite -(leq_add2r (trunc_log 2 n.+1)) addnBAC // addnK addnC.
 Qed.
 
 (* Exercise 4.3 *)
