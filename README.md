@@ -18,7 +18,7 @@ Besides Mathcomp, this also requires the [Equations](https://mattam82.github.io/
 8. [Red-Black Trees](src/redblack.v)
 9. [AVL Trees](src/avl.v)
 10. [Beyond Insert and Delete: \cup, \cap and -](src/beyond.v)
-11. Arrays via Braun Trees
+11. [Arrays via Braun Trees](src/braun.v)
 12. Tries
 13. Huffman’s Algorithm
 ### Part III: Priority Queues

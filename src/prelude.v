@@ -468,6 +468,14 @@ apply: log2n_exp.
 by rewrite addn1; apply/ltnW/trunc_log_ltn.
 Qed.
 
+Lemma log2_trunc_log n :
+  1 < n -> log2n n = (trunc_log' 2 n.-1).+1.
+Proof.
+move=> n_gt1; apply: log2n_eq => //.
+rewrite -[n]prednK ?ltnS -?pred_Sn ?[0 < n]ltnW//.
+by rewrite trunc_logP ?ltn_predRL// trunc_log_ltn.
+Qed.
+
 End Log2.
 
 Section UpDiv.
