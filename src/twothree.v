@@ -17,6 +17,12 @@ Inductive tree23 A := Leaf
 
 Definition empty {A} : tree23 A := @Leaf A.
 
+(* dependent helper for irrefutable pattern matching *)
+Inductive non_empty23_if {A} (b : bool) (t : tree23 A) : Type :=
+| Nd2 l x r     : t = Node2 l x r     -> b -> non_empty23_if b t
+| Nd3 l x m y r : t = Node3 l x m y r -> b -> non_empty23_if b t
+| Def           :                     ~~ b -> non_empty23_if b t.
+
 Section Intro.
 Context {A : Type}.
 
@@ -41,6 +47,14 @@ Fixpoint height23 (t : tree23 A) : nat :=
   | Node2 l _ r => maxn (height23 l) (height23 r) + 1
   | Node3 l _ m _ r => maxn (height23 l) (maxn (height23 m) (height23 r)) + 1
   end.
+
+Lemma ne_hgt23 (t1 t2 : tree23 A) : non_empty23_if (height23 t1 < height23 t2)%N t2.
+Proof.
+case: ltnP; last by move=>_; apply: Def.
+case: t2=>//=.
+- by move=>l a r _; apply: Nd2.
+by move=>l a m b r _; apply: Nd3.
+Qed.
 
 Lemma height_empty t : height23 t == 0 -> t = empty.
 Proof.
@@ -975,32 +989,34 @@ move/cmp_gt: Hc'; rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
 by rewrite inorderD33 (IHr H3) (inorder_lift Hfm).
 Qed.
 
-Lemma inorder_isin_list x (t : tree23 T) :
+Lemma inorder_isin_list (t : tree23 T) :
   bst_list t ->
-  isin23 t x = (x \in inorder23 t).
+  isin23 t =i inorder23 t.
 Proof.
-rewrite /bst_list /=; elim: t=>//=.
+rewrite /bst_list /= =>+ x; elim: t=>//=.
 - move=>l IHl a r IHr.
-  rewrite mem_cat inE sorted_cat_cons_cat=>/andP [H1 H2].
+  rewrite -topredE /= in IHl; rewrite -topredE /= in IHr.
+  rewrite -topredE /= mem_cat inE sorted_cat_cons_cat=>/andP [H1 H2].
   case Hc: (cmp x a)=>/=.
   - move/cmp_lt: Hc=>Hx; rewrite IHl; last by rewrite (cat_sorted2 H1).
-    have ->: (x==a)=false by move: Hx; rewrite lt_neqAle=>/andP [/negbTE].
-    have ->: x \in inorder23 r = false; last by rewrite /= orbF.
-    apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder23 r)).
+    have/negbTE->: x!=a by move: Hx; rewrite lt_neqAle; case/andP.
+    suff: x \notin inorder23 r by move/negbTE=>->/=; rewrite orbF.
+    apply/count_memPn; rewrite -(count_pred0 (inorder23 r)).
     apply/eq_in_count=>z; move: H2=>/= /(order_path_min lt_trans)/allP/(_ z)/[apply] Hz.
     by move: (lt_trans Hx Hz); rewrite lt_neqAle eq_sym=>/andP [/negbTE].
   - by move/cmp_eq: Hc=>/eqP->; rewrite eq_refl /= orbT.
   move/cmp_gt: Hc=>Hx; rewrite IHr; last first.
   - by rewrite -cat1s in H2; rewrite (cat_sorted2 H2).
-  have ->: (x==a)=false by move: Hx; rewrite lt_neqAle eq_sym=>/andP [/negbTE].
-  suff: x \in inorder23 l = false by move=>->.
-  apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder23 l)).
+  have/negbTE->: x!=a by move: Hx; rewrite lt_neqAle eq_sym; case/andP.
+  suff: x \notin inorder23 l by move/negbTE=>->.
+  apply/count_memPn; rewrite -(count_pred0 (inorder23 l)).
   apply/eq_in_count=>z /=.
   move: H1; rewrite (sorted_pairwise lt_trans) pairwise_cat /= allrel1r andbT.
   case/andP=>+ _ =>/allP/(_ z)/[apply] Hz.
   by move: (lt_trans Hz Hx); rewrite lt_neqAle eq_sym=>/andP [/negbTE].
 move=>l IHl a m IHm b r IHr.
-rewrite !(mem_cat, inE) sorted_cat_cons_cat; case/andP=>/=.
+rewrite -topredE /= in IHl; rewrite -topredE /= in IHm; rewrite -topredE /= in IHr.
+rewrite -topredE /= !(mem_cat, inE) sorted_cat_cons_cat; case/andP=>/=.
 rewrite cats1 (sorted_rconsE lt_trans); case/andP => Hal H1.
 rewrite (path_sortedE lt_trans); case/andP; rewrite all_cat=>/and3P [Ham Hab Har].
 rewrite sorted_cat_cons_cat; case/andP=>/=.
@@ -1008,17 +1024,16 @@ rewrite cats1 (sorted_rconsE lt_trans); case/andP => Hbm H2.
 rewrite (path_sortedE lt_trans); case/andP=>Hbr H3.
 case Hc: (cmp x a)=>/=.
 - move/cmp_lt: Hc=>Hx; rewrite (IHl H1).
-  have ->: (x==a)=false by move: Hx; rewrite lt_neqAle=>/andP [/negbTE].
-  have ->: x \in inorder23 m = false.
-  - apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder23 m)).
+  have/negbTE->: x!=a by move: Hx; rewrite lt_neqAle; case/andP.
+  have/negbTE->: x \notin inorder23 m.
+  - apply/count_memPn; rewrite -(count_pred0 (inorder23 m)).
     apply/eq_in_count=>z /= Hz; move: (allP Ham z Hz) => /(lt_trans Hx).
     by rewrite lt_neqAle eq_sym => /andP [/negbTE].
-  have ->: (x==b)=false by move: (lt_trans Hx Hab); rewrite lt_neqAle=>/andP [/negbTE].
-  have ->: x \in inorder23 r = false.
-  - apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder23 r)).
-    apply/eq_in_count=>z /= Hz; move: (allP Har z Hz) => /(lt_trans Hx).
-    by rewrite lt_neqAle eq_sym => /andP [/negbTE].
-  by rewrite !orbF.
+  have/negbTE->: x!=b by move: (lt_trans Hx Hab); rewrite lt_neqAle; case/andP.
+  suff: x \notin inorder23 r by move/negbTE->; rewrite !orbF.
+  apply/count_memPn; rewrite -(count_pred0 (inorder23 r)).
+  apply/eq_in_count=>z /= Hz; move: (allP Har z Hz) => /(lt_trans Hx).
+  by rewrite lt_neqAle eq_sym => /andP [/negbTE].
 - by move/cmp_eq: Hc=>/eqP->; rewrite eq_refl /= orbT.
 move/cmp_gt: Hc=>Hx; move: (Hx); rewrite lt_neqAle eq_sym=>/andP [/negbTE ->] /= _.
 have ->/=: x \in inorder23 l = false.
@@ -1083,9 +1098,9 @@ apply/andP; split; last by apply: complete_delete.
 by rewrite inorder_delete23 //; apply: del_list_sorted.
 Qed.
 
-Lemma inv_isin_list x (t : tree23 T) :
+Corollary inv_isin_list (t : tree23 T) :
   invariant t ->
-  isin23 t x = (x \in inorder23 t).
+  isin23 t =i inorder23 t.
 Proof. by rewrite /invariant => /andP [H1 _]; apply: inorder_isin_list. Qed.
 
 Definition Set23 :=

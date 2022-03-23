@@ -8,10 +8,12 @@ Unset Printing Implicit Defensive.
 
 Inductive tree A := Leaf | Node of (tree A) & A & (tree A).
 
+Definition leaf {A} : tree A := @Leaf A.
+
 Definition is_node {A} (t : tree A) :=
   if t is Node _ _ _ then true else false.
 
-Lemma not_node_leaf {A} t : ~~ is_node t -> t = @Leaf A.
+Lemma not_node_leaf {A} (t : tree A) : ~~ is_node t -> t = leaf.
 Proof. by case: t. Qed.
 
 (* dependent helper for irrefutable pattern matching *)
@@ -25,7 +27,7 @@ Context {A B : Type}.
 Fixpoint map_tree (f : A -> B) (t : tree A) : tree B :=
   if t is Node l x r
     then Node (map_tree f l) (f x) (map_tree f r)
-  else @Leaf B.
+  else leaf.
 
 Fixpoint inorder {A} (t : tree A) : seq A :=
   if t is Node l x r
@@ -77,7 +79,7 @@ Fixpoint height (t : tree A) : nat :=
     then maxn (height l) (height r) + 1
   else 0.
 
-Lemma heightE (t : tree A) : reflect (t = @Leaf A) (height t == 0).
+Lemma heightE (t : tree A) : reflect (t = leaf) (height t == 0).
 Proof.
 apply: (iffP idP); last by move=>->.
 by case: t=>//= l a r; rewrite addn1 => /eqP.
@@ -121,7 +123,7 @@ Qed.
 Fixpoint subtrees (t : tree A) : seq (tree A) :=
   if t is Node l x r
     then Node l x r :: subtrees l ++ subtrees r
-  else [:: @Leaf A].
+  else [:: leaf].
 
 (* Exercise 4.1 *)
 
@@ -334,7 +336,7 @@ Variable x0 : A.
 
 Equations? bal (n : nat) (xs : seq A) : tree A * seq A by wf n lt :=
 bal n xs with inspect (n == 0) := {
-  | true eqn: Hn => (@Leaf A, xs)
+  | true eqn: Hn => (leaf, xs)
   | false eqn: Hn =>
       let m := n./2 in
       let '(l, ys) := bal m xs in
@@ -482,8 +484,6 @@ End AlmostCompleteTrees.
 
 Section AugmentedTrees.
 Context {A B : Type}.
-
-Definition empty_a : tree (A*B) := @Leaf (A*B).
 
 Fixpoint inorder_a (t : tree (A * B)) : seq A :=
   if t is Node l (x, _) r

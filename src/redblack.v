@@ -37,7 +37,7 @@ Definition color (t : rbt A) : col :=
   if t is Node _ (_, c) _ then c else Black.
 
 Definition paint (c : col) (t : rbt A) : rbt A :=
-  if t is Node l (a, _) r then Node l (a,c) r else empty_a.
+  if t is Node l (a, _) r then Node l (a,c) r else leaf.
 
 Lemma paint2 c1 c2 t : paint c2 (paint c1 t) = paint c2 t.
 Proof. by case: t=>//= l [a c] r. Qed.
@@ -77,7 +77,7 @@ case: t=>//= l [a c] r -> /=.
 by rewrite addn0 addnK.
 Qed.
 
-Lemma bh_gt0 t : t <> empty_a -> color t = Black -> (0 < bh t)%N.
+Lemma bh_gt0 t : t <> leaf -> color t = Black -> (0 < bh t)%N.
 Proof. by case: t=>//=l [a c] r _ -> /=; rewrite addn1. Qed.
 
 (* TODO separate induction principles for invc/invh? *)
@@ -162,7 +162,7 @@ baliR tl a             tr                                              => B tl a
 
 Fixpoint ins (x : T) (t : rbt T) : rbt T :=
   match t with
-  | Leaf => R empty_a x empty_a
+  | Leaf => R leaf x leaf
   | Node l (a, Black) r => match cmp x a with
                            | LT => baliL (ins x l) a r
                            | EQ => B l a r
@@ -317,15 +317,15 @@ Fixpoint del (x : T) (t : rbt T) : rbt T :=
   if t is Node l (a, _) r then
     match cmp x a with
     | LT => let: l' := del x l in
-            if (l != empty_a) && (color l == Black) then baldL l' a r else R l' a r
+            if (l != leaf) && (color l == Black) then baldL l' a r else R l' a r
     | EQ => if r is Node lr (ar, _) rr
             then let: (a', r') := split_min lr ar rr in
                  if color r == Black then baldR l a' r' else R l a' r'
             else l
     | GT => let: r' := del x r in
-            if (r != empty_a) && (color r == Black) then baldR l a r' else R l a r'
+            if (r != leaf) && (color r == Black) then baldR l a r' else R l a r'
     end
-    else empty_a.
+    else leaf.
 
 Definition delete x t := paint Black (del x t).
 
@@ -665,7 +665,7 @@ Qed.
 
 Definition invariant (t : rbt T) := bst_list_a t && rbt_inv t.
 
-Lemma invariant_empty : invariant empty_a.
+Lemma invariant_empty : invariant leaf.
 Proof. by []. Qed.
 
 Corollary invariant_insert x (t : rbt T) :
@@ -702,14 +702,14 @@ rewrite /invariant /bst_list_a => /andP [H1 H2].
 by rewrite inorder_delete //; apply: inorder_del_list.
 Qed.
 
-Corollary inv_isin_list x (t : rbt T) :
+Corollary inv_isin_list (t : rbt T) :
   invariant t ->
-  isin_a t x = (x \in inorder_a t).
+  isin_a t =i inorder_a t.
 Proof. by rewrite /invariant => /andP [H1 _]; apply: inorder_isin_list_a. Qed.
 
 Definition SetRBT :=
   @ASetM.make _ _ (rbt T)
-    empty_a insert delete isin_a
+    leaf insert delete isin_a
     inorder_a invariant
     invariant_empty erefl
     invariant_insert inorder_insert_list
@@ -750,15 +750,15 @@ Qed.
 Fixpoint del_j (x : T) (t : rbt T) : rbt T :=
   if t is Node l (a, _) r then
     match cmp x a with
-    | LT => if (l != empty_a) && (color l == Black)
+    | LT => if (l != leaf) && (color l == Black)
               then baldL (del_j x l) a r
               else R (del_j x l) a r
     | EQ => join l r
-    | GT => if (r != empty_a) && (color r == Black)
+    | GT => if (r != leaf) && (color r == Black)
               then baldR l a (del_j x r)
               else R l a (del_j x r)
     end
-    else empty_a.
+    else leaf.
 
 Definition delete_j x t := paint Black (del_j x t).
 
@@ -977,7 +977,7 @@ Qed.
 
 Definition SetRBTj :=
   @ASetM.make _ _ (rbt T)
-    empty_a insert delete_j isin_a
+    leaf insert delete_j isin_a
     inorder_a invariant
     invariant_empty erefl
     invariant_insert inorder_insert_list

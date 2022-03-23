@@ -342,7 +342,7 @@ Fixpoint insert (x : T) (t : tree_ht T) : tree_ht T :=
     | EQ => Node l (a,n) r
     | GT => balR l a (insert x r)
     end
-    else Node empty_a (x,1%N) empty_a.
+    else Node leaf (x,1%N) leaf.
 
 Theorem avl_insert x t :
   avl t ->
@@ -419,7 +419,7 @@ Fixpoint delete (x : T) (t : tree_ht T) : tree_ht T :=
               else r
     | GT => balL l a (delete x r)
     end
-  else empty_a.
+  else leaf.
 
 Lemma avl_split_max l a r t x :
   split_max l a r = (t, x) ->
@@ -643,7 +643,7 @@ rewrite /invariant /bst_list_a => /andP [H1 H2].
 by rewrite inorder_delete //; apply: inorder_del_list.
 Qed.
 
-Corollary invariant_empty : invariant empty_a.
+Corollary invariant_empty : invariant leaf.
 Proof. by []. Qed.
 
 Corollary invariant_insert x t :
@@ -662,14 +662,14 @@ apply/andP; split; last by case/andP: (avl_delete x H2).
 by rewrite inorder_delete //; apply: del_list_sorted.
 Qed.
 
-Corollary inv_isin_list x t :
+Corollary inv_isin_list t :
   invariant t ->
-  isin_a t x = (x \in inorder_a t).
+  isin_a t =i inorder_a t.
 Proof. by rewrite /invariant => /andP [H1 _]; apply: inorder_isin_list_a. Qed.
 
 Definition SetAVL :=
   @ASetM.make _ _ (tree_ht T)
-    empty_a insert delete isin_a
+    leaf insert delete isin_a
     inorder_a invariant
     invariant_empty erefl
     invariant_insert inorder_insert_list
@@ -730,7 +730,7 @@ Variable (m : nat) (mnz : (0 < m)%N).
 
 (* Exercise 9.5 *)
 
-Definition avl_of_list {A} (xs : seq A) : tree_ht A := empty_a (* FIXME *).
+Definition avl_of_list {A} (xs : seq A) : tree_ht A := leaf (* FIXME *).
 
 (* order preservation *)
 
@@ -809,7 +809,7 @@ Definition rot2 {A} (a : tree_bal A) (x : A) (b : tree_bal A) (z : A) (c : tree_
     let bb1 := if bb == Rh then Lh else Bal in
     let bb2 := if bb == Lh then Rh else Bal in
     Node (Node a (x, bb1) b1) (y, Bal) (Node b2 (z, bb2) c)
-  | Leaf => empty_a
+  | Leaf => leaf
   end.
 
 (* TODO split out internal matches and formulate helper lemmas in their terms *)
@@ -820,7 +820,7 @@ Definition balL_b {A} (ab : tree_bal A) (z : A) (bb : bal) (c : tree_bal A) : tr
           | Node a (x, Lh) b => Node a (x, Bal) (Node b (z, Bal) c)
           | Node a (x, Bal) b => Node a (x, Rh) (Node b (z, Lh) c)
           | Node a (x, Rh) b => rot2 a x b z c
-          | Leaf => empty_a
+          | Leaf => leaf
           end
   | Bal => Node ab (z, Lh) c
   | Rh => Node ab (z, Bal) c
@@ -834,7 +834,7 @@ Definition balR_b {A} (a : tree_bal A) (x : A) (bb : bal) (bc : tree_bal A) : tr
           | Node b (z, Lh) c => rot2 a x b z c
           | Node b (z, Bal) c => Node (Node a (x, Rh) b) (z, Lh) c
           | Node b (z, Rh) c => Node (Node a (x, Bal) b) (z, Bal) c
-          | Leaf => empty_a
+          | Leaf => leaf
           end
   end.
 
@@ -847,7 +847,7 @@ Fixpoint insert_b (x : T) (t : tree_bal T) : tree_bal T :=
          | GT => let r' := insert_b x r in
                  if incr r r' then balR_b l a b r' else Node l (a, b) r'
          end
-    else Node empty_a (x, Bal) empty_a.
+    else Node leaf (x, Bal) leaf.
 
 Definition decr {A} (t t' : tree_bal A) : bool :=
   is_node t && (~~ is_node t' || ((~~ is_bal t) && is_bal t')).
@@ -872,7 +872,7 @@ Fixpoint delete_b (x : T) (t : tree_bal T) : tree_bal T :=
          | GT => let r' := delete_b x r in
                  if decr r r' then balL_b l a ba r' else Node l (a, ba) r'
          end
-    else empty_a.
+    else leaf.
 
 Lemma avl_insert_b x t :
   avl_b t ->
@@ -1127,13 +1127,13 @@ Section Exercises2.
 Fixpoint debal {A} (t : tree_bal A) : tree_ht A :=
   if t is Node l (a, _) r
     then Node (debal l) (a, maxn (height l) (height r) + 1) (debal r)
-    else empty_a.
+    else leaf.
 
 Lemma avl_b_avl {A} (t : tree_bal A) : avl_b t -> avl (debal t).
 Proof.
 Admitted.
 
-Fixpoint debal2 {A} (t : tree_bal A) : tree_ht A := empty_a. (* FIXME *)
+Fixpoint debal2 {A} (t : tree_bal A) : tree_ht A := leaf. (* FIXME *)
 
 Lemma avl_debal_eq {A} (t : tree_bal A) : avl_b t -> debal2 t = debal t.
 Proof.

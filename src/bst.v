@@ -18,6 +18,25 @@ Fixpoint bst (t : tree T) : bool :=
     then [&& all (< a) (inorder l), all (> a) (inorder r), bst l & bst r]
     else true.
 
+(* not needed *)
+Lemma bst_uniq (t : tree T) : bst t -> uniq (inorder t).
+Proof.
+elim: t=>//=l IHl a r IHr /and4P [Hal Har /IHl Hl /IHr Hr].
+rewrite cat_uniq cons_uniq Hl Hr /= andbT negb_or.
+do !(apply/andP; split).
+- apply/count_memPn; rewrite -(count_pred0 (inorder l)).
+  apply/eq_in_count=>z; move/allP: Hal=>/(_ z) /[apply] /=.
+  by rewrite lt_neqAle =>/andP [/negbTE].
+- rewrite -all_predC.
+  apply/sub_all/Har=>z Hz /=.
+  apply/count_memPn; rewrite -(count_pred0 (inorder l)).
+  apply/eq_in_count=>x; move/allP: Hal=>/(_ x) /[apply] /= Hx.
+  by move: (lt_trans Hx Hz); rewrite lt_neqAle =>/andP [/negbTE].
+apply/count_memPn; rewrite -(count_pred0 (inorder r)).
+apply/eq_in_count=>z; move/allP: Har=>/(_ z) /[apply] /=.
+by rewrite lt_neqAle =>/andP [/negbTE]; rewrite eq_sym.
+Qed.
+
 (* Exercise 5.1 *)
 
 Fixpoint nodes {A} (t : tree A) : seq (tree A * A * tree A) := [::]. (* FIXME *)
@@ -69,8 +88,6 @@ case: ifP.
 by rewrite lt_neqAle eq_sym=>->->.
 Qed.
 
-Definition empty : tree T := @Leaf T.
-
 Fixpoint isin (t : tree T) x : bool :=
   if t is Node l a r
     then match cmp x a with
@@ -87,7 +104,7 @@ Fixpoint insert x (t : tree T) : tree T :=
            | EQ => Node l a r
            | GT => Node l a (insert x r)
          end
-  else Node empty x empty.
+  else Node leaf x leaf.
 
 (* deletion by replacing *)
 
@@ -117,9 +134,9 @@ Fixpoint delete x (t : tree T) : tree T :=
                      else l
            | GT => Node l a (delete x r)
          end
-  else empty.
+  else leaf.
 
-Definition UASet := ASet.make empty insert delete isin.
+Definition UASet := ASet.make leaf insert delete isin.
 
 (* deletion by joining *)
 
@@ -129,7 +146,7 @@ join Leaf           t              => t;
 join (Node l1 a r1) (Node l2 b r2) =>
   if join r1 l2 is Node l3 c r3
     then Node (Node l1 a l3) c (Node r3 b r2)
-    else Node l1 a (Node empty b r2).
+    else Node l1 a (Node leaf b r2).
 
 Lemma join_characteristic l r : inorder (join l r) = inorder l ++ inorder r.
 Proof.
@@ -146,7 +163,7 @@ Fixpoint delete2 x (t : tree T) : tree T :=
            | EQ => join l r
            | GT => Node l a (delete2 x r)
          end
-  else empty.
+  else leaf.
 
 Equations join0 (t1 t2 : tree T) : tree T :=
 join0 t              Leaf           => t;
@@ -178,7 +195,7 @@ Context {disp : unit} {T : orderType disp}.
 
 (* Exercise 5.3 *)
 
-Lemma inorder_empty : inorder (@empty _ T) = [::].
+Lemma inorder_empty : inorder (@Leaf T) = [::].
 Proof.
 Admitted.
 
@@ -196,13 +213,13 @@ Lemma inorder_delete x (t : tree T) :
 Proof.
 Admitted.
 
-Lemma inorder_isin x (t : tree T) :
+Lemma inorder_isin (t : tree T) :
   bst t ->
-  isin t x = (x \in inorder t).
+  isin t =i inorder t.
 Proof.
 Admitted.
 
-Lemma bst_empty : bst (@empty _ T).
+Lemma bst_empty : bst (@Leaf T).
 Proof.
 Admitted.
 
@@ -436,26 +453,26 @@ rewrite IHr //.
 by rewrite -cat1s in H2; rewrite (cat_sorted2 H2).
 Qed.
 
-Lemma inorder_isin_list x (t : tree T) :
+Lemma inorder_isin_list (t : tree T) :
   bst_list t ->
-  isin t x = (x \in inorder t).
+  isin t =i inorder t.
 Proof.
-rewrite /bst_list /=.
-elim: t=>//=l IHl a r IHr.
-rewrite mem_cat inE sorted_cat_cons_cat=>/andP [H1 H2].
+rewrite /bst_list /= => + x; elim: t=>//=l IHl a r IHr.
+rewrite -topredE /= in IHl; rewrite -topredE /= in IHr.
+rewrite -topredE /= mem_cat inE sorted_cat_cons_cat=>/andP [H1 H2].
 case Hc: (cmp x a)=>/=.
 - move/cmp_lt: Hc=>Hx; rewrite IHl; last by rewrite (cat_sorted2 H1).
-  have ->: (x==a)=false by move: Hx; rewrite lt_neqAle=>/andP [/negbTE].
-  have ->: x \in inorder r = false; last by rewrite /= orbF.
-  apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder r)).
+  have/negbTE->: x!=a by move: Hx; rewrite lt_neqAle; case/andP.
+  suff: x \notin inorder r by move/negbTE=>->/=; rewrite orbF.
+  apply/count_memPn; rewrite -(count_pred0 (inorder r)).
   apply/eq_in_count=>z; move: H2=>/= /(order_path_min lt_trans)/allP/(_ z)/[apply] Hz.
   by move: (lt_trans Hx Hz); rewrite lt_neqAle eq_sym=>/andP [/negbTE].
 - by move/cmp_eq: Hc=>/eqP->; rewrite eq_refl /= orbT.
 move/cmp_gt: Hc=>Hx; rewrite IHr; last first.
 - by rewrite -cat1s in H2; rewrite (cat_sorted2 H2).
-have ->: (x==a)=false by move: Hx; rewrite lt_neqAle eq_sym=>/andP [/negbTE].
-suff: x \in inorder l = false by move=>->.
-apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder l)).
+have/negbTE->: x!=a by move: Hx; rewrite lt_neqAle eq_sym; case/andP.
+suff: x \notin inorder l by move/negbTE=>->.
+apply/count_memPn; rewrite -(count_pred0 (inorder l)).
 apply/eq_in_count=>z /=.
 move: H1; rewrite (sorted_pairwise lt_trans) pairwise_cat /= allrel1r andbT.
 case/andP=>+ _ =>/allP/(_ z)/[apply] Hz.
@@ -484,7 +501,7 @@ rewrite inorder_delete_list //.
 by apply: inorder_del_list.
 Qed.
 
-Corollary bst_list_empty : bst_list (@empty _ T).
+Corollary bst_list_empty : bst_list (@Leaf T).
 Proof. by []. Qed.
 
 Corollary bst_list_insert x (t : tree T) :
@@ -523,6 +540,20 @@ Fixpoint bst_a t : bool :=
     then [&& all (< a) (inorder_a l), all (> a) (inorder_a r), bst_a l & bst_a r]
     else true.
 
+(* not needed *)
+Lemma bst_a_uniq t : bst_a t -> uniq (inorder_a t).
+Proof.
+elim: t=>//=l IHl [a b] r IHr /and4P [Hal Har /IHl Hl /IHr Hr].
+rewrite cat_uniq /= Hl Hr andbT /= negb_or -andbA; apply/and3P; split.
+- apply/count_memPn/eqP; rewrite eqn0Ngt -has_count -all_predC.
+  by apply/sub_all/Hal=>z /=; rewrite lt_neqAle; case/andP.
+- rewrite -all_predC; apply/sub_all/Har=>z Hz /=.
+  apply/count_memPn/eqP; rewrite eqn0Ngt -has_count -all_predC.
+  by apply/sub_all/Hal=>y /= Hy; move: (lt_trans Hy Hz); rewrite lt_neqAle; case/andP.
+apply/count_memPn/eqP; rewrite eqn0Ngt -has_count -all_predC.
+by apply/sub_all/Har=>z /=; rewrite eq_sym lt_neqAle; case/andP.
+Qed.
+
 Definition bst_list_a t : bool := sorted <%O (inorder_a t).
 
 Lemma bst_to_list_a t :
@@ -537,22 +568,23 @@ Qed.
 
 Lemma inorder_isin_list_a t :
   bst_list_a t ->
-  forall x, isin_a t x = (x \in inorder_a t).  (* TODO use =i ? *)
+  isin_a t =i inorder_a t.
 Proof.
 move/bst_to_list_a=>+ x; elim: t=>//= l IHl [a c] r IHr.
-case/and4P=>Hal Har /IHl Hl /IHr Hr.
-rewrite mem_cat inE; case Hc: (cmp x a)=>/=.
+case/and4P=>Hal Har /IHl {IHl}Hl /IHr {IHr}Hr.
+rewrite -topredE /= in Hl; rewrite -topredE /= in Hr.
+rewrite -topredE /= mem_cat inE; case Hc: (cmp x a)=>/=.
 - move/cmp_lt: Hc=>Hx; rewrite Hl.
-  have ->: (x==a)=false by move: Hx; rewrite lt_neqAle=>/andP [/negbTE].
-  suff: x \in inorder_a r = false by move=>->/= ; rewrite orbF.
-  apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder_a r)).
+  have/negbTE->: x!=a by move: Hx; rewrite lt_neqAle; case/andP.
+  suff: x \notin inorder_a r by move/negbTE=>->/=; rewrite orbF.
+  apply/count_memPn; rewrite -(count_pred0 (inorder_a r)).
   apply/eq_in_count=>z /= /(allP Har)/(lt_trans Hx).
   by rewrite lt_neqAle eq_sym=>/andP [/negbTE].
 - by move/cmp_eq: Hc=>/eqP->; rewrite eq_refl /= orbT.
 move/cmp_gt: Hc=>Hx; rewrite Hr.
-have ->: (x==a)=false by move: Hx; rewrite lt_neqAle eq_sym=>/andP [/negbTE].
-suff: x \in inorder_a l = false by move=>->.
-apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder_a l)).
+have/negbTE->: x!=a by move: Hx; rewrite lt_neqAle eq_sym; case/andP.
+suff: x \notin inorder_a l by move/negbTE=>->.
+apply/count_memPn; rewrite -(count_pred0 (inorder_a l)).
 apply/eq_in_count=>z /(allP Hal) /= Hz; move: (lt_trans Hz Hx).
 by rewrite lt_neqAle eq_sym=>/andP [/negbTE].
 Qed.
@@ -719,7 +751,7 @@ Fixpoint insert_i x (t : ivl_tree) : ivl_tree :=
            | EQ => Node l (a,m) r
            | GT => node_i l a (insert_i x r)
          end
-  else Node empty_a (x, high x) empty_a.
+  else Node leaf (x, high x) leaf.
 
 Fixpoint split_min_i (l : ivl_tree) (a : ivl) (r : ivl_tree) : ivl * ivl_tree :=
   if l is Node ll (al, _) rl then
@@ -747,7 +779,7 @@ Fixpoint delete_i x (t : ivl_tree) : ivl_tree :=
                      else l
            | GT => node_i l a (delete_i x r)
          end
-  else empty_a.
+  else leaf.
 
 (* functional correctness *)
 

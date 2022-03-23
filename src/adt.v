@@ -26,16 +26,15 @@ Record ASetM (disp : unit) (T : orderType disp): Type :=
 
         _ : forall x s, invar s -> invar (insert x s);
         _ : forall x s, invar s ->
-            perm_eq (abs (insert x s))
-                    (if x \in abs s then abs s else x :: abs s);
+              perm_eq (abs (insert x s))
+                      (if x \in abs s then abs s else x :: abs s);
 
         _ : forall x s, invar s -> invar (delete x s);
         _ : forall x s, invar s ->
-            perm_eq (abs (delete x s))
-                    (filter (predC1 x) (abs s));
+              perm_eq (abs (delete x s))
+                      (filter (predC1 x) (abs s));
 
-        _ : forall x s, invar s ->
-            isin s x = (x \in abs s)
+        _ : forall s, invar s -> isin s =i abs s
         }.
 End ASetM.
 
@@ -45,7 +44,7 @@ Context {disp : unit} {T : orderType disp}.
 (* direct proofs for unbalanced trees work *)
 Definition UASetM :=
   @ASetM.make _ _ (tree T)
-    empty insert delete isin
+    leaf insert delete isin
     inorder bst
     bst_empty inorder_empty
     bst_insert inorder_insert
@@ -65,7 +64,7 @@ Definition LASetM :=
 (* unbalanced trees via sorted lists implement sets *)
 Definition ULASetM :=
   @ASetM.make _ _ (tree T)
-    empty insert delete isin
+    leaf insert delete isin
     inorder bst_list
     bst_list_empty erefl
     bst_list_insert inorder_insert_list_set
@@ -109,16 +108,16 @@ Record ASetI (disp : unit) (T : orderType disp): Type :=
 
         (* FIXME *)
 
-       }.
-End ASetI.
+        }.
+        End ASetI.
 
-(* Exercise 6.3 *)
+        (* Exercise 6.3 *)
 
-Section MapUnbalanced.
-Context {disp : unit} {K : orderType disp} {V : Type}.
+        Section MapUnbalanced.
+        Context {disp : unit} {K : orderType disp} {V : Type}.
 
-Notation kvtree := (tree (K*V)).
+        Notation kvtree := (tree (K*V)).
 
-(* FIXME *)
+        (* FIXME *)
 
 End MapUnbalanced.
