@@ -75,7 +75,7 @@ Context {A : Type}.
 
 Fixpoint lookup1 (x0 : A) (t : tree A) (n : nat) : A :=
   if t is Node l x r then
-    if n == 1 then x else lookup1 x0 (if ~~ odd n then l else r) (n./2)
+    if n == 1 then x else lookup1 x0 (if ~~ odd n then l else r) n./2
     else x0.
 
 Fixpoint update1 (n : nat) (x : A) (t : tree A) : tree A :=
@@ -414,3 +414,233 @@ Definition ArrayBraun :=
     invar_array invar_list_array.
 
 End ArraysViaBraunTrees.
+
+(* TODO move to prelude *)
+Definition butlast {A : Type} (xs : seq A) :=
+  if xs is x :: s then belast x s else [::].
+
+Lemma belast_butlast {A} (x : A) xs : 0 < size xs -> belast x xs = x :: butlast xs.
+Proof. by case: xs. Qed.
+
+Lemma size_butlast {A} (xs : seq A) : size (butlast xs) = (size xs).-1.
+Proof. by case: xs=>//=x s; rewrite size_belast. Qed.
+
+(* TODO switch to packed structures *)
+Module ArrayFlex.
+Record ArrayFlex (T : Type) : Type :=
+  make {tp :> Type;
+        lookup : T -> tp -> nat -> T;
+        update : nat -> T -> tp -> tp;
+        len : tp -> nat;
+        array : seq T -> tp;
+
+        add_lo : T -> tp -> tp;
+        del_lo : tp -> tp;
+        add_hi : T -> tp -> tp;
+        del_hi : tp -> tp;
+
+        list : tp -> seq T;
+        invar : tp -> bool;
+
+        _ : forall x0 ar n, invar ar -> n < len ar ->
+              lookup x0 ar n = nth x0 (list ar) n;
+        _ : forall x ar n, invar ar -> n < len ar ->
+              invar (update n x ar);
+        _ : forall x0 x ar n, invar ar -> n < len ar ->
+              list (update n x ar) = set_nth x0 (list ar) n x;
+        _ : forall ar, invar ar -> len ar = size (list ar);
+        _ : forall xs, invar (array xs);
+        _ : forall xs, list (array xs) = xs;
+
+        _ : forall a ar, invar ar -> invar (add_lo a ar);
+        _ : forall a ar, invar ar -> list (add_lo a ar) = a :: list ar;
+        _ : forall ar, invar ar -> invar (del_lo ar);
+        _ : forall ar, invar ar -> list (del_lo ar) = behead (list ar);
+        _ : forall a ar, invar ar -> invar (add_hi a ar);
+        _ : forall a ar, invar ar -> list (add_hi a ar) = rcons (list ar) a;
+        _ : forall ar, invar ar -> invar (del_hi ar);
+        _ : forall ar, invar ar -> list (del_hi ar) = butlast (list ar)
+        }.
+End ArrayFlex.
+
+Section FlexibleArrays.
+Context {A : Type}.
+
+Fixpoint del_hi1 (n : nat) (t : tree A) : tree A :=
+  if t is Node l x r then
+    if n == 1 then leaf
+      else if ~~ odd n then Node (del_hi1 n./2 l) x r
+                       else Node l x (del_hi1 n./2 r)
+  else leaf.
+
+Fixpoint add_lo1 (x : A) (t : tree A) : tree A :=
+  if t is Node l a r
+    then Node (add_lo1 a r) x l
+    else Node leaf x leaf.
+
+Fixpoint merge (l r : tree A) : tree A :=
+  if l is Node ll al rl
+    then Node r al (merge ll rl)
+    else r.
+
+Definition del_lo1 (t : tree A) : tree A :=
+  if t is Node l a r
+    then merge l r
+    else leaf.
+
+Definition add_lo (x : A) (t : br_tree A) : br_tree A :=
+  let: (t,l) := t in (add_lo1 x t, l.+1).
+Definition del_lo (t : br_tree A) : br_tree A :=
+  let: (t,l) := t in (del_lo1 t, l.-1).
+Definition add_hi (x : A) (t : br_tree A) : br_tree A :=
+  let: (t,l) := t in (update1 l.+1 x t, l.+1).
+Definition del_hi (t : br_tree A) : br_tree A :=
+  let: (t,l) := t in (del_hi1 l t, l.-1).
+
+(* Functional Correctness *)
+
+Lemma butlast_splice (xs ys : seq A) :
+  butlast (splice xs ys) = if size ys < size xs then splice (butlast xs) ys
+                                                else splice xs (butlast ys).
+Proof.
+funelim (splice xs ys); simp splice=>//=.
+rewrite ltnS; move: H; case: leqP=>{Heqcall}.
+- case: s=>[|z s] /=; first by rewrite leqn0=>/eqP/size0nil->.
+  simp splice=>_<-.
+  by apply: belast_butlast; rewrite size_splice /= addnS.
+case: ys=>[|y ys]/=; first by rewrite ltn0.
+by simp splice=>/=_->.
+Qed.
+
+Lemma del_hi1_list t :
+  braun t ->
+  list1 (del_hi1 (size_tree t) t) = butlast (list1 t).
+Proof.
+elim: t=>//=l IHl a r IHr /and3P [E /IHl Hl /IHr Hr].
+rewrite -{2}(add0n 1) eqn_add2r; case: ifP.
+- by rewrite addn_eq0; case/andP=>/eqP/size0leaf->/eqP/size0leaf->.
+move/negbT=>E1; rewrite addn1=>/=; case: ifP=>/=.
+- move/negbNE; case/orP: E=>/eqP E; rewrite E; first by rewrite addnn odd_double.
+  move=>_; rewrite addnAC addnn addn1 /= doubleK -addn1 -E Hl.
+  rewrite belast_butlast; last first.
+  - by rewrite size_splice -!size_list1 E addnAC addn1.
+  by rewrite butlast_splice -!size_list1 E addn1 ltnS leqnn.
+move/negbT/negbNE; case/orP: E=>/eqP E; rewrite E; last first.
+- by rewrite addnAC addnn addn1 /= odd_double.
+move=>_; rewrite addnn uphalf_double Hr belast_butlast; last first.
+- by rewrite size_splice -!size_list1 lt0n.
+by rewrite butlast_splice -!size_list1 E ltnn.
+Qed.
+
+Lemma del_hi1_braun t : braun t -> braun (del_hi1 (size_tree t) t).
+Proof.
+elim: t=>//=l IHl a r IHr /and3P [E Hl Hr].
+rewrite -{2}(add0n 1) eqn_add2r; case: ifP=>//.
+move/negbT=>E1; rewrite addn1=>/=; case: ifP=>/=.
+- move/negbNE; case/orP: E=>/eqP E; rewrite E; first by rewrite addnn odd_double.
+  move=>_; rewrite addnAC addnn addn1 /= doubleK -addn1 -E Hr IHl //= andbT.
+  by rewrite size_list1 del_hi1_list // size_butlast -size_list1 E addn1 /= eq_refl.
+move/negbT/negbNE; case/orP: E=>/eqP E; rewrite E; last first.
+- by rewrite addnAC addnn addn1 /= odd_double.
+move=>_; rewrite addnn uphalf_double Hl IHr //= andbT.
+rewrite (size_list1 (del_hi1 _ _)) del_hi1_list // size_butlast -size_list1 addn1.
+rewrite prednK ?eq_refl ?orbT //.
+by move: E1; rewrite -lt0n addn_gt0 E orbb.
+Qed.
+
+Lemma add_lo1_list a t :
+  braun t -> list1 (add_lo1 a t) = a :: list1 t.
+Proof.
+elim: t a=>//=l _ x r IHr a /and3P [_ _ Hr].
+by rewrite IHr //; simp splice.
+Qed.
+
+Lemma add_lo1_braun x t :
+  braun t -> braun (add_lo1 x t).
+Proof.
+elim: t x=>//=l IHl a r IHr x /and3P [E Hl Hr].
+rewrite Hl IHr //= andbT size_list1 add_lo1_list //= -size_list1.
+by case/orP: E=>/eqP->; rewrite addn1 eq_refl // orbT.
+Qed.
+
+Lemma merge_list l r :
+  (size_tree l == size_tree r) || (size_tree l == size_tree r + 1) ->
+  braun l -> braun r ->
+  list1 (merge l r) = splice (list1 l) (list1 r).
+Proof.
+elim: l r=>//=ll IHl al rl _ r E /and3P [El Hll Hrl] Hr.
+by simp splice; rewrite IHl.
+Qed.
+
+Lemma merge_braun l r :
+  (size_tree l == size_tree r) || (size_tree l == size_tree r + 1) ->
+  braun l -> braun r ->
+  braun (merge l r).
+Proof.
+elim: l r=>//=ll IHl al rl _ r E /and3P [El Hll Hrl] -> /=.
+apply/andP; split; last by apply: IHl.
+rewrite (size_list1 (merge _ _)) merge_list // size_splice -!size_list1.
+by case/orP: E; rewrite eq_sym ?eqn_add2r =>->//; rewrite orbT.
+Qed.
+
+Lemma del_lo1_list t : braun t -> list1 (del_lo1 t) = behead (list1 t).
+Proof. by case: t=>//=l _ r /and3P [E Hl Hr]; apply: merge_list. Qed.
+
+Lemma del_lo1_braun t : braun t -> braun (del_lo1 t).
+Proof. by case: t=>//=l _ r /and3P [E Hl Hr]; apply: merge_braun. Qed.
+
+(* Corollaries *)
+
+Corollary invar_add_lo a t : invar t -> invar (add_lo a t).
+Proof.
+rewrite /invar /add_lo; case: t=>[t n]/= /andP [E /eqP ->].
+apply/andP; split; first by apply: add_lo1_braun.
+by rewrite !size_list1 add_lo1_list.
+Qed.
+
+Corollary list_add_lo a t : invar t -> list (add_lo a t) = a :: list t.
+Proof.
+rewrite /invar /add_lo /list; case: t=>[t n]/= /andP [E _].
+by apply: add_lo1_list.
+Qed.
+
+Corollary invar_del_lo t : invar t -> invar (del_lo t).
+Proof.
+rewrite /invar /del_lo; case: t=>[t n]/= /andP [E /eqP ->].
+apply/andP; split; first by apply: del_lo1_braun.
+by rewrite !size_list1 del_lo1_list // size_behead.
+Qed.
+
+Corollary list_del_lo t : invar t -> list (del_lo t) = behead (list t).
+Proof.
+rewrite /invar /add_lo /list; case: t=>[t n]/= /andP [E _].
+by apply: del_lo1_list.
+Qed.
+
+Corollary invar_add_hi a t : invar t -> invar (add_hi a t).
+Proof.
+rewrite /invar /add_hi; case: t=>[t n]/= /andP [E /eqP ->].
+rewrite -addn1; apply/andP; split; first by apply: update1_braun_extend.
+by rewrite update1_size_extend.
+Qed.
+
+Corollary list_add_hi a t : invar t -> list (add_hi a t) = rcons (list t) a.
+Proof.
+rewrite /invar /add_hi /list; case: t=>[t n]/= /andP [E /eqP ->].
+by rewrite -addn1; apply: update1_braun_rcons.
+Qed.
+
+Corollary invar_del_hi t : invar t -> invar (del_hi t).
+Proof.
+rewrite /invar /del_hi; case: t=>[t n]/= /andP [E /eqP ->].
+apply/andP; split; first by apply: del_hi1_braun.
+by rewrite (size_list1 (del_hi1 _ _)) del_hi1_list // size_butlast size_list1.
+Qed.
+
+Corollary list_del_hi t : invar t -> list (del_hi t) = butlast (list t).
+Proof.
+rewrite /invar /del_hi /list; case: t=>[t n]/= /andP [E /eqP ->].
+by rewrite del_hi1_list.
+Qed.
+
+End FlexibleArrays.

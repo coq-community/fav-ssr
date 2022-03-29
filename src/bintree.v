@@ -50,6 +50,9 @@ Fixpoint size_tree (t : tree A) : nat :=
     then size_tree l + size_tree r + 1
   else 0.
 
+Lemma size0leaf t : size_tree t = 0 -> t = leaf.
+Proof. by case: t=>//=l a r; rewrite addn1. Qed.
+
 (* number of leaves *)
 Fixpoint size1_tree (t : tree A) : nat :=
   if t is Node l _ r
