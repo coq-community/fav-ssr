@@ -249,6 +249,14 @@ Proof. by apply/maxn_idPl/leq_addr. Qed.
 Lemma maxn_addr n m : maxn n (n + m) = n + m.
 Proof. by apply/maxn_idPr/leq_addr. Qed.
 
+Lemma maxn_expn k n m : 0 < k -> maxn (k^n) (k^m) = k ^ maxn n m.
+Proof.
+case: k=>//; case=>[|k _]; first by rewrite !exp1n.
+rewrite /maxn; case: (ltnP n m).
+- by rewrite ltn_exp2l // =>->.
+by rewrite ltnNge leq_exp2l // =>->.
+Qed.
+
 End Arith.
 
 Section Size.
@@ -259,7 +267,31 @@ Proof. by case: xs=>// x; case=>//= _; exists x. Qed.
 Lemma size2 {A} (xs : seq A) : 1 < size xs -> exists x y ys, xs = [:: x, y & ys].
 Proof. by case: xs=>// x; case=>//= y ys _; exists x,y,ys. Qed.
 
+Lemma size_ind {T} P :
+  (forall xs, size xs = 0 -> P xs) ->
+  (forall n, (forall xs, size xs <= n -> P xs) -> forall xs, size xs <= n.+1 -> P xs) ->
+  forall (xs : seq T), P xs.
+Proof.
+(* from https://stackoverflow.com/a/45883068/919707 *)
+move=>H0 Hn xs; move: {2}(size _) (leqnn (size xs)) =>n; elim: n xs=>[|n IH] xs.
+- by rewrite leqn0=>/eqP; apply: H0.
+by apply/Hn/IH.
+Qed.
+
 End Size.
+
+Section Butlast.
+
+Definition butlast {A : Type} (xs : seq A) :=
+  if xs is x :: s then belast x s else [::].
+
+Lemma belast_butlast {A} (x : A) xs : 0 < size xs -> belast x xs = x :: butlast xs.
+Proof. by case: xs. Qed.
+
+Lemma size_butlast {A} (xs : seq A) : size (butlast xs) = (size xs).-1.
+Proof. by case: xs=>//=x s; rewrite size_belast. Qed.
+
+End Butlast.
 
 Section Sorted.
 
@@ -291,6 +323,42 @@ Lemma perm_allrelr {A B : eqType} r (s : seq A) (s1 s2 : seq B) :
 Proof. by move=>H; apply: eq_all=>z /=; apply: perm_all. Qed.
 
 End Allrel.
+
+Section Option.
+
+Definition someb {A} (x : option A) : bool :=
+  if x isn't None then true else false.
+
+Definition olist {A} (o : option A) : seq A :=
+  if o is Some x then [:: x] else [::].
+
+Definition omap {T S} (f : T -> option S) (xs : seq T) : seq S :=
+  flatten (map (olist \o f) xs).
+
+Lemma omap_nil {T S} (f : T -> option S) :
+  omap f [::] = [::].
+Proof. by []. Qed.
+
+Lemma omap_cons {T S} (f : T -> option S) (x : T) xs :
+  omap f (x::xs) = olist (f x) ++ omap f xs.
+Proof. by []. Qed.
+
+Lemma omap_rcons {T S} (f : T -> option S) (x : T) xs :
+  omap f (rcons xs x) = omap f xs ++ olist (f x).
+Proof. by rewrite /omap map_rcons flatten_rcons. Qed.
+
+Lemma omap_cat {T S} (f : T -> option S) xs ys :
+  omap f (xs ++ ys) = omap f xs ++ omap f ys.
+Proof. by elim: xs=>//=x s IH; rewrite !omap_cons IH catA. Qed.
+
+Lemma omap_empty {T S} (f : T -> option S) xs :
+  all (fun x => ~~ someb (f x)) xs -> omap f xs = [::].
+Proof.
+elim: xs=>//=x s IH /andP [Hx /IH].
+by rewrite omap_cons=>->; case: (f x) Hx.
+Qed.
+
+End Option.
 
 Section Log.
 
