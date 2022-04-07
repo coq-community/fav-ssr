@@ -1,7 +1,7 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
 From mathcomp Require Import eqtype order ssrnat seq path.
-From favssr Require Import prelude bintree bst redblack.
+From favssr Require Import prelude bintree bst adt redblack.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -13,7 +13,7 @@ Open Scope order_scope.
 
 (* TODO switch to packed structures to reuse ASetM *)
 Module ASetM2.
-Record ASetM2 (disp : unit) (T : orderType disp): Type :=
+Structure ASetM2 (disp : unit) (T : orderType disp): Type :=
   make {tp :> Type;
         empty : tp;
         insert : T -> tp -> tp;
@@ -23,44 +23,38 @@ Record ASetM2 (disp : unit) (T : orderType disp): Type :=
         int : tp -> tp -> tp;
         dif : tp -> tp -> tp;
 
-        abs : tp -> seq T;
+        abs : tp -> pred T;
         invar : tp -> bool;
 
         _ : invar empty;
-        _ : abs empty = [::];
+        _ : abs empty =i pred0;
 
         _ : forall x t, invar t -> invar (insert x t);
         _ : forall x t, invar t ->
-            perm_eq (abs (insert x t))
-                    (if x \in abs t then abs t else x :: abs t);
+              abs (insert x t) =i [predU1 x & abs t];
 
         _ : forall x t, invar t -> invar (delete x t);
         _ : forall x t, invar t ->
-            perm_eq (abs (delete x t))
-                    (filter (predC1 x) (abs t));
+              abs (delete x t) =i [predD1 abs t & x];
 
-        _ : forall x t, invar t ->
-            isin t x = (x \in abs t);
+        _ : forall t, invar t -> isin t =i abs t;
 
         _ : forall t1 t2, invar t1 -> invar t2 -> invar (uni t1 t2);
         _ : forall t1 t2, invar t1 -> invar t2 ->
-            perm_eq (abs (uni t1 t2))
-                    (abs t1 ++ filter [predC mem (abs t1)] (abs t2));
+              abs (uni t1 t2) =i [predU (abs t1) & (abs t2)];
 
         _ : forall t1 t2, invar t1 -> invar t2 -> invar (int t1 t2);
         _ : forall t1 t2, invar t1 -> invar t2 ->
-            perm_eq (abs (int t1 t2))
-                    (filter (mem (abs t2)) (abs t1));
+              abs (int t1 t2) =i [predI (abs t1) & (abs t2)];
 
         _ : forall t1 t2, invar t1 -> invar t2 -> invar (dif t1 t2);
         _ : forall t1 t2, invar t1 -> invar t2 ->
-            perm_eq (abs (dif t1 t2))
-                    (filter [predC mem (abs t2)] (abs t1))
+              abs (dif t1 t2) =i [predD (abs t1) & (abs t2)]
         }.
 End ASetM2.
 
 (* TODO use a canonical structure? *)
-Record JoinSig (disp : unit) (X : orderType disp) (Y : Type) : Type :=
+Structure JoinSig (disp : unit) (X : orderType disp) (Y : Type) : Type :=
   mkjoin {
     join : tree (X*Y) -> X -> tree (X*Y) -> tree (X*Y);
     inv : tree (X*Y) -> bool;
@@ -143,10 +137,9 @@ Lemma split_bst t x l b r :
       bst_a l & bst_a r].
 Proof.
 elim: t l r=>/= [|tl IHl [a b'] tr IHr] l r; first by case=><-<-<-.
-rewrite !filter_cat mem_cat inE /=; case Hxa: (cmp x a)=>/=.
-- move/cmp_lt: Hxa=>Hxa.
-  case E: (split tl x)=>[[l1 bb] l2][El Eb Er]; rewrite {l1}El {bb}Eb in E.
-  case/and4P=>Hal Har Hbl Hbr; rewrite Hxa ltNge le_eqVlt Hxa orbT /=.
+rewrite !filter_cat mem_cat inE /=; case: cmpE=>Hxa /=.
+- case E: (split tl x)=>[[l1 bb] l2][El Eb Er]; rewrite {l1}El {bb}Eb in E.
+  case/and4P=>Hal Har Hbl Hbr.
   case/and5P: (IHl _ _ E Hbl)=>/eqP Pl /eqP Pl2 /eqP -> -> Hbl2 /=.
   rewrite -Er; apply/and4P; split.
   - rewrite Pl.
@@ -157,16 +150,12 @@ rewrite !filter_cat mem_cat inE /=; case Hxa: (cmp x a)=>/=.
   - rewrite join_inorder Pl2.
     suff: all (> x) (inorder_a tr) by move/all_filterP=>{1}<-.
     by apply/sub_all/Har=>z Hz; apply/lt_trans/Hz.
-  - suff: x \notin inorder_a tr.
-    - move/negbTE=>->; move: (Hxa); rewrite lt_neqAle.
-      by case/andP=>/negbTE -> /=; rewrite orbF.
-    apply/count_memPn/eqP; rewrite eqn0Ngt -has_count -all_predC.
-    apply/sub_all/Har=>z /(lt_trans Hxa) /=.
-    by rewrite lt_neqAle eq_sym; case/andP.
-   apply: bst_join=>//; rewrite Pl2 all_filter.
-   by apply/sub_all/Hal=>z /= Hz; apply/implyP.
-- move/cmp_eq: Hxa=>/eqP-> [-><-->] /and4P [Hal Har ->->] /=.
-  rewrite eq_refl orbT /= andbT ltxx.
+  - suff: x \notin inorder_a tr by move/negbTE=>->; rewrite orbF.
+    by apply: (all_notin Har); rewrite -leNgt; apply: ltW.
+  apply: bst_join=>//; rewrite Pl2 all_filter.
+  by apply/sub_all/Hal=>z /= Hz; apply/implyP.
+- case=>-><--> /and4P [Hal Har ->->] /=.
+  rewrite Hxa orbT /= andbT.
   move/all_filterP: (Hal)=>->; move/all_filterP: (Har)=>->.
   apply/andP; split.
   - suff: [seq x <- inorder_a r | x < a] = nil by move=>->; rewrite cats0.
@@ -175,9 +164,8 @@ rewrite !filter_cat mem_cat inE /=; case Hxa: (cmp x a)=>/=.
   suff: [seq x <- inorder_a l | a < x] = nil by move=>->.
   rewrite (eq_in_filter (a2:=pred0)); first by rewrite filter_pred0.
   by move=>z /= /(allP Hal) Hz; apply/negbTE; rewrite -leNgt; apply: ltW.
-move/cmp_gt: Hxa=>Hxa.
 case E: (split tr x)=>[[r1 bb] r2][El Eb Er]; rewrite {r2}Er {bb}Eb in E.
-case/and4P=>Hal Har Hbl Hbr; rewrite Hxa ltNge le_eqVlt Hxa orbT /=.
+case/and4P=>Hal Har Hbl Hbr.
 case/and5P: (IHr _ _ E Hbr)=>/eqP Pr1 /eqP Pr /eqP -> Hbr1 -> /=.
 rewrite andbT -El; apply/and4P; split.
 - rewrite join_inorder Pr1.
@@ -188,14 +176,10 @@ rewrite andbT -El; apply/and4P; split.
   rewrite (eq_in_filter (a2:=pred0)); first by rewrite filter_pred0.
   move=>z /= /(allP Hal) Hz; apply/negbTE; rewrite -leNgt.
   by apply/ltW/(lt_trans Hz).
-- suff: x \notin inorder_a tl.
-  - move/negbTE=>->; move: (Hxa); rewrite lt_neqAle /= eq_sym.
-    by case/andP=>/negbTE ->.
-  apply/count_memPn/eqP; rewrite eqn0Ngt -has_count -all_predC.
-  apply/sub_all/Hal=>z /= Hz; move: (lt_trans Hz Hxa).
-  by rewrite lt_neqAle eq_sym; case/andP.
- apply: bst_join=>//; rewrite Pr1 all_filter.
- by apply/sub_all/Har=>z /= Hz; apply/implyP.
+- suff: x \notin inorder_a tl by move/negbTE=>->.
+  by apply: (all_notin Hal)=>/=; rewrite -leNgt; apply: ltW.
+apply: bst_join=>//; rewrite Pr1 all_filter.
+by apply/sub_all/Har=>z /= Hz; apply/implyP.
 Qed.
 
 Lemma split_inv t x l b r :
@@ -806,11 +790,10 @@ Qed.
 
 Corollary inorder_insert_list' x (t : rbt T) :
   invariant' t ->
-  perm_eq (inorder_a (insert x t))
-          (if x \in inorder_a t then inorder_a t else x :: inorder_a t).
+  inorder_a (insert x t) =i [predU1 x & inorder_a t].
 Proof.
 rewrite /invariant' /bst_list_a => /andP [H1 _].
-by rewrite inorder_insert //; apply: inorder_ins_list.
+by rewrite inorder_insert //; apply: inorder_ins_list_pred.
 Qed.
 
 Corollary invariant_delete' x (t : rbt T) :
@@ -823,16 +806,15 @@ Qed.
 
 Corollary inorder_delete_list' x (t : rbt T) :
   invariant' t ->
-  perm_eq (inorder_a (delete x t))
-          (filter (predC1 x) (inorder_a t)).
+  inorder_a (delete x t) =i [predD1 inorder_a t & x].
 Proof.
 rewrite /invariant' /bst_list_a => /andP [H1 H2].
-by rewrite inorder_delete //; apply: inorder_del_list.
+by rewrite inorder_delete //; apply: inorder_del_list_pred.
 Qed.
 
-Lemma inv_isin_list' x (t : rbt T) :
+Lemma inv_isin_list' (t : rbt T) :
   invariant' t ->
-  isin_a t x = (x \in inorder_a t).
+  isin_a t =i inorder_a t.
 Proof. by rewrite /invariant' => /andP [H1 _]; apply: inorder_isin_list_a. Qed.
 
 Corollary invariant_union' (t1 t2 : rbt T) :
@@ -845,11 +827,11 @@ Qed.
 
 Corollary inorder_union' (t1 t2 : rbt T) :
   invariant' t1 -> invariant' t2 ->
-  perm_eq (inorder_a ((union (j:=JoinRBT)) t1 t2))
-          (inorder_a t1 ++ filter [predC mem (inorder_a t1)] (inorder_a t2)).
+  inorder_a ((union (j:=JoinRBT)) t1 t2) =i [predU (inorder_a t1) & (inorder_a t2)].
 Proof.
-rewrite /invariant' /bst_list_a => /andP [H11 _] /andP [H21 _].
-by apply: union_inorder; apply/bst_to_list_a.
+rewrite /invariant' /bst_list_a => /andP [/bst_to_list_a H11 _] /andP [/bst_to_list_a H21 _] z.
+move/perm_mem: (union_inorder (j:=JoinRBT) H11 H21)=>/(_ z)->.
+by rewrite mem_cat mem_filter !inE; case: (z \in inorder_a t1).
 Qed.
 
 Corollary invariant_inter' (t1 t2 : rbt T) :
@@ -862,11 +844,11 @@ Qed.
 
 Corollary inorder_inter' (t1 t2 : rbt T) :
   invariant' t1 -> invariant' t2 ->
-  perm_eq (inorder_a ((inter (j:=JoinRBT)) t1 t2))
-          (filter (mem (inorder_a t2)) (inorder_a t1)).
+  inorder_a ((inter (j:=JoinRBT)) t1 t2) =i [predI (inorder_a t1) & (inorder_a t2)].
 Proof.
-rewrite /invariant' /bst_list_a => /andP [H11 _] /andP [H21 _].
-by apply: inter_inorder; apply/bst_to_list_a.
+rewrite /invariant' /bst_list_a => /andP [/bst_to_list_a H11 _] /andP [/bst_to_list_a H21 _] z.
+move/perm_mem: (inter_inorder (j:=JoinRBT) H11 H21)=>/(_ z)->.
+by rewrite mem_filter !inE andbC.
 Qed.
 
 Corollary invariant_diff' (t1 t2 : rbt T) :
@@ -879,19 +861,19 @@ Qed.
 
 Corollary inorder_diff' (t1 t2 : rbt T) :
   invariant' t1 -> invariant' t2 ->
-  perm_eq (inorder_a ((diff (j:=JoinRBT)) t1 t2))
-          (filter [predC mem (inorder_a t2)] (inorder_a t1)).
+  inorder_a ((diff (j:=JoinRBT)) t1 t2) =i [predD (inorder_a t1) & (inorder_a t2)].
 Proof.
-rewrite /invariant' /bst_list_a => /andP [H11 _] /andP [H21 _].
-by apply: diff_inorder; apply/bst_to_list_a.
+rewrite /invariant' /bst_list_a => /andP [/bst_to_list_a H11 _] /andP [/bst_to_list_a H21 _] z.
+move/perm_mem: (diff_inorder (j:=JoinRBT) H11 H21)=>/(_ z)->.
+by rewrite mem_filter !inE.
 Qed.
 
 Definition SetRBT2 :=
   @ASetM2.make _ _ (rbt T)
     leaf insert delete isin_a
     (union (j:=JoinRBT)) (inter (j:=JoinRBT)) (diff (j:=JoinRBT))
-    inorder_a invariant'
-    invariant_empty' erefl
+    (pred_of_seq \o inorder_a) invariant'
+    invariant_empty' inorder_a_empty_pred
     invariant_insert' inorder_insert_list'
     invariant_delete' inorder_delete_list'
     inv_isin_list'

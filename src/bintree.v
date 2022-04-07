@@ -525,6 +525,14 @@ Proof. by elim: t=>//=l IHl [a n] r IHr /and3P [/eqP -> /IHl <- /IHr <-]. Qed.
 
 End AugmentedTrees.
 
+Section AugmentedTreesEq.
+Context {A : eqType} {B : Type}.
+
+Lemma inorder_a_empty_pred : inorder_a (@Leaf (A*B)) =i pred0.
+Proof. by []. Qed.
+
+End AugmentedTreesEq.
+
 (* generalized form *)
 (* we don't always need a meaningful invariant (and thus an eqType constraint) *)
 (* e.g. if B is the value in a KV map *)

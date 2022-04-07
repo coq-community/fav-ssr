@@ -469,7 +469,7 @@ case: (cmp x a)=>/=.
   - by rewrite Hl2 E1 E2 Hl1 Hcm Hcr !eq_refl.
   by case/and3P: Hl1=>/eqP<- ->->; rewrite Hl2 E1 E2 Hcm Hcr !maxnn !eq_refl.
 - by rewrite E1 E2 Hcl Hcm Hcr !eq_refl.
-case Hxb: (cmp x b)=>/=.
+case: (cmp x b)=>/=.
 - case Hxm: (ins x m)=>[t|tl ta tm] /=; rewrite {}Hxm /= in Hm1 Hm2.
   - by rewrite Hm2 E1 E2 Hcl Hm1 Hcr !eq_refl.
   by case/and3P: Hm1=>/eqP<- ->->; rewrite Hm2 E1 E2 Hcl Hcr !maxnn !eq_refl.
@@ -742,7 +742,7 @@ case: (cmp x a).
 - case Hsm: (split_min m')=>[x0 t0].
   rewrite hD32 (height_lift Hlm) (height_lift Hlr) (split_min_hD Hsm) //.
   by rewrite -(complete_lift Hlm).
-case Hxb: (cmp x b).
+case: (cmp x b).
 - by rewrite hD32 IHm (height_lift Hlr).
 - case Hsm: (split_min r')=>[x0 t0].
   rewrite hD33 (height_lift Hlm) (height_lift Hlr) (split_min_hD Hsm) //.
@@ -810,35 +810,31 @@ Lemma inorder_insert23 x t :
   bst_list t ->
   inorder23 (insert x t) = ins_list x (inorder23 t).
 Proof.
-rewrite /bst_list /insert; elim: t=>//=.
-- move=>l IHl a r IHr.
-  rewrite sorted_cat_cons_cat=>/andP [H1 /path_sorted H2].
+rewrite /bst_list /insert; elim: t=>//=[l IHl a r IHr|l IHl a m IHm b r IHr].
+- rewrite sorted_cat_cons_cat=>/andP [H1 /path_sorted H2].
   rewrite inslist_sorted_cat_cons_cat //.
-  case Hc: (cmp x a)=>/=.
-  - move/cmp_lt: Hc=>->.
-    by case Hxl: (ins x l)=>[l'|l' a' m'] /=;
-    (rewrite -IHl; last by rewrite (cat_sorted2 H1)); rewrite Hxl //= -catA.
-  - by move/cmp_eq: Hc=>/eqP ->; rewrite ltxx eq_refl.
-  move/cmp_gt: Hc; rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
-  by case Hxr: (ins x r)=>[r'|m' b' r'] /=; rewrite -IHr // Hxr.
-move=>l IHl a m IHm b r IHr.
+  case: cmpE=>Hx /=.
+  - case: ltgtP Hx=>//_ _.
+    by case Hxr: (ins x r)=>[r'|m' b' r'] /=; rewrite -IHr // Hxr.
+  - by rewrite Hx ltxx eq_refl.
+  by case Hxl: (ins x l)=>[l'|l' a' m'] /=;
+  (rewrite -IHl; last by rewrite (cat_sorted2 H1)); rewrite Hxl //= -catA.
 rewrite sorted_cat_cons_cat=>/andP [H1 /path_sorted].
 rewrite sorted_cat_cons_cat=>/andP [H2 /path_sorted H3].
 rewrite inslist_sorted_cat_cons_cat //.
-case Hca: (cmp x a)=>/=.
-- move/cmp_lt: Hca=>->.
-  case Hxl: (ins x l)=>[l'|l' a' r'] /=;
-  (rewrite -IHl; last by rewrite (cat_sorted2 H1)); rewrite Hxl //= -catA.
-- by move/cmp_eq: Hca=>/eqP ->; rewrite ltxx eq_refl.
-move/cmp_gt: Hca; rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
-rewrite inslist_sorted_cat_cons_cat //.
-case Hcb: (cmp x b)=>/=.
-- move/cmp_lt: Hcb=>->.
+case: cmpE=>Hxa /=.
+- case: ltgtP Hxa=>// _ _.
+  rewrite inslist_sorted_cat_cons_cat //.
+  case: cmpE=>Hxb /=.
+  - case: ltgtP Hxb=>// _ _.
+    by case Hxr: (ins x r)=>[r'|l' c' r'] /=;
+      rewrite -IHr // Hxr //= -catA.
+  - by rewrite Hxb ltxx eq_refl.
   by case Hxm: (ins x m) =>[m'|r' c' l'] /=;
-  (rewrite -IHm; last by rewrite (cat_sorted2 H2)); rewrite Hxm //= -!catA.
-- by move/cmp_eq: Hcb=>/eqP ->; rewrite ltxx eq_refl.
-move/cmp_gt: Hcb; rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
-by case Hxr: (ins x r)=>[r'|l' c' r'] /=; rewrite -IHr // Hxr //= -catA.
+    (rewrite -IHm; last by rewrite (cat_sorted2 H2)); rewrite Hxm //= -!catA.
+- by rewrite Hxa ltxx eq_refl.
+by case Hxl: (ins x l)=>[l'|l' a' r'] /=;
+  (rewrite -IHl; last by rewrite (cat_sorted2 H1)); rewrite Hxl //= -catA.
 Qed.
 
 Lemma inorderD21 {A} (l' : upD A) a r :
@@ -947,14 +943,13 @@ rewrite /bst_list /delete; elim/complete23_ind=>{t}//=.
   - case: {H H2 IHr Hcr}r E Hfr =>//= /eqP/height_empty -> _.
     case: ifP=>/=; last by rewrite if_same.
     by move/eqP=>->; rewrite ltxx.
-  case Hc: (cmp x a)=>/=.
-  - by move/cmp_lt: Hc=>->; rewrite inorderD21 (IHl H1) (inorder_lift Hfr).
-  - move/cmp_eq: Hc=>/eqP ->; rewrite ltxx eq_refl.
-    case Hsm: (split_min r')=>[x0 t0].
+  case: cmpE=>Hx /=.
+  - case: ltgtP Hx=>// _ _.
+    by rewrite inorderD22 (IHr H2) (inorder_lift Hfl).
+  - rewrite Hx eq_refl; case Hsm: (split_min r')=>[x0 t0].
     rewrite inorderD22 (split_minD Hsm); last by rewrite -(complete_lift Hfr).
     by rewrite -(inorder_lift Hfl) -(inorder_lift Hfr).
-  move/cmp_gt: Hc; rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
-  by rewrite inorderD22 (IHr H2) (inorder_lift Hfl).
+  by rewrite inorderD21 (IHl H1) (inorder_lift Hfr).
 move=>l a m b r /eqP E1 /eqP E2 Hcl Hcm Hcr IHl IHm IHr /[dup] H.
 case/cat_sorted2=>H1 /=; rewrite (path_sortedE lt_trans); case/andP.
 rewrite all_cat=>/= /and3P [_ Hab _] /[dup] H0; case/cat_sorted2=>H2 /path_sorted H3.
@@ -971,50 +966,39 @@ case Hfr: (lift r)=>[r'|]; last first.
   case: ifP =>/=; first by move/eqP=>->; rewrite ltxx.
   case: ifP=>/=; last by rewrite if_same.
   by move/eqP=>-> _; rewrite ltNge le_eqVlt Hab orbT.
-case Hc: (cmp x a)=>/=.
-- by move/cmp_lt: Hc=>->; rewrite inorderD31 (IHl H1) (inorder_lift Hfm).
-- move/cmp_eq: Hc=>/eqP ->; rewrite ltxx eq_refl.
-  case Hsm: (split_min m')=>[x0 t0].
+case: cmpE=>Hxa /=.
+- case: ltgtP Hxa=>//_ _.
+  rewrite dellist_sorted_cat_cons_cat //.
+  case: cmpE=>Hxb /=.
+  - case: ltgtP Hxb=>//_ _.
+    by rewrite inorderD33 (IHr H3) (inorder_lift Hfm).
+  - rewrite Hxb eq_refl; case Hsm: (split_min r')=>[x0 t0].
+    rewrite inorderD33 (split_minD Hsm); last by rewrite -(complete_lift Hfr).
+    by rewrite -(inorder_lift Hfm) -(inorder_lift Hfr).
+  by rewrite inorderD32 (IHm H2) (inorder_lift Hfr).
+- rewrite Hxa eq_refl; case Hsm: (split_min m')=>[x0 t0].
   rewrite inorderD32 -cat_cons (split_minD Hsm); last by rewrite -(complete_lift Hfm).
   by rewrite -(inorder_lift Hfm) -(inorder_lift Hfr).
-move/cmp_gt: Hc; rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
-rewrite dellist_sorted_cat_cons_cat //.
-case Hc': (cmp x b)=>/=.
-- by move/cmp_lt: Hc'=>->; rewrite inorderD32 (IHm H2) (inorder_lift Hfr).
-- move/cmp_eq: Hc'=>/eqP ->; rewrite ltxx eq_refl.
-  case Hsm: (split_min r')=>[x0 t0].
-  rewrite inorderD33 (split_minD Hsm); last by rewrite -(complete_lift Hfr).
-  by rewrite -(inorder_lift Hfm) -(inorder_lift Hfr).
-move/cmp_gt: Hc'; rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
-by rewrite inorderD33 (IHr H3) (inorder_lift Hfm).
+by rewrite inorderD31 (IHl H1) (inorder_lift Hfm).
 Qed.
 
 Lemma inorder_isin_list (t : tree23 T) :
   bst_list t ->
   isin23 t =i inorder23 t.
 Proof.
-rewrite /bst_list /= =>+ x; elim: t=>//=.
-- move=>l IHl a r IHr.
-  rewrite -topredE /= in IHl; rewrite -topredE /= in IHr.
+rewrite /bst_list /= =>+ x; elim: t=>//=[l IHl a r IHr|l IHl a m IHm b r IHr].
+- rewrite -topredE /= in IHl; rewrite -topredE /= in IHr.
   rewrite -topredE /= mem_cat inE sorted_cat_cons_cat=>/andP [H1 H2].
-  case Hc: (cmp x a)=>/=.
-  - move/cmp_lt: Hc=>Hx; rewrite IHl; last by rewrite (cat_sorted2 H1).
-    have/negbTE->: x!=a by move: Hx; rewrite lt_neqAle; case/andP.
-    suff: x \notin inorder23 r by move/negbTE=>->/=; rewrite orbF.
-    apply/count_memPn; rewrite -(count_pred0 (inorder23 r)).
-    apply/eq_in_count=>z; move: H2=>/= /(order_path_min lt_trans)/allP/(_ z)/[apply] Hz.
-    by move: (lt_trans Hx Hz); rewrite lt_neqAle eq_sym=>/andP [/negbTE].
-  - by move/cmp_eq: Hc=>/eqP->; rewrite eq_refl /= orbT.
-  move/cmp_gt: Hc=>Hx; rewrite IHr; last first.
-  - by rewrite -cat1s in H2; rewrite (cat_sorted2 H2).
-  have/negbTE->: x!=a by move: Hx; rewrite lt_neqAle eq_sym; case/andP.
-  suff: x \notin inorder23 l by move/negbTE=>->.
-  apply/count_memPn; rewrite -(count_pred0 (inorder23 l)).
-  apply/eq_in_count=>z /=.
-  move: H1; rewrite (sorted_pairwise lt_trans) pairwise_cat /= allrel1r andbT.
-  case/andP=>+ _ =>/allP/(_ z)/[apply] Hz.
-  by move: (lt_trans Hz Hx); rewrite lt_neqAle eq_sym=>/andP [/negbTE].
-move=>l IHl a m IHm b r IHr.
+  case: cmpE=>Hx /=; rewrite ?orbT //.
+  - rewrite IHr; last first.
+    - by rewrite -cat1s in H2; rewrite (cat_sorted2 H2).
+    move: H1; rewrite cats1 (sorted_rconsE lt_trans); case/andP=>Ha _.
+    suff: x \notin inorder23 l by move/negbTE=>->.
+    by apply: (all_notin Ha); rewrite -leNgt; apply: ltW.
+  rewrite IHl; last by rewrite (cat_sorted2 H1).
+  move: H2=>/= /(order_path_min lt_trans)=>Ha.
+  suff: x \notin inorder23 r by move/negbTE=>->/=; rewrite orbF.
+  by apply: (all_notin Ha); rewrite -leNgt; apply: ltW.
 rewrite -topredE /= in IHl; rewrite -topredE /= in IHm; rewrite -topredE /= in IHr.
 rewrite -topredE /= !(mem_cat, inE) sorted_cat_cons_cat; case/andP=>/=.
 rewrite cats1 (sorted_rconsE lt_trans); case/andP => Hal H1.
@@ -1022,64 +1006,29 @@ rewrite (path_sortedE lt_trans); case/andP; rewrite all_cat=>/and3P [Ham Hab Har
 rewrite sorted_cat_cons_cat; case/andP=>/=.
 rewrite cats1 (sorted_rconsE lt_trans); case/andP => Hbm H2.
 rewrite (path_sortedE lt_trans); case/andP=>Hbr H3.
-case Hc: (cmp x a)=>/=.
-- move/cmp_lt: Hc=>Hx; rewrite (IHl H1).
-  have/negbTE->: x!=a by move: Hx; rewrite lt_neqAle; case/andP.
-  have/negbTE->: x \notin inorder23 m.
-  - apply/count_memPn; rewrite -(count_pred0 (inorder23 m)).
-    apply/eq_in_count=>z /= Hz; move: (allP Ham z Hz) => /(lt_trans Hx).
-    by rewrite lt_neqAle eq_sym => /andP [/negbTE].
-  have/negbTE->: x!=b by move: (lt_trans Hx Hab); rewrite lt_neqAle; case/andP.
-  suff: x \notin inorder23 r by move/negbTE->; rewrite !orbF.
-  apply/count_memPn; rewrite -(count_pred0 (inorder23 r)).
-  apply/eq_in_count=>z /= Hz; move: (allP Har z Hz) => /(lt_trans Hx).
-  by rewrite lt_neqAle eq_sym => /andP [/negbTE].
-- by move/cmp_eq: Hc=>/eqP->; rewrite eq_refl /= orbT.
-move/cmp_gt: Hc=>Hx; move: (Hx); rewrite lt_neqAle eq_sym=>/andP [/negbTE ->] /= _.
-have ->/=: x \in inorder23 l = false.
-- apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder23 l)).
-  apply/eq_in_count=>z /= Hz; move: (allP Hal z Hz)=>Hza; move: (lt_trans Hza Hx).
-  by rewrite lt_neqAle eq_sym => /andP [/negbTE].
-case Hc: (cmp x b)=>/=.
-- move/cmp_lt: Hc=>Hx'; rewrite (IHm H2).
-  have ->: (x==b)=false by move: Hx'; rewrite lt_neqAle=>/andP [/negbTE].
-  have ->: x \in inorder23 r = false.
-  - apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder23 r)).
-    apply/eq_in_count=>z /= Hz; move: (allP Hbr z Hz) => /(lt_trans Hx').
-    by rewrite lt_neqAle eq_sym => /andP [/negbTE].
-  by rewrite !orbF.
-- by move/cmp_eq: Hc=>/eqP->; rewrite eq_refl /= orbT.
-move/cmp_gt: Hc=>Hx'; rewrite (IHr H3).
-move: (Hx'); rewrite lt_neqAle eq_sym=>/andP [/negbTE ->] /= _.
-suff: x \in inorder23 m = false by move=>->.
-apply/negbTE/count_memPn; rewrite -(count_pred0 (inorder23 m)).
-apply/eq_in_count=>z /= Hz; move: (allP Hbm z Hz)=>Hzb; move: (lt_trans Hzb Hx').
-by rewrite lt_neqAle eq_sym => /andP [/negbTE].
+case: cmpE=>Hxa /=; rewrite ?orbT //.
+- have/negbTE ->/=: x \notin inorder23 l.
+  - by apply: (all_notin Hal); rewrite -leNgt; apply: ltW.
+  case: cmpE=>Hxb /=; rewrite ?orbT //.
+  - rewrite (IHr H3); suff: x \notin inorder23 m by move/negbTE=>->.
+    by apply: (all_notin Hbm); rewrite -leNgt; apply: ltW.
+  rewrite (IHm H2); suff: x \notin inorder23 r by move/negbTE=>->; rewrite orbF.
+  by apply: (all_notin Hbr); rewrite -leNgt; apply: ltW.
+have/negbTE->/=: x \notin inorder23 m.
+- by apply: (all_notin Ham); rewrite -leNgt; apply: ltW.
+have/negbTE->/=: x!=b by move: (lt_trans Hxa Hab); rewrite lt_neqAle; case/andP.
+rewrite (IHl H1); suff: x \notin inorder23 r by move/negbTE->; rewrite !orbF.
+by apply: (all_notin Har); rewrite -leNgt; apply: ltW.
 Qed.
 
 (* corollaries *)
 
 Definition invariant t := bst_list t && complete23 t.
 
-Corollary inorder_insert_list23 x (t : tree23 T) :
-  invariant t ->
-  perm_eq (inorder23 (insert x t))
-          (if x \in inorder23 t then inorder23 t else x :: inorder23 t).
-Proof.
-rewrite /invariant /bst_list => /andP [H1 _].
-by rewrite inorder_insert23 //; apply: inorder_ins_list.
-Qed.
-
-Corollary inorder_delete_list23 x (t : tree23 T) :
-  invariant t ->
-  perm_eq (inorder23 (delete x t))
-          (filter (predC1 x) (inorder23 t)).
-Proof.
-rewrite /invariant /bst_list => /andP [H1 H2].
-by rewrite inorder_delete23 //; apply: inorder_del_list.
-Qed.
-
 Corollary invariant_empty : invariant (@empty T).
+Proof. by []. Qed.
+
+Corollary inorder_empty_pred : inorder23 (@Leaf T) =i pred0.
 Proof. by []. Qed.
 
 Corollary invariant_insert x (t : tree23 T) :
@@ -1090,6 +1039,14 @@ apply/andP; split; last by apply: complete_insert.
 by rewrite inorder_insert23 //; apply: ins_list_sorted.
 Qed.
 
+Corollary inorder_insert_list23 x (t : tree23 T) :
+  invariant t ->
+  inorder23 (insert x t) =i [predU1 x & inorder23 t].
+Proof.
+rewrite /invariant /bst_list => /andP [H1 _].
+by rewrite inorder_insert23 //; apply: inorder_ins_list_pred.
+Qed.
+
 Corollary invariant_delete x (t : tree23 T) :
   invariant t -> invariant (delete x t).
 Proof.
@@ -1098,16 +1055,24 @@ apply/andP; split; last by apply: complete_delete.
 by rewrite inorder_delete23 //; apply: del_list_sorted.
 Qed.
 
+Corollary inorder_delete_list23 x (t : tree23 T) :
+  invariant t ->
+  inorder23 (delete x t) =i [predD1 inorder23 t & x].
+Proof.
+rewrite /invariant /bst_list => /andP [H1 H2].
+by rewrite inorder_delete23 //; apply: inorder_del_list_pred.
+Qed.
+
 Corollary inv_isin_list (t : tree23 T) :
   invariant t ->
   isin23 t =i inorder23 t.
 Proof. by rewrite /invariant => /andP [H1 _]; apply: inorder_isin_list. Qed.
 
 Definition Set23 :=
-  @ASetM.make _ _ (tree23 T)
+  @ASetM.make _ (tree23 T)
     empty insert delete isin23
-    inorder23 invariant
-    invariant_empty erefl
+    (pred_of_seq \o inorder23) invariant
+    invariant_empty inorder_empty_pred
     invariant_insert inorder_insert_list23
     invariant_delete inorder_delete_list23
     inv_isin_list.

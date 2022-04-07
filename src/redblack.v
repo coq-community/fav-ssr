@@ -582,17 +582,15 @@ Proof.
 rewrite /bst_list_a; elim: t=>//= l IHl [a c] r IHr.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
 rewrite inslist_sorted_cat_cons_cat //.
-case Hc: (cmp x a)=>/=.
-- move/cmp_lt: Hc=>->; case: c=>/=.
-  - by rewrite IHl // (cat_sorted2 H1).
-  by rewrite inorder_baliL IHl // (cat_sorted2 H1).
-- by move/cmp_eq: Hc=>/eqP ->; rewrite ltxx eq_refl; case: c.
-move/cmp_gt: Hc=>/[dup] Hx.
-rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
-rewrite -cat1s in H2.
+case: cmpE=>Hx /=.
+- case: ltgtP Hx=>//_ _; rewrite -cat1s in H2.
+  case: c=>/=.
+  - by rewrite IHr // (cat_sorted2 H2).
+  by rewrite inorder_baliR IHr // (cat_sorted2 H2).
+- by rewrite Hx ltxx eq_refl; case: c.
 case: c=>/=.
-- by rewrite IHr // (cat_sorted2 H2).
-by rewrite inorder_baliR IHr // (cat_sorted2 H2).
+- by rewrite IHl // (cat_sorted2 H1).
+by rewrite inorder_baliL IHl // (cat_sorted2 H1).
 Qed.
 
 Corollary inorder_insert x t :
@@ -634,23 +632,21 @@ Proof.
 rewrite /bst_list_a /=; elim: t=>//=l IHl [a c] r IHr /[dup] H.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
 rewrite dellist_sorted_cat_cons_cat //.
-case Hc: (cmp x a)=>/=.
-- move/cmp_lt: Hc=>->; case: ifP=>/= _.
-  - by rewrite inorder_baldL IHl // (cat_sorted2 H1).
-  by rewrite IHl // (cat_sorted2 H1).
-- move/cmp_eq: Hc=>/eqP ->; rewrite ltxx eq_refl.
+case: cmpE=>Hxa /=.
+- case: ltgtP Hxa=>//_ _; rewrite -cat1s in H2.
+  case: ifP=>/= _.
+  - by rewrite inorder_baldR IHr // (cat_sorted2 H2).
+  by rewrite IHr // (cat_sorted2 H2).
+- rewrite Hxa eq_refl.
   case: {IHr H H2}r=>//=; first by rewrite cats0.
   move=>lr [ar cr] rr.
   case Hsm: (split_min lr ar rr)=>[a' r'] /=.
   move: (inorder_split_min Hsm)=>Esm.
   case: cr=>/=; first by rewrite Esm.
   by rewrite inorder_baldR Esm.
-move/cmp_gt: Hc=>/[dup] Hx.
-rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
-rewrite -cat1s in H2.
 case: ifP=>/= _.
-- by rewrite inorder_baldR IHr // (cat_sorted2 H2).
-by rewrite IHr // (cat_sorted2 H2).
+- by rewrite inorder_baldL IHl // (cat_sorted2 H1).
+by rewrite IHl // (cat_sorted2 H1).
 Qed.
 
 Corollary inorder_delete x t :
@@ -678,11 +674,10 @@ Qed.
 
 Corollary inorder_insert_list x (t : rbt T) :
   invariant t ->
-  perm_eq (inorder_a (insert x t))
-          (if x \in inorder_a t then inorder_a t else x :: inorder_a t).
+  inorder_a (insert x t) =i [predU1 x & inorder_a t].
 Proof.
 rewrite /invariant /bst_list_a => /andP [H1 _].
-by rewrite inorder_insert //; apply: inorder_ins_list.
+by rewrite inorder_insert //; apply: inorder_ins_list_pred.
 Qed.
 
 Corollary invariant_delete x (t : rbt T) :
@@ -695,11 +690,10 @@ Qed.
 
 Corollary inorder_delete_list x (t : rbt T) :
   invariant t ->
-  perm_eq (inorder_a (delete x t))
-          (filter (predC1 x) (inorder_a t)).
+  inorder_a (delete x t) =i [predD1 inorder_a t & x].
 Proof.
 rewrite /invariant /bst_list_a => /andP [H1 H2].
-by rewrite inorder_delete //; apply: inorder_del_list.
+by rewrite inorder_delete //; apply: inorder_del_list_pred.
 Qed.
 
 Corollary inv_isin_list (t : rbt T) :
@@ -708,10 +702,10 @@ Corollary inv_isin_list (t : rbt T) :
 Proof. by rewrite /invariant => /andP [H1 _]; apply: inorder_isin_list_a. Qed.
 
 Definition SetRBT :=
-  @ASetM.make _ _ (rbt T)
+  @ASetM.make _ (rbt T)
     leaf insert delete isin_a
-    inorder_a invariant
-    invariant_empty erefl
+    (pred_of_seq \o inorder_a) invariant
+    invariant_empty inorder_a_empty_pred
     invariant_insert inorder_insert_list
     invariant_delete inorder_delete_list
     inv_isin_list.
@@ -936,18 +930,15 @@ Proof.
 rewrite /bst_list_a /=; elim: t=>//=l IHl [a c] r IHr /[dup] H.
 rewrite sorted_cat_cons_cat=>/andP [H1 H2].
 rewrite dellist_sorted_cat_cons_cat //.
-case Hc: (cmp x a)=>/=.
-- move/cmp_lt: Hc=>->; case: ifP=>/= _.
-  - by rewrite inorder_baldL IHl // (cat_sorted2 H1).
-  by rewrite IHl // (cat_sorted2 H1).
-- move/cmp_eq: Hc=>/eqP ->; rewrite ltxx eq_refl.
-  by rewrite inorder_join.
-move/cmp_gt: Hc=>/[dup] Hx.
-rewrite ltNge le_eqVlt negb_or=>/andP [/negbTE -> /negbTE ->].
-rewrite -cat1s in H2.
+case: cmpE=>Hx /=.
+- case: ltgtP Hx=>//_ _; rewrite -cat1s in H2.
+  case: ifP=>/= _.
+  - by rewrite inorder_baldR IHr // (cat_sorted2 H2).
+  by rewrite IHr // (cat_sorted2 H2).
+- by rewrite Hx eq_refl inorder_join.
 case: ifP=>/= _.
-- by rewrite inorder_baldR IHr // (cat_sorted2 H2).
-by rewrite IHr // (cat_sorted2 H2).
+- by rewrite inorder_baldL IHl // (cat_sorted2 H1).
+by rewrite IHl // (cat_sorted2 H1).
 Qed.
 
 Corollary inorder_delete_j x t :
@@ -958,15 +949,6 @@ rewrite /delete_j => H.
 by rewrite inorder_paint; apply: inorder_del_j.
 Qed.
 
-Corollary inorder_delete_j_list x (t : rbt T) :
-  invariant t ->
-  perm_eq (inorder_a (delete_j x t))
-          (filter (predC1 x) (inorder_a t)).
-Proof.
-rewrite /invariant /bst_list_a => /andP [H1 H2].
-by rewrite inorder_delete_j //; apply: inorder_del_list.
-Qed.
-
 Corollary invariant_delete_j x (t : rbt T) :
   invariant t -> invariant (delete_j x t).
 Proof.
@@ -975,11 +957,19 @@ apply/andP; split; last by apply: rbt_delete_j.
 by rewrite inorder_delete_j //; apply: del_list_sorted.
 Qed.
 
+Corollary inorder_delete_j_list x (t : rbt T) :
+  invariant t ->
+  inorder_a (delete_j x t) =i [predD1 inorder_a t & x].
+Proof.
+rewrite /invariant /bst_list_a => /andP [H1 H2].
+by rewrite inorder_delete_j //; apply: inorder_del_list_pred.
+Qed.
+
 Definition SetRBTj :=
-  @ASetM.make _ _ (rbt T)
+  @ASetM.make _ (rbt T)
     leaf insert delete_j isin_a
-    inorder_a invariant
-    invariant_empty erefl
+    (pred_of_seq \o inorder_a) invariant
+    invariant_empty inorder_a_empty_pred
     invariant_insert inorder_insert_list
     invariant_delete_j inorder_delete_j_list
     inv_isin_list.

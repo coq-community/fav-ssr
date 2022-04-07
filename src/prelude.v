@@ -280,6 +280,18 @@ Qed.
 
 End Size.
 
+Section Mem.
+
+Lemma all_notin {A : eqType} (p : pred A) xs y :
+  all p xs -> ~~ p y -> y \notin xs.
+Proof.
+move=>Ha Hy; apply/count_memPn; rewrite -(count_pred0 xs).
+apply/eq_in_count=>z; move/allP: Ha=>/(_ z) /[apply] /= Hz.
+by case: eqP=>// H; rewrite -H Hz in Hy.
+Qed.
+
+End Mem.
+
 Section Butlast.
 
 Definition butlast {A : Type} (xs : seq A) :=
@@ -326,9 +338,6 @@ End Allrel.
 
 Section Option.
 
-Definition someb {A} (x : option A) : bool :=
-  if x isn't None then true else false.
-
 Definition olist {A} (o : option A) : seq A :=
   if o is Some x then [:: x] else [::].
 
@@ -352,7 +361,7 @@ Lemma omap_cat {T S} (f : T -> option S) xs ys :
 Proof. by elim: xs=>//=x s IH; rewrite !omap_cons IH catA. Qed.
 
 Lemma omap_empty {T S} (f : T -> option S) xs :
-  all (fun x => ~~ someb (f x)) xs -> omap f xs = [::].
+  all (fun x => ~~ f x) xs -> omap f xs = [::].
 Proof.
 elim: xs=>//=x s IH /andP [Hx /IH].
 by rewrite omap_cons=>->; case: (f x) Hx.
