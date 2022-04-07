@@ -636,6 +636,20 @@ rewrite /invar /del_hi /list; case: t=>[t n]/= /andP [E /eqP ->].
 by rewrite del_hi1_list.
 Qed.
 
+Definition ArrayFlexBraun :=
+  @ArrayFlex.make _ (br_tree A)
+    lookup update len array
+    add_lo del_lo add_hi del_hi
+    list invar
+    invar_lookup
+    invar_update invar_list_update
+    invar_len
+    invar_array invar_list_array
+    invar_add_lo list_add_lo
+    invar_del_lo list_del_lo
+    invar_add_hi list_add_hi
+    invar_del_hi list_del_hi.
+
 End FlexibleArrays.
 
 Section BiggerBetterFasterMore.
