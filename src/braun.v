@@ -8,7 +8,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Module Array.
-Record Array (T : Type) : Type :=
+Structure Array (T : Type) : Type :=
   make {tp :> Type;
         lookup : T -> tp -> nat -> T;
         update : nat -> T -> tp -> tp;
@@ -420,7 +420,7 @@ End ArraysViaBraunTrees.
 
 (* TODO switch to packed structures *)
 Module ArrayFlex.
-Record ArrayFlex (T : Type) : Type :=
+Structure ArrayFlex (T : Type) : Type :=
   make {tp :> Type;
         lookup : T -> tp -> nat -> T;
         update : nat -> T -> tp -> tp;
