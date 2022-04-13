@@ -15,3 +15,4 @@ src/avl.v
 src/beyond.v
 src/braun.v
 src/trie.v
+src/huffman.v
