@@ -167,6 +167,7 @@ Qed.
 
 Lemma mins_getmin_heap t x0 : heap t ->
   get_min x0 t = mins x0 (mset_tree t).
+Proof.
 Admitted.
 
 Definition HeapPQM :=
