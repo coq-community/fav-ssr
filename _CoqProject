@@ -16,3 +16,4 @@ src/beyond.v
 src/braun.v
 src/trie.v
 src/huffman.v
+src/priority.v

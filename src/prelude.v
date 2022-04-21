@@ -1,5 +1,5 @@
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import ssrnat eqtype seq path prime div.
+From mathcomp Require Import ssrnat eqtype order seq path prime div.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -304,6 +304,30 @@ Lemma size_butlast {A} (xs : seq A) : size (butlast xs) = (size xs).-1.
 Proof. by case: xs=>//=x s; rewrite size_belast. Qed.
 
 End Butlast.
+
+Section Mins.
+Context {disp : unit} {T : orderType disp}.
+Variable (x0 : T).
+
+Import Order.POrderTheory.
+Import Order.TotalTheory.
+Open Scope order_scope.
+
+Definition mins (xs : seq T) := if xs is x::xs' then foldl Order.min x xs' else x0.
+
+Lemma mins_min_in xs : xs != [::] -> all (>= mins xs) xs && (mins xs \in xs).
+Proof.
+case: xs=>//=x xs _; elim/last_ind: xs=>/=.
+- by rewrite lexx inE eq_refl.
+move=>xs y /andP [/andP [IH1 IH2]]; rewrite !inE=>IH3.
+rewrite foldl_rcons le_minl IH1 /= mem_rcons inE eq_minr all_rcons le_minl lexx orbT /=.
+rewrite {1 3 6}/Order.min; case: ifP.
+- by rewrite IH2 /= =>H; case/orP: IH3=>[/eqP->|->]; rewrite ?eqxx ?orbT.
+move/negbT; rewrite -leNgt=>Hy; rewrite Hy /= orbT andbT.
+by apply/sub_all/IH2=>z; apply/le_trans.
+Qed.
+
+End Mins.
 
 Section Sorted.
 
