@@ -406,6 +406,20 @@ apply/andP; split.
 by apply: up_log_min=>//; rewrite addn1; apply/ltnW/trunc_log_ltn.
 Qed.
 
+(* not needed so far *)
+Lemma trunc_logM p x y :
+  0 < x -> 0 < y ->
+  trunc_log p x + trunc_log p y <= trunc_log p (x * y) <= trunc_log p x + trunc_log p y + 1.
+Proof.
+move=>Hx Hy; case: p=>//=; case=>//= n; set p:=n.+2.
+apply/andP; split.
+- apply: trunc_log_max=>//; rewrite expnD.
+  by apply: leq_mul; apply: trunc_logP.
+rewrite -ltnS -(ltn_exp2l (m:=p)) // expnS !expnD expn1 !mulnA (mulnC p) -mulnA -!expnSr.
+apply: leq_ltn_trans; first by apply: trunc_logP=>//; rewrite muln_gt0 Hx Hy.
+by apply: ltn_mul; apply: trunc_log_ltn.
+Qed.
+
 End Log.
 
 Section UpDiv.

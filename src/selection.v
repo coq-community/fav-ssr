@@ -745,10 +745,11 @@ apply: (leq_trans (n:=r+3)); last by apply: leq_addl.
 by do 10!(case: r Hr=>//= r Hr).
 Defined.
 
-Lemma T_mom_select_upper_mono n m :
-  (n <= m -> T_mom_select_upper n <= T_mom_select_upper m)%N.
+(* TODO prove via homo_leq? *)
+Lemma T_mom_select_upper_mono :
+  {homo T_mom_select_upper : n m / (n <= m)%N}.
 Proof.
-move=>Hnm.
+move=>n m Hnm.
 funelim (T_mom_select_upper n); funelim (T_mom_select_upper m)=>//; first 1 last.
 - move/negbT: {H0}H; rewrite -leqNgt=>H.
   by move: (leq_ltn_trans H H1); rewrite ltnNge Hnm.
