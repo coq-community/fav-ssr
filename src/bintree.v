@@ -488,14 +488,19 @@ End AlmostCompleteTrees.
 Section AugmentedTrees.
 Context {A B : Type}.
 
-Fixpoint inorder_a (t : tree (A * B)) : seq A :=
+Fixpoint preorder_a (t : tree (A*B)) : seq A :=
+  if t is Node l (x,_) r
+    then x :: preorder_a l ++ preorder_a r
+  else [::].
+
+Fixpoint inorder_a (t : tree (A*B)) : seq A :=
   if t is Node l (x, _) r
     then inorder_a l ++ [:: x] ++ inorder_a r
   else [::].
 
-Definition inorder_a' (t : tree (A * B)) : seq A := map fst (inorder t).
+Definition inorder_a' (t : tree (A*B)) : seq A := map fst (inorder t).
 
-Definition inorder_a'' (t : tree (A * B)) : seq A := inorder (map_tree fst t).
+Definition inorder_a'' (t : tree (A*B)) : seq A := inorder (map_tree fst t).
 
 Lemma in_a : inorder_a =1 inorder_a'.
 Proof.
@@ -530,6 +535,13 @@ Context {A : eqType} {B : Type}.
 
 Lemma inorder_a_empty_pred : inorder_a (@Leaf (A*B)) =i pred0.
 Proof. by []. Qed.
+
+Lemma perm_pre_in (t : tree (A*B)) : perm_eq (inorder_a t) (preorder_a t).
+Proof.
+elim: t=>//=l IHl [a _] r IHr.
+rewrite perm_catC /= perm_cons perm_catC.
+by apply: perm_cat.
+Qed.
 
 End AugmentedTreesEq.
 
