@@ -160,6 +160,13 @@ Qed.
 Canonical tree_eqMixin := EqMixin eqtreeP.
 Canonical tree_eqType := Eval hnf in EqType (tree T) tree_eqMixin.
 
+Lemma perm_pre_in (t : tree T) : perm_eq (inorder t) (preorder t).
+Proof.
+elim: t=>//=l IHl a r IHr.
+rewrite perm_catC /= perm_cons perm_catC.
+by apply: perm_cat.
+Qed.
+
 Lemma subtree_self (t : tree T) : t \in subtrees t.
 Proof. by case: t=>//=l x r; rewrite inE eq_refl. Qed.
 
@@ -536,7 +543,7 @@ Context {A : eqType} {B : Type}.
 Lemma inorder_a_empty_pred : inorder_a (@Leaf (A*B)) =i pred0.
 Proof. by []. Qed.
 
-Lemma perm_pre_in (t : tree (A*B)) : perm_eq (inorder_a t) (preorder_a t).
+Lemma perm_pre_in_a (t : tree (A*B)) : perm_eq (inorder_a t) (preorder_a t).
 Proof.
 elim: t=>//=l IHl [a _] r IHr.
 rewrite perm_catC /= perm_cons perm_catC.

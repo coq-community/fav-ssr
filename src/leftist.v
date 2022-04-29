@@ -167,8 +167,8 @@ elim: l r=>//= l1 _ [a1 n1] r1 IHr1; elim=>//= l2 _ [a2 n2] r2 IHr2.
 case/and3P=>Ha1 Hl1 Hr1; case/and3P=>Ha2 Hl2 Hr2.
 case: ifP=>/= Ha; apply/heap_node; split=>//.
 - rewrite !all_cat in Ha1 *; case/andP: Ha1=>-> Ha1 /=.
-  rewrite (perm_all _ (perm_pre_in _)) (perm_all _ (mset_merge_heap _ _))
-    all_cat /= all_cat -!(perm_all _ (perm_pre_in _)) Ha Ha1 /=.
+  rewrite (perm_all _ (perm_pre_in_a _)) (perm_all _ (mset_merge_heap _ _))
+    all_cat /= all_cat -!(perm_all _ (perm_pre_in_a _)) Ha Ha1 /=.
   rewrite all_cat in Ha2; case/andP: Ha2=>Hal2 Har2.
   apply/andP; split.
   - by apply/sub_all/Hal2=>z Hz; apply/le_trans/Hz.
@@ -177,8 +177,8 @@ case: ifP=>/= Ha; apply/heap_node; split=>//.
 - move/negbT: Ha; rewrite -ltNge=>Ha.
   rewrite !all_cat in Ha2 *; case/andP: Ha2=>-> Ha2 /=.
   move: (@mset_merge_heap (Node l1 (a1, n1) r1) r2)=>/= H'.
-  rewrite (perm_all _ (perm_pre_in _)) (perm_all _ H') /= !all_cat
-    -!(perm_all _ (perm_pre_in _)) (ltW Ha) Ha2 /= andbT.
+  rewrite (perm_all _ (perm_pre_in_a _)) (perm_all _ H') /= !all_cat
+    -!(perm_all _ (perm_pre_in_a _)) (ltW Ha) Ha2 /= andbT.
   rewrite all_cat in Ha1; case/andP: Ha1=>Hal1 Har1.
   apply/andP; split.
   - by apply/sub_all/Hal1=>z Hz; apply/ltW/lt_le_trans/Hz.

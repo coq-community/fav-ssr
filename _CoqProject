@@ -18,3 +18,4 @@ src/trie.v
 src/huffman.v
 src/priority.v
 src/leftist.v
+src/braun_queue.v
