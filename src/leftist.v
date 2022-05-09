@@ -107,7 +107,8 @@ by apply: ltW.
 Qed.
 
 Lemma heap_node (l : lheap T) a r :
-  heap_a (node l a r) <-> [/\ all (>= a) (inorder_a l ++ inorder_a r), heap_a l & heap_a r].
+  heap_a (node l a r) <->
+    [/\ all (>= a) (inorder_a l ++ inorder_a r), heap_a l & heap_a r].
 Proof.
 rewrite /node; split.
 - case: ifP=>/= _ /and3P // [Ha Hlr Hr]; split=>//.
