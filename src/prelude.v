@@ -327,6 +327,81 @@ move/negbT; rewrite -leNgt=>Hy; rewrite Hy /= orbT andbT.
 by apply/sub_all/IH2=>z; apply/le_trans.
 Qed.
 
+(* TODO restructure? *)
+Lemma all_foldl_le (x : T) xs y :
+  y <= x ->
+  all (>= y) xs ->
+  y <= foldl Order.min x xs.
+Proof.
+move=>Hyx; elim/last_ind: xs=>//=t h IH.
+rewrite all_rcons foldl_rcons; case/andP=>Hy Ha.
+by rewrite le_minr Hy IH.
+Qed.
+
+Lemma all_foldl_eq (x : T) xs :
+  all (>= x) xs ->
+  foldl Order.min x xs = x.
+Proof.
+elim/last_ind: xs=>//=t h IH.
+rewrite all_rcons foldl_rcons; case/andP=>Hx Ha.
+by rewrite IH // minElt; case: ltgtP Hx.
+Qed.
+
+Lemma all_foldl_ge (x : T) xs y :
+  y <= x ->
+  all (>= y) xs ->
+  y \in xs ->
+  foldl Order.min x xs = y.
+Proof.
+move=>Hyx; elim/last_ind: xs=>//=t h IH.
+rewrite all_rcons foldl_rcons mem_rcons inE; case/andP=>Hy Ha.
+case/orP.
+- move/eqP=>E; rewrite E in Hyx Ha *; apply/min_idPr.
+  by apply: all_foldl_le.
+by move=>H; rewrite IH //; apply/min_idPl.
+Qed.
+
+Lemma eq_mins_iff m xs :
+  xs != [::] -> m = mins xs <-> all (>= m) xs && (m \in xs).
+Proof.
+move=>H; split.
+- by move=>->; apply: mins_min_in.
+case: xs H=>//=x xs _; elim/last_ind: xs=>/=.
+- by rewrite andbT inE; by case/andP=>_/eqP.
+move=>xs y; rewrite foldl_rcons !inE mem_rcons inE all_rcons minElt -!andbA.
+move=>IH; case/and4P=>Hx Hy Ha Ho; case: ltP=>H.
+- apply: IH; rewrite Hx Ha /=; case/or3P: Ho.
+  - by move=>->.
+  - move/eqP=>E; rewrite E in Hx Ha.
+    move: (all_foldl_le Hx Ha)=>H'.
+    by move: (le_lt_trans H' H); rewrite ltxx.
+  by move=>->; rewrite orbT.
+apply/eqP; rewrite eq_le Hy /=.
+case/or3P: Ho.
+- move/eqP=>E; rewrite E in Hy Ha *.
+  by rewrite all_foldl_eq in H.
+- by move/eqP=>->.
+by move=>Hm; rewrite (all_foldl_ge Hx Ha Hm) in H.
+Qed.
+
+Lemma mins_cat xs ys :
+  xs != [::] ->
+  ys != [::] ->
+  mins (xs ++ ys) = Order.min (mins xs) (mins ys).
+Proof.
+move=>Hx Hy; symmetry; apply/eq_mins_iff.
+- by case: xs Hx.
+case/andP: (mins_min_in Hx)=>Hax Hix.
+case/andP: (mins_min_in Hy)=>Hay Hiy.
+apply/andP; split.
+- rewrite all_cat; apply/andP; split.
+  - by apply/sub_all/Hax=>z Hz; rewrite le_minl Hz.
+  by apply/sub_all/Hay=>z Hz; rewrite le_minl Hz orbT.
+rewrite minElt; case: ifP=>_; rewrite mem_cat.
+- by rewrite Hix.
+by rewrite Hiy orbT.
+Qed.
+
 End Mins.
 
 Section Sorted.

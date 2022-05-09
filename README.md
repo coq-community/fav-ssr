@@ -25,7 +25,7 @@ Besides Mathcomp, this also requires the [Equations](https://mattam82.github.io/
 14. [Priority Queues](src/priority.v)
 15. [Leftist Heaps](src/leftist.v)
 16. [Priority Queues via Braun Trees](src/braun_queue.v)
-17. Binomial Heaps
+17. [Binomial Heaps](src/binom_heap.v)
 ### Part IV: Advanced Design and Analysis Techniques
 18. Dynamic Programming
 19. Amortized Analysis
