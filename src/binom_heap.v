@@ -1,7 +1,7 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
 From mathcomp Require Import eqtype order ssrnat seq path bigop prime.
-From favssr Require Import prelude priority.
+From favssr Require Import prelude basics priority.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -149,8 +149,8 @@ Lemma perm_mset_heap xs ys :
   perm_eq xs ys -> perm_eq (mset_heap xs) (mset_heap ys).
 Proof. by move=>H; rewrite /mset_heap; apply/perm_flatten/perm_map. Qed.
 
-Lemma mset_heap_rev ts : perm_eq (mset_heap (rev ts)) (mset_heap ts).
-Proof. by rewrite /mset_heap; apply/perm_flatten/perm_map; rewrite perm_rev. Qed.
+Corollary mset_heap_rev ts : perm_eq (mset_heap (rev ts)) (mset_heap ts).
+Proof. by apply: perm_mset_heap; rewrite perm_rev. Qed.
 
 Lemma sum_pow2 n : (\sum_(0 <= i < n) 2 ^ i).+1 = 2 ^ n.
 Proof.
@@ -594,3 +594,155 @@ Definition BHeapPQM :=
   invar_merge mset_merge.
 
 End PriorityQueueImplementation.
+
+Section RunningTimeAnalysis.
+Context {disp : unit} {T : orderType disp}.
+
+Definition T_link (t1 t2 : tree T) : nat := 1.
+
+Fixpoint T_ins_tree (t1 : tree T) (h : heap T) : nat :=
+  if h is t2::ts then
+    if rank t1 < rank t2
+      then 1%N
+      else T_link t1 t2 + T_ins_tree (link t1 t2) ts
+  else 1.
+
+Definition T_insert (x : T) (ts : heap T) : nat :=
+  T_ins_tree (Node 0 x [::]) ts + 1.
+
+Fixpoint T_merge (h1 : heap T) : heap T -> nat :=
+  if h1 is t1::ts1 then
+    let fix T_merge_h1 (h2 : heap T) :=
+      if h2 is t2::ts2 then
+        if rank t1 < rank t2 then T_merge ts1 h2
+          else if rank t2 < rank t1 then T_merge_h1 ts2
+            else T_ins_tree (link t1 t2) (merge ts1 ts2) + T_merge ts1 ts2
+      else 1%N in
+    T_merge_h1
+  else fun=>1%N.
+
+Fixpoint T_get_min (t : tree T) (h : heap T) : nat :=
+  if h is t1::ts
+   then T_get_min t1 ts + 1
+   else 1.
+
+Fixpoint T_get_min_rest (t : tree T) (h : heap T) : nat :=
+  if h is t1::ts then
+    T_get_min_rest t1 ts + 1
+  else 1.
+
+Definition T_rev' {A} (xs : seq A) := T_catrev xs [::].
+
+Definition T_del_min (h : heap T) : nat :=
+  if h is t::ts then
+    T_get_min_rest t ts +
+      let: (Node _ _ ts1, ts2) := get_min_rest t ts in
+      T_rev' ts1 + T_merge (rev ts1) ts2 + 1
+  else 1.
+
+Lemma T_ins_tree_simple_bound t ts : (T_ins_tree t ts <= size ts + 1)%N.
+Proof.
+elim: ts t=>//=t1 ts IH t; case: ifP=>//= _.
+by rewrite /T_link addnC leq_add2r -addn1; apply: IH.
+Qed.
+
+Lemma T_insert_bound x ts :
+  invar ts ->
+  (T_insert x ts <= trunc_log 2 (size (mset_heap ts) + 1) + 2)%N.
+Proof.
+move=>Hi; have H: (T_insert x ts <= size ts + 2)%N.
+- rewrite /T_insert /= (_ : 2 = 1 + 1) // addnA leq_add2r.
+  by apply: T_ins_tree_simple_bound.
+apply: (leq_trans H); rewrite leq_add2r.
+by apply: size_mset_heap.
+Qed.
+
+Lemma T_ins_tree_length t ts:
+  T_ins_tree t ts + size (ins_tree t ts) = 2 + size ts.
+Proof.
+elim: ts t=>//=ts t1 IH t; case: ifP=>//= _.
+rewrite /T_link -addnA addnC -(addn1 (size _)) addnA.
+by apply/eqP; rewrite eqn_add2r IH.
+Qed.
+
+Lemma T_merge_length ts1 ts2 :
+  (size (merge ts1 ts2) + T_merge ts1 ts2 <= 2 * (size ts1 + size ts2) + 1)%N.
+Proof.
+elim: ts1 ts2=>//=.
+- by move=>ts2; rewrite leq_add2r add0n; apply: leq_pmull.
+move=>t1 ts1 IH1; elim=>//=.
+- rewrite leq_add2r addn0 mulnSr.
+  apply: leq_ltn_trans; first by apply: (leq_pmull _ (n:=2)).
+  by rewrite -[X in (X < _)%N]addn0 ltn_add2l.
+move=>t2 ts2 IH2; case: ifP=>/= _.
+- rewrite addSn addn1 ltnS; apply: leq_trans; first by apply: IH1.
+  by rewrite /= !addnS addSn addn0 ltn_pmul2l.
+case: ifP=>/= _.
+- rewrite addSn addn1 ltnS; apply: leq_trans; first by apply: IH2.
+  by rewrite addn1 !addSn addnS ltn_pmul2l.
+rewrite addnCA addnA T_ins_tree_length !addnS addn0 !addSn add0n ltnS.
+apply: leq_ltn_trans; first by apply: IH1.
+by rewrite -[X in (_ < 2 * X)%N]addn2 !mulnDr ltn_add2l.
+Qed.
+
+Lemma T_merge_bound ts1 ts2 :
+  invar ts1 -> invar ts2 ->
+  (T_merge ts1 ts2 <= 4 * trunc_log 2 (size (mset_heap ts1) + size (mset_heap ts2) + 1) + 1)%N.
+Proof.
+move=>H1 H2.
+have H : (T_merge ts1 ts2 <= 2 * (size ts1) + 2 * (size ts2) + 1)%N.
+- rewrite -mulnDr; apply: leq_trans; last by apply: T_merge_length.
+  by apply: leq_addl.
+apply: (leq_trans H); rewrite leq_add2r.
+set n1 := size (mset_heap ts1); set n2 := size (mset_heap ts2).
+apply: (leq_trans (n:=2 * trunc_log 2 (n1 + 1) + 2 * trunc_log 2 (n2 + 1))).
+- by apply: leq_add; rewrite leq_pmul2l //; apply: size_mset_heap.
+rewrite (_ : 4 = 2 + 2) // mulnDl; apply: leq_add; rewrite leq_pmul2l //;
+apply: leq_trunc_log; rewrite leq_add2r.
+- by apply: leq_addr.
+by apply: leq_addl.
+Qed.
+
+Lemma T_get_min_estimate t ts : T_get_min t ts = (size ts).+1.
+Proof. by elim: ts t=>//=t1 ts -> t; rewrite addn1. Qed.
+
+Lemma T_get_min_bound t ts :
+  invar_tree t -> all (> rank t) (map rank ts) -> invar ts ->
+  (T_get_min t ts <= trunc_log 2 (size (mset_heap (t::ts)) + 1))%N.
+Proof.
+move=>Ht Ha Hi; rewrite T_get_min_estimate.
+by apply: leq_trans; last by apply: size_mset_heap; rewrite invar_cons Ht Ha Hi.
+Qed.
+
+Lemma T_get_min_eq_rest t ts : T_get_min_rest t ts = T_get_min t ts.
+Proof. by []. Qed.
+
+Lemma T_del_min_bound ts :
+  invar ts ->
+  (T_del_min ts <= 6 * trunc_log 2 (size (mset_heap ts) + 1) + 3)%N.
+Proof.
+rewrite /T_del_min; case: ts=>//=t ts; rewrite invar_cons; case/and3P=>Ht Ha Hi.
+case Hgmr: (get_min_rest t ts)=>[t' ts2]; case: t' Hgmr=>r a ts1 Hgmr.
+have /andP [/invar_children Hl H'] := invar_get_min_rest Hgmr Ht Ha Hi.
+set n := size (mset_heap (t::ts)).
+set n1 := size (mset_heap ts1); set n2 := size (mset_heap ts2).
+have Hn12 : (n1 + n2 <= n)%N.
+- by rewrite /n1 /n2 /n (perm_size (perm_mset_heap (mset_get_min_rest Hgmr)))
+    /= /mset_heap size_cat.
+rewrite {2}(_ : 3 = 2 + 1) // !addnA leq_add2r
+  (_ : 6 = 1 + 1 + 4) // !mulnDl mul1n -3!addnA; apply: leq_add.
+- by rewrite T_get_min_eq_rest; apply: T_get_min_bound.
+rewrite {4}(_ : 2 = 1 + 1) // 2!addnA addnAC -addnA; apply: leq_add.
+- apply: (leq_trans (n := trunc_log 2 (n1 + 1) + 1)).
+  - rewrite /T_rev' T_catrev_complexity addn1 ltnS.
+    rewrite -size_rev /n1 -(perm_size (mset_heap_rev ts1)).
+    by apply: size_mset_heap.
+  rewrite leq_add2r; apply: leq_trunc_log; rewrite leq_add2r.
+  by apply/leq_trans/Hn12; apply: leq_addr.
+apply: (leq_trans (n := 4 * trunc_log 2 (n1 + n2 + 1) + 1)).
+- apply/leq_trans; first by apply: T_merge_bound.
+  by rewrite (perm_size (mset_heap_rev ts1)).
+by rewrite leq_add2r leq_pmul2l //; apply: leq_trunc_log; rewrite leq_add2r.
+Qed.
+
+End RunningTimeAnalysis.
