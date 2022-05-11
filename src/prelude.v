@@ -284,11 +284,7 @@ Section Mem.
 
 Lemma all_notin {A : eqType} (p : pred A) xs y :
   all p xs -> ~~ p y -> y \notin xs.
-Proof.
-move=>Ha Hy; apply/count_memPn; rewrite -(count_pred0 xs).
-apply/eq_in_count=>z; move/allP: Ha=>/(_ z) /[apply] /= Hz.
-by case: eqP=>// H; rewrite -H Hz in Hy.
-Qed.
+Proof. by move/allP=>Ha; apply/contra/Ha. Qed.
 
 End Mem.
 
