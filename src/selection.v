@@ -168,7 +168,7 @@ Proof. by move=>Ha; rewrite /select sort_cat // nth_cat size_sort. Qed.
 Lemma select_recurrence k x xs :
   (*k < size xs ->*)  (* unnecessary *)
   select x0 k xs =
-    let '(ls, es, gs) := partition3 x xs in
+    let: (ls, es, gs) := partition3 x xs in
     if k < size ls then select x0 k ls
       else if k < size ls + size es then x
         else select x0 (k - size ls - size es) gs.
@@ -543,13 +543,13 @@ mom_select_exists k xs with inspect (20 < size xs) := {
     | @exist M fM with inspect (partition3 M xs) => {
       | (ls, es, gs) eqn: eq with inspect (k < size ls) => {
         | true eqn: Hk1 =>
-            let '(exist r fR) := mom_select_exists k ls in
-            (exist _ r _)
+            let: exist r fR := mom_select_exists k ls in
+            exist _ r _
         | false eqn: Hk1 with inspect (k < size ls + size es) => {
           | true eqn: Hk2 => exist _ M _
           | false eqn: Hk2 =>
-              let '(exist r fR) := mom_select_exists (k - size ls - size es) gs in
-              (exist _ r _)
+              let: exist r fR := mom_select_exists (k - size ls - size es) gs in
+              exist _ r _
     } } } }
   | false eqn: Hn => exist _ (select x0 k xs) _
   }.

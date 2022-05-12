@@ -316,13 +316,13 @@ Fixpoint split_min (l : rbt T) (a : T) (r : rbt T) : T * rbt T :=
 Fixpoint del (x : T) (t : rbt T) : rbt T :=
   if t is Node l (a, _) r then
     match cmp x a with
-    | LT => let: l' := del x l in
+    | LT => let l' := del x l in
             if (l != leaf) && (color l == Black) then baldL l' a r else R l' a r
     | EQ => if r is Node lr (ar, _) rr
             then let: (a', r') := split_min lr ar rr in
                  if color r == Black then baldR l a' r' else R l a' r'
             else l
-    | GT => let: r' := del x r in
+    | GT => let r' := del x r in
             if (r != leaf) && (color r == Black) then baldR l a r' else R l a r'
     end
     else leaf.
@@ -990,7 +990,7 @@ Admitted.
 
 Fixpoint bhs {A} (t : rbt A) : seq nat :=
   if t is Node l (_,c) r then
-    let: H := bhs l ++ bhs r in
+    let H := bhs l ++ bhs r in
     if c == Black then map S H else H
   else [::0].
 

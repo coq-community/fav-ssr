@@ -349,8 +349,8 @@ bal n xs with inspect (n == 0) := {
   | true eqn: Hn => (leaf, xs)
   | false eqn: Hn =>
       let m := n./2 in
-      let '(l, ys) := bal m xs in
-      let '(r, zs) := bal (n-1-m) (behead ys) in
+      let: (l, ys) := bal m xs in
+      let: (r, zs) := bal (n-1-m) (behead ys) in
       (Node l (head x0 ys) r, zs)
 }.
 Proof.

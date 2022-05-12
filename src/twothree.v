@@ -356,7 +356,7 @@ Definition node33 {A} (t1 : tree23 A) (a : A) (n2 : n23 A) (z : A) (u3 : upD A) 
   end.
 
 Fixpoint split_min2 {A} (l : tree23 A) (a : A) (r : tree23 A) : A * upD A :=
-  let: def := (a, UF empty) in
+  let def := (a, UF empty) in
   match lift r with
   | None => def
   | Some r' =>
@@ -369,7 +369,7 @@ Fixpoint split_min2 {A} (l : tree23 A) (a : A) (r : tree23 A) : A * upD A :=
     end
   end
 with split_min3 {A} (l : tree23 A) (a : A) (m : tree23 A) (b : A) (r : tree23 A) : A * upD A :=
-  let: def := (a, TD (Node2 empty b empty))
+  let def := (a, TD (Node2 empty b empty))
   in match lift m with
   | None => def
   | Some m' =>

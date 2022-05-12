@@ -65,8 +65,6 @@ Context {disp : unit} {T : orderType disp}.
 
 Variant cmp_val := LT | EQ | GT.
 
-(* TODO a spec lemma would be useful *)
-
 Definition cmp (x y : T) : cmp_val :=
   if x < y then LT else if x == y then EQ else GT.
 
@@ -119,7 +117,7 @@ Fixpoint delete x (t : tree T) : tree T :=
     then match cmp x a with
            | LT => Node (delete x l) a r
            | EQ => if r is Node lr ar rr
-                     then let '(a', r') := split_min lr ar rr in
+                     then let: (a', r') := split_min lr ar rr in
                           Node l a' r'
                      else l
            | GT => Node l a (delete x r)
@@ -684,7 +682,7 @@ Fixpoint insert_i x (t : ivl_tree) : ivl_tree :=
 
 Fixpoint split_min_i (l : ivl_tree) (a : ivl) (r : ivl_tree) : ivl * ivl_tree :=
   if l is Node ll (al, _) rl then
-    let '(x, l') := split_min_i ll al rl in
+    let: (x, l') := split_min_i ll al rl in
         (x, node_i l' a r)
     else (a, r).
 
@@ -703,7 +701,7 @@ Fixpoint delete_i x (t : ivl_tree) : ivl_tree :=
     then match cmp x a with
            | LT => node_i (delete_i x l) a r
            | EQ => if r is Node lr (ar,_) rr
-                     then let '(a', r') := split_min_i lr ar rr in
+                     then let: (a', r') := split_min_i lr ar rr in
                           node_i l a' r'
                      else l
            | GT => node_i l a (delete_i x r)
