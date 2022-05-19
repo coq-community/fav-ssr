@@ -1,6 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import eqtype order ssrnat seq path bigop prime.
+From mathcomp Require Import eqtype order ssrnat seq path bigop prime binomial.
 From favssr Require Import prelude basics priority.
 
 Set Implicit Arguments.
@@ -231,6 +231,7 @@ Context {disp : unit} {T : orderType disp}.
 
 (* insert *)
 
+(* aka smash *)
 Definition link (t1 t2 : tree T) : tree T :=
   let: Node r x1 ts1 := t1 in
   let: Node _ x2 ts2 := t2 in
@@ -268,6 +269,7 @@ case: ifP=>_ /=.
 by rewrite -cat1s -(cat1s x1) perm_catCA perm_cons perm_catCA perm_cat2l.
 Qed.
 
+(* aka carry *)
 Fixpoint ins_tree (t1 : tree T) (h : heap T) : heap T :=
   if h is t2::ts then
     if rank t1 < rank t2
@@ -746,3 +748,48 @@ by rewrite leq_add2r leq_pmul2l //; apply: leq_trunc_log; rewrite leq_add2r.
 Qed.
 
 End RunningTimeAnalysis.
+
+Section Exercises.
+Context {disp : unit} {T : orderType disp}.
+
+(* Exercise 17.1 *)
+
+Fixpoint nol (n : nat) (t : tree T) : nat := 1. (* FIXME *)
+
+Lemma binom_sum (r n : nat) :
+  \sum_(0 <= i < r) 'C(i, n) = 'C(r, n.+1).
+Proof.
+Admitted.
+
+Lemma nol_binom n t :
+  invar_btree t -> nol n t = 'C(rank t, n).
+Proof.
+Admitted.
+
+(* Exercise 17.2 *)
+
+(* 1. *)
+
+Definition invar_bin (bs : seq nat) : bool := true. (* FIXME *)
+
+Definition num_of (bs : seq nat) : nat := 0. (* FIXME *)
+
+Fixpoint carry (d : nat) (b : seq nat) : seq nat := [::d]. (* FIXME *)
+
+Fixpoint add (b1 : seq nat) : seq nat -> seq nat := id. (* FIXME *)
+
+(* 2. *)
+
+Lemma correct_add b1 b2 :
+  invar_bin b1 -> invar_bin b2 ->
+  num_of (add b1 b2) == num_of b1 + num_of b2.
+Proof.
+Admitted.
+
+(* 3. *)
+
+Fixpoint T_carry (d : nat) (b : seq nat) : nat := 1. (* FIXME *)
+
+Fixpoint T_add (b1 : seq nat) : seq nat -> nat := fun=>1%N. (* FIXME *)
+
+End Exercises.
