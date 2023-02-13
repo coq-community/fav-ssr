@@ -495,23 +495,29 @@ End Log.
 
 Section UpDiv.
 
-Definition up_div p q := (p %/ q) + ~~ (q %| p).
+Definition up_div x y :=
+  let: (q,r) := edivn x y in q + (r != 0).
+
+Lemma up_divE x y : up_div x y = x %/ y + ~~ (y %| x).
+Proof.
+by rewrite /up_div /divn /dvdn modn_def; case: (edivn x y).
+Qed.
 
 Lemma up_div0n d : up_div 0 d = 0.
-Proof. by rewrite /up_div div0n dvdn0. Qed.
+Proof. by rewrite up_divE div0n dvdn0. Qed.
 
 Lemma up_divn0 n : up_div n 0 = (n != 0).
-Proof. by rewrite /up_div divn0 dvd0n. Qed.
+Proof. by rewrite up_divE divn0 dvd0n. Qed.
 
 Lemma up_div1n d : up_div 1 d = 1.
-Proof. by rewrite /up_div dvdn1; case: d=>//; case. Qed.
+Proof. by rewrite up_divE dvdn1; case: d=>//; case. Qed.
 
 Lemma up_divn1 n : up_div n 1 = n.
-Proof. by rewrite /up_div divn1 dvd1n addn0. Qed.
+Proof. by rewrite up_divE divn1 dvd1n addn0. Qed.
 
 Lemma up_div_gt0 p q : 0 < p -> 0 < up_div p q.
 Proof.
-move=>Hp; rewrite /up_div.
+move=>Hp; rewrite up_divE.
 case/boolP: (p < q)%N => Hpq.
 - by rewrite divn_small // gtnNdvd.
 rewrite -leqNgt in Hpq.
@@ -525,8 +531,7 @@ Lemma up_divS p q : up_div p.+1 q = (p %/ q).+1.
 Proof.
 have [->|Hq] := posnP q.
 - by rewrite up_divn0 divn0.
-rewrite /up_div divnS // addnAC -[in RHS]addn1 [in RHS]addnC.
-by case: (q %| p.+1)%N.
+by rewrite up_divE divnS // addnC addnA addn_negb add1n.
 Qed.
 
 Corollary up_div_div p q : 0 < p -> up_div p q = (p.-1 %/ q).+1.
@@ -534,8 +539,8 @@ Proof. by case: p=>//=p _; apply: up_divS. Qed.
 
 Corollary div_pred_up_div p q : p.-1 %/ q = (up_div p q).-1.
 Proof.
-case: p=>/=; first by rewrite div0n up_div0n.
-by move=>n; rewrite up_divS.
+case: p=>/= [|p]; first by rewrite div0n up_div0n.
+by rewrite up_divS.
 Qed.
 
 Lemma up_div_divDP p q : 0 < q -> up_div p q = (p + q.-1) %/ q.
@@ -566,13 +571,13 @@ Qed.
 
 Lemma leq_up_div n d : up_div n d * d <= n + d.
 Proof.
-rewrite /up_div mulnDl; apply: leq_add.
+rewrite up_divE mulnDl; apply: leq_add.
 - by apply: leq_trunc_div.
-by case: (d %| n)=>//=; rewrite mul1n.
+by rewrite mulnbl; case: ifP.
 Qed.
 
 Lemma up_divnMl p m d : 0 < p -> up_div (p * m) (p * d) = up_div m d.
-Proof. by move=>Hp; rewrite /up_div divnMl // dvdn_pmul2l. Qed.
+Proof. by move=>Hp; rewrite !up_divE divnMl // dvdn_pmul2l. Qed.
 
 Lemma up_divMA m n p : up_div (up_div m n) p = up_div m (n * p).
 Proof.

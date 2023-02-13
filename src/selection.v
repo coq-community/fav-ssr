@@ -331,7 +331,7 @@ simp chop=>/= Hk; have ->: (size l).+1 = n.+1 + size (drop n l).
 - by rewrite -{1}(cat_take_drop n l) size_cat size_takel.
 rewrite IH addSn up_divS; congr S.
 rewrite divnD // divn_small // modn_small // add0n.
-by rewrite -{3}[in RHS](addn0 n) ltn_add2l lt0n.
+by rewrite up_divE -{3}[in RHS](addn0 n) ltn_add2l lt0n.
 Qed.
 
 Definition mom xs :=
