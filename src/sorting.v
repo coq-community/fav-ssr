@@ -433,7 +433,7 @@ Lemma C_merge_all_leq xss m k :
   C_merge_all xss <= m * k * 2^k.
 Proof.
 funelim (C_merge_all xss)=>//= /and3P [/eqP Hx /eqP Hy Ha] Hs.
-move: H; simp merge_adj C_merge_adj=>/= H. (* slow for some reason *)
+move: H; rewrite merge_adj_equation_3 C_merge_adj_equation_3 =>/= H.
 have [k0 Hk] : { k0 | k = k0.+1 } by move: Hs; case: k=>//=k0 _; exists k0.
 have He : ~~ odd (size l1) by rewrite odd2 Hs oddX Hk.
 rewrite Hk expnS mulnS mulnDl in Hs *; apply: leq_add.
