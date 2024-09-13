@@ -698,6 +698,45 @@ Qed.
 
 End NaturalMergeSort.
 
+Section UniquenessOfSorting.
+Context {disp : unit} {T : orderType disp}.
+Implicit Types (xs ys : seq T).
+
+(* this already exists in path.v as sorted_eq *)
+Theorem sorteq_eq' xs ys :
+  perm_eq xs ys -> sorted <=%O xs -> sorted <=%O ys -> xs = ys.
+Proof.
+elim: xs=>[|x xs IH] /= in ys *; first by rewrite perm_sym =>/perm_nilP.
+case: ys=>[|y ys] /=; first by move/perm_nilP.
+move=>H1 H2 H3.
+suff E: x = y.
+- rewrite E in H1 *; congr (y ::_); apply: IH.
+  - by rewrite (perm_cons y) in H1.
+  - by apply: (path_sorted H2).
+  by apply: (path_sorted H3).
+case: (leP x y)=>H.
+- move/(perm_has (pred1 x)): H1; rewrite !has_pred1 !inE eqxx /= => /esym.
+  case/orP=>[/eqP| H0] //.
+  move/le_path_min: H3 => /allP/(_ _ H0) Hy.
+  by apply/eqP; rewrite eq_le H.
+move/(perm_has (pred1 y)): H1; rewrite !has_pred1 !inE eqxx /=.
+case/orP=>[/eqP| H0] //.
+move/le_path_min: H2 => /allP/(_ _ H0) Hy.
+by move: Hy; rewrite leNgt H.
+Qed.
+
+Corollary sorted_ext_eq (f g : seq T -> seq T) :
+     (forall zs, sorted <=%O (f zs) /\ perm_eq (f zs) zs)
+  -> (forall zs, sorted <=%O (g zs) /\ perm_eq (g zs) zs)
+  -> f =1 g.
+Proof.
+move => Hf Hg zs.
+case: (Hf zs) => {Hf} Hf1 Hf2; case: (Hg zs) => {Hg} Hg1 Hg2.
+by apply: sorteq_eq'=>//; apply: (perm_trans Hf2); rewrite perm_sym.
+Qed.
+
+End UniquenessOfSorting.
+
 Section Stability.
 Context {disp : unit} {T : eqType} {K : orderType disp}.
 Implicit Types (xs ys : seq T).
