@@ -1,8 +1,10 @@
-# Functional Algorithms Verified in SSReflect
+# Functional Data Structures and Algorithms in SSReflect
 
 A port of https://functional-algorithms-verified.org/ to Coq/SSReflect.
 
 Besides Mathcomp, this also requires the [Equations](https://mattam82.github.io/Coq-Equations/) plugin.
+
+The book was previously called "Functional Algorithms Verified", hence the FAV acronym.
 
 ## Contents
 
@@ -20,7 +22,7 @@ Besides Mathcomp, this also requires the [Equations](https://mattam82.github.io/
 10. [Beyond Insert and Delete: \cup, \cap and -](src/beyond.v)
 11. [Arrays via Braun Trees](src/braun.v)
 12. [Tries](src/trie.v)
-13. [Huffman’s Algorithm](src/huffman.v)
+13. Region Quadtrees
 ### Part III: Priority Queues
 14. [Priority Queues](src/priority.v)
 15. [Leftist Heaps](src/leftist.v)
@@ -33,3 +35,7 @@ Besides Mathcomp, this also requires the [Equations](https://mattam82.github.io/
 21. Splay Trees
 22. Skew Heaps
 23. Pairing Heaps
+### Part V: Selected Topics
+24. Knuth–Morris–Pratt String Search
+25. [Huffman’s Algorithm](src/huffman.v)
+26. Alpha-Beta Pruning 
