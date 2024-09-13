@@ -458,6 +458,177 @@ Definition LASet := ASet.make [::] ins_list del_list (@mem_seq T).
 
 End CorrectnessProofs.
 
+Section TreeRotations.
+Context {disp : unit} {T : orderType disp}.
+
+Fixpoint is_list (t : tree T) : bool :=
+  if t is Node l _ r then ~~ is_node l && is_list r else true.
+
+Fixpoint rlen (t : tree T) : nat :=
+  if t is Node _ _ r then (rlen r).+1 else 0.
+
+Lemma rlen_le_size t : (rlen t <= size_tree t)%N.
+Proof.
+elim: t=>//= l _ _ r IHr.
+by rewrite addn1 ltnS; apply/(leq_trans IHr)/leq_addl.
+Qed.
+
+Equations? list_of (t : tree T) : tree T by wf (2 * size_tree t - rlen t) lt :=
+list_of (Node (Node ll a rl) b r) => list_of (Node ll a (Node rl b r));
+list_of (Node           Leaf a r) => Node leaf a (list_of r);
+list_of  Leaf                     => leaf.
+Proof.
+all: apply: ssrnat.ltP.
+- rewrite add0n mulnDr muln1 {3}(_ : 2 = 1 + 1) // addnA addn1 subSS -addnBAC ?addn1 //.
+  by apply/leq_trans/leq_pmull=>//; exact: rlen_le_size.
+rewrite (@addnAC (size_tree rl)) !addnA subnS ltn_predL subn_gt0 mulnDr muln1
+  {2}(_ : 2 = 1 + 1) // addnA addn1 ltnS addn1 ltnS mul2n.
+apply: leq_trans; first by exact: rlen_le_size.
+by rewrite doubleD -(@addnn (size_tree r)) addnA; apply: leq_addl.
+Qed.
+
+Lemma is_list_rot t : is_list (list_of t).
+Proof. by funelim (list_of t). Qed.
+
+Lemma inorder_rot t : inorder (list_of t) = inorder t.
+Proof. by funelim (list_of t)=>//=; rewrite H //= -catA. Qed.
+
+Variant dir := L | R.
+
+Definition pos := seq dir.
+
+Equations? rotR_poss (t : tree T) : seq pos by wf (2 * size_tree t - rlen t) lt :=
+rotR_poss (Node (Node ll a rl) b r) => [::] :: rotR_poss (Node ll a (Node rl b r));
+rotR_poss (Node Leaf a r)           => map (cons R) (rotR_poss r);
+rotR_poss  Leaf                     => [::].
+Proof.  (* identical to above *)
+all: apply: ssrnat.ltP.
+- rewrite add0n mulnDr muln1 {3}(_ : 2 = 1 + 1) // addnA addn1 subSS -addnBAC ?addn1 //.
+  by apply/leq_trans/leq_pmull=>//; exact: rlen_le_size.
+rewrite (@addnAC (size_tree rl)) !addnA subnS ltn_predL subn_gt0 mulnDr muln1
+  {2}(_ : 2 = 1 + 1) // addnA addn1 ltnS addn1 ltnS mul2n.
+apply: leq_trans; first by exact: rlen_le_size.
+by rewrite doubleD -(@addnn (size_tree r)) addnA; apply: leq_addl.
+Qed.
+
+Equations apply_at (f : tree T -> tree T) (p : pos) (t : tree T) : tree T :=
+apply_at f [::]      t            => f t;
+apply_at f ds        Leaf         => leaf;
+apply_at f (L :: ds) (Node l a r) => Node (apply_at f ds l) a r;
+apply_at f (R :: ds) (Node l a r) => Node l a (apply_at f ds r).
+
+Fixpoint apply_ats (f : tree T -> tree T) (ps : seq pos) (t : tree T) : tree T :=
+  if ps is p :: ps' then apply_ats f ps' (apply_at f p t) else t.
+
+Equations rotR (t : tree T) : tree T :=
+rotR (Node (Node ll a rl) b r) => Node ll a (Node rl b r);
+rotR  t                        => t.
+
+Equations rotL (t : tree T) : tree T :=
+rotL (Node ll a (Node rl b r)) => Node (Node ll a rl) b r;
+rotL  t                        => t.
+
+Definition rotRs := apply_ats rotR.
+Definition rotLs := apply_ats rotL.
+
+Lemma apply_ats_map_R f ps l a r :
+  apply_ats f (map (cons R) ps) (Node l a r) = Node l a (apply_ats f ps r).
+Proof. by elim: ps r=>//= p ps IH r; simp apply_at. Qed.
+
+Lemma inorder_rotRs_poss t : inorder (rotRs (rotR_poss t) t) = inorder t.
+Proof.
+funelim (rotR_poss t)=>//=; rewrite /rotRs /= in H *.
+- by rewrite apply_ats_map_R /= H.
+by simp apply_at rotR; rewrite H -catA.
+Qed.
+
+Lemma is_list_rotRs t : is_list (rotRs (rotR_poss t) t).
+Proof.
+by funelim (rotR_poss t)=>//; rewrite /rotRs apply_ats_map_R.
+Qed.
+
+Lemma length_rotRs_poss t : size (rotR_poss t) = size_tree t - rlen t.
+Proof.
+funelim (rotR_poss t)=>//=.
+- by rewrite size_map add0n addn1 subSS.
+rewrite H /= addn1 subSS subnSK; last first.
+- by rewrite !addnA addn1 ltnS; apply: leq_trans; [exact: rlen_le_size | apply: leq_addl].
+by rewrite [in RHS]addn1 subSS addnAC !addnA.
+Qed.
+
+Lemma size_rlen_better_ub t : (size_tree t - rlen t <= (size_tree t).-1)%N.
+Proof.
+by case: t=>//= l _ r; rewrite -subn1 leq_sub2lE // addn1.
+Qed.
+
+Lemma apply_ats_append f ps1 ps2 t :
+  apply_ats f (ps1 ++ ps2) t = apply_ats f ps2 (apply_ats f ps1 t).
+Proof. by elim: ps1 t=>/=. Qed.
+
+Lemma rot_id t : rotLs (rev (rotR_poss t)) (rotRs (rotR_poss t) t) = t.
+Proof.
+funelim (rotR_poss t)=>//=; rewrite /rotLs /rotRs in H *.
+- by rewrite apply_ats_map_R -map_rev apply_ats_map_R H.
+rewrite rev_cons -cat1s -cats1 !apply_ats_append /=.
+by simp apply_at; rewrite H; simp rotL.
+Qed.
+
+Lemma inorder_nil (t : tree T) : inorder t = [::] -> t = leaf.
+Proof.
+case: t=>//= l a r.
+by move/(f_equal size)=>/=; rewrite size_cat /= addnS.
+Qed.
+
+Lemma is_list_inorder_same t1 t2 :
+  is_list t1 -> is_list t2 -> inorder t1 = inorder t2 -> t1 = t2.
+Proof.
+elim: t1 t2=>/= [t2 _ _| l _ a r IHr t2].
+- case: t2=>//= l2 a2 r2.
+  by move/(f_equal size)=>/=; rewrite size_cat /= addnS.
+case/andP=>/not_node_leaf {l}-> Hr; case: t2=>//= l2 a2 r2.
+case/andP=>/not_node_leaf {l2}-> Hr2 /= [->] H2.
+by rewrite (IHr r2 Hr Hr2 H2).
+Qed.
+
+Corollary tree_to_tree_rotations t1 t2 :
+  inorder t1 = inorder t2 ->
+  rotLs (rev (rotR_poss t2)) (rotRs (rotR_poss t1) t1) = t2.
+Proof.
+move=>E.
+have H : rotRs (rotR_poss t1) t1 = rotRs (rotR_poss t2) t2.
+- apply: is_list_inorder_same; try by apply: is_list_rotRs.
+  by rewrite !inorder_rotRs_poss.
+move/(f_equal (rotLs (rev (rotR_poss t2)))): H=>->.
+by apply: rot_id.
+Qed.
+
+(* Exercise 5.4 *)
+
+Equations? count_rots (t : tree T) : nat by wf (2 * size_tree t - rlen t) lt :=
+count_rots t => 0. (* FIXME *)
+Proof.
+Qed.
+
+Lemma count_rots_correct t : count_rots t = size_tree t - rlen t.
+Proof.
+Admitted.
+
+(* Exercise 5.5 *)
+
+Lemma rotRs_induction t :
+  exists2 ps, is_list (rotRs ps t) & inorder (rotRs ps t) = inorder t.
+Proof.
+Admitted.
+
+End TreeRotations.
+
+(* Exercise 5.6 *)
+
+Lemma rotRs_max :
+  exists (t : tree nat) ps, is_list (rotRs ps t) /\ size (rotR_poss t) < size ps.
+Proof.
+Admitted.
+
 Section Augmented.
 Context {disp : unit} {T : orderType disp} {A : Type}.
 Implicit Types (t : tree (T*A)).
@@ -596,7 +767,7 @@ Qed.
 
 Definition ivl_totalPOrderMixin :
   totalPOrderMixin ivl_porderType := total_ivl.
-Canonical multinom_latticeType :=
+Canonical ivl_latticeType :=
   Eval hnf in LatticeType ivl ivl_totalPOrderMixin.
 Canonical ivl_distrLatticeType :=
   Eval hnf in DistrLatticeType ivl ivl_totalPOrderMixin.
@@ -855,7 +1026,7 @@ apply/hasPn=>/= lp Hlp; rewrite /overlap negb_and -!ltNge; apply/orP; left.
 by apply/le_lt_trans/Hlx/max_hi_max.
 Qed.
 
-(* Exercise 5.4 *)
+(* Exercise 5.7 *)
 
 Definition in_ivl (x : T) (iv : ivl) : bool := low iv <= x <= high iv.
 
