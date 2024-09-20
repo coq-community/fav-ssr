@@ -1,4 +1,4 @@
-# Functional Algorithms Verified in SSReflect
+# Functional Data Structures and Algorithms in SSReflect
 
 A port of https://functional-algorithms-verified.org/ to Coq/SSReflect.
 
@@ -39,4 +39,3 @@ The book was previously called "Functional Algorithms Verified", hence the FAV a
 24. Knuth–Morris–Pratt String Search
 25. [Huffman’s Algorithm](src/huffman.v)
 26. Alpha-Beta Pruning
-
