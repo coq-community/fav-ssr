@@ -1,14 +1,53 @@
+<!---
+This file was generated from `meta.yml`, please do not edit manually.
+Follow the instructions on https://github.com/coq-community/templates to regenerate.
+--->
 # Functional Data Structures and Algorithms in SSReflect
 
-A port of https://functional-algorithms-verified.org/ to Coq/SSReflect.
+[![Docker CI][docker-action-shield]][docker-action-link]
+[![Contributing][contributing-shield]][contributing-link]
+[![Code of Conduct][conduct-shield]][conduct-link]
+[![Zulip][zulip-shield]][zulip-link]
+
+[docker-action-shield]: https://github.com/coq-community/fav-ssr/actions/workflows/docker-action.yml/badge.svg?branch=trunk
+[docker-action-link]: https://github.com/coq-community/fav-ssr/actions/workflows/docker-action.yml
+
+[contributing-shield]: https://img.shields.io/badge/contributions-welcome-%23f7931e.svg
+[contributing-link]: https://github.com/coq-community/manifesto/blob/master/CONTRIBUTING.md
+
+[conduct-shield]: https://img.shields.io/badge/%E2%9D%A4-code%20of%20conduct-%23f15a24.svg
+[conduct-link]: https://github.com/coq-community/manifesto/blob/master/CODE_OF_CONDUCT.md
+
+[zulip-shield]: https://img.shields.io/badge/chat-on%20zulip-%23c1272d.svg
+[zulip-link]: https://coq.zulipchat.com/#narrow/stream/237663-coq-community-devs.20.26.20users
+
+
+
+A port of the book https://functional-algorithms-verified.org/ to Coq/SSReflect.
 
 The book was previously called "Functional Algorithms Verified", hence the FAV acronym.
 
-## Dependencies
+## Meta
 
-- [MathComp ssreflect 1.17](https://math-comp.github.io)
-- [MathComp algebra](https://math-comp.github.io)
-- [Equations 1.3](https://mattam82.github.io/Coq-Equations/)
+- Author(s):
+  - Alex Gryzlov (initial)
+- Coq-community maintainer(s):
+  - Alex Gryzlov ([**@clayrat**](https://github.com/clayrat))
+- License: [MIT license](LICENSE)
+- Compatible Coq versions: 8.15 to 8.19
+- Additional dependencies:
+  - [MathComp ssreflect](https://math-comp.github.io) 1.17.0 to 1.19.0
+  - [MathComp algebra](https://math-comp.github.io)
+  - [Equations](https://github.com/mattam82/Coq-Equations) 1.3 or later
+- Coq namespace: `favssr`
+- Related publication(s): none
+
+## Building instructions
+
+To build manually, do:
+```shell
+make   # or make -j <number-of-cores-on-your-machine>
+```
 
 ## Contents
 
