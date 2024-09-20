@@ -1,0 +1,35 @@
+# This file was generated from `meta.yml`, please do not edit manually.
+# Follow the instructions on https://github.com/coq-community/templates to regenerate.
+
+opam-version: "2.0"
+maintainer: "palmskog@gmail.com"
+version: "dev"
+
+homepage: "https://github.com/coq-community/fav-ssr"
+dev-repo: "git+https://github.com/coq-community/fav-ssr.git"
+bug-reports: "https://github.com/coq-community/fav-ssr/issues"
+license: "MIT"
+
+synopsis: "A port of the Functional Data Structures and Algorithms book to Coq/SSReflect"
+description: """
+A port of the book https://functional-algorithms-verified.org/ to Coq/SSReflect.
+
+The book was previously called "Functional Algorithms Verified", hence the FAV acronym."""
+
+build: [make "-j%{jobs}%"]
+install: [make "install"]
+depends: [
+  "coq" {>= "8.15" & < "8.20"}
+  "coq-mathcomp-ssreflect" {>= "1.17" & < "2.0"}
+  "coq-mathcomp-algebra" 
+  "coq-equations" {>= "1.3"}
+]
+
+tags: [
+  "category:Computer Science/Decision Procedures and Certified Algorithms/Correctness proofs of algorithms"
+  "keyword:program verification"
+  "logpath:favssr"
+]
+authors: [
+  "Alex Gryzlov"
+]
