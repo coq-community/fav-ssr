@@ -1082,7 +1082,7 @@ Lemma size_omap_lvr {T} (xs : seq (tree T)) :
   (size (omap left  xs) = count is_node xs) *
   (size (omap right xs) = count is_node xs).
 Proof.
-rewrite /omap !size_flatten /shape -!map_comp !(eq_map (f1:=size \o _) (f2:=is_node));
+rewrite /omap !size_flatten /shape -!map_comp !(@eq_map _ _ (size \o _) is_node);
   try by case.
 by rewrite sumn_count.
 Qed.
@@ -1138,17 +1138,17 @@ move=>Hs Ht Hl; case: (ltnP (size xs) (2 ^ k))=>Hs'.
   rewrite omap_cat [X in _ ++ X]omap_empty; last first.
   - by apply/(all_nthP leaf)=>i _; rewrite nth_nseq if_same.
   rewrite cats0; have->: omap value [seq Node leaf x leaf | x <- xs] = xs.
-  - by rewrite /omap -map_comp /= (eq_map (f2:=fun x => [::x])) // flatten_seq1.
+  - by rewrite /omap -map_comp flatten_seq1.
   case: {Hs Hl Hs'}xs=>//x s.
   rewrite list_fast_rec_all_leaf; first by rewrite cats0.
   apply/allP=>z; rewrite mem_cat; case/orP.
   - rewrite omap_cat mem_cat /omap; case/orP.
-    - rewrite -map_comp (eq_map (f2:=fun=>[::leaf])) // flatten_map1.
+    - rewrite -map_comp flatten_map1.
       by case/mapP=>y _ ->.
     rewrite map_nseq /=; case/flattenP=>y; rewrite mem_nseq.
     by case/andP=>_/eqP->.
   rewrite omap_cat mem_cat /omap; case/orP.
-  - rewrite -map_comp (eq_map (f2:=fun=>[::leaf])) // flatten_map1.
+  - rewrite -map_comp flatten_map1.
     by case/mapP=>y _ ->.
   rewrite map_nseq /=; case/flattenP=>y; rewrite mem_nseq.
   by case/andP=>_/eqP->.

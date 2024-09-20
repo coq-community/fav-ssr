@@ -2,9 +2,13 @@
 
 A port of https://functional-algorithms-verified.org/ to Coq/SSReflect.
 
-Besides Mathcomp, this also requires the [Equations](https://mattam82.github.io/Coq-Equations/) plugin.
-
 The book was previously called "Functional Algorithms Verified", hence the FAV acronym.
+
+## Dependencies
+
+- [MathComp ssreflect 1.17](https://math-comp.github.io)
+- [MathComp algebra](https://math-comp.github.io)
+- [Equations 1.3](https://mattam82.github.io/Coq-Equations/)
 
 ## Contents
 
