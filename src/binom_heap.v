@@ -1,4 +1,3 @@
-From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
 From mathcomp Require Import eqtype order ssrnat seq path bigop prime binomial.
 From favssr Require Import prelude basics priority.
@@ -14,7 +13,7 @@ Open Scope order_scope.
 Section Tree.
 Context {A : Type}.
 
-Inductive tree A := Node of nat & A & (seq (tree A)).
+Inductive tree A := Node of nat & A & seq (tree A).
 
 Definition rank (t : tree A) : nat :=
   let: Node r _ _ := t in r.

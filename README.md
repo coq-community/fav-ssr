@@ -4,6 +4,8 @@ A port of https://functional-algorithms-verified.org/ to Coq/SSReflect.
 
 Besides Mathcomp, this also requires the [Equations](https://mattam82.github.io/Coq-Equations/) plugin.
 
+The book was previously called "Functional Algorithms Verified", hence the FAV acronym.
+
 ## Contents
 
 1. [Basics](src/basics.v)
@@ -20,16 +22,21 @@ Besides Mathcomp, this also requires the [Equations](https://mattam82.github.io/
 10. [Beyond Insert and Delete: \cup, \cap and -](src/beyond.v)
 11. [Arrays via Braun Trees](src/braun.v)
 12. [Tries](src/trie.v)
-13. [Huffman’s Algorithm](src/huffman.v)
+13. [Region Quadtrees](src/quadtree.v)
 ### Part III: Priority Queues
 14. [Priority Queues](src/priority.v)
 15. [Leftist Heaps](src/leftist.v)
 16. [Priority Queues via Braun Trees](src/braun_queue.v)
 17. [Binomial Heaps](src/binom_heap.v)
 ### Part IV: Advanced Design and Analysis Techniques
-18. Dynamic Programming
+18. [Dynamic Programming](src/dynprog.v)
 19. Amortized Analysis
 20. Queues
 21. Splay Trees
 22. Skew Heaps
 23. Pairing Heaps
+### Part V: Selected Topics
+24. Knuth–Morris–Pratt String Search
+25. [Huffman’s Algorithm](src/huffman.v)
+26. Alpha-Beta Pruning
+

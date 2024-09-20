@@ -1,5 +1,5 @@
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import ssrnat eqtype order seq path prime div.
+From mathcomp Require Import ssrnat eqtype seq order path prime div.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -281,22 +281,57 @@ Qed.
 End Size.
 
 Section Mem.
+Context {A B : eqType}.
 
-Lemma all_notin {A : eqType} (p : pred A) xs y :
+Lemma all_notin (p : pred A) xs y :
   all p xs -> ~~ p y -> y \notin xs.
 Proof. by move/allP=>Ha; apply/contra/Ha. Qed.
 
+Lemma in_zip (l1 : seq A) (l2 : seq B) x y :
+  (x, y) \in zip l1 l2 -> x \in l1 /\ y \in l2.
+Proof.
+elim: l1 l2=>[|a l1 IH][|b l2] //=.
+rewrite !inE; case/orP.
+- by case/eqP=>->->; rewrite !eqxx.
+by move/IH=>[H1 H2]; rewrite H1 H2 !orbT.
+Qed.
+
 End Mem.
 
-Section Butlast.
+Section Zip.
 
-Definition butlast {A : Type} (xs : seq A) :=
+Lemma zip_map2 {P Q R S} (f : P -> R) (g : Q -> S) (s1 : seq P) (s2 : seq Q) :
+        zip (map f s1) (map g s2) =
+        map (fun '(x1,x2) => (f x1,g x2)) (zip s1 s2).
+Proof.
+elim: s1 s2=>/= [|x1 s1 IH] [|x2 s2] //=.
+by congr cons.
+Qed.
+
+End Zip.
+
+Section Map2.
+Context {A B C : Type}.
+
+Definition map2 (f : A -> B -> C) (l1 : seq A) (l2 : seq B) : seq C :=
+  [seq f x y | '(x, y) <- zip l1 l2].
+
+Lemma size_map2 f l1 l2 :
+  size (map2 f l1 l2) = minn (size l1) (size l2).
+Proof. by elim: l1 l2=>[|a l1 IH][|b l2] //=; rewrite IH minnSS. Qed.
+
+End Map2.
+
+Section Butlast.
+Context {A : Type}.
+
+Definition butlast (xs : seq A) :=
   if xs is x :: s then belast x s else [::].
 
-Lemma belast_butlast {A} (x : A) xs : 0 < size xs -> belast x xs = x :: butlast xs.
+Lemma belast_butlast (x : A) xs : 0 < size xs -> belast x xs = x :: butlast xs.
 Proof. by case: xs. Qed.
 
-Lemma size_butlast {A} (xs : seq A) : size (butlast xs) = (size xs).-1.
+Lemma size_butlast (xs : seq A) : size (butlast xs) = (size xs).-1.
 Proof. by case: xs=>//=x s; rewrite size_belast. Qed.
 
 End Butlast.
@@ -492,6 +527,21 @@ by apply: ltn_mul; apply: trunc_log_ltn.
 Qed.
 
 End Log.
+
+Section Mod.
+
+Lemma mod_minus m i :
+  m <= i < m.*2 -> i %% m = i - m.
+Proof.
+case/andP=>H1 H2; have H0: 0 < m by case: {H1}m H2.
+rewrite {2}(divn_eq i m) addnC.
+suff: i %/ m = 1 by move=>->; rewrite mul1n addnK.
+apply/eqP; rewrite eqn_leq; apply/andP; split.
+- by rewrite -ltnS ltn_divLR // mul2n.
+by rewrite leq_divRL // mul1n.
+Qed.
+
+End Mod.
 
 Section UpDiv.
 

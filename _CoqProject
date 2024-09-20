@@ -15,8 +15,10 @@ src/avl.v
 src/beyond.v
 src/braun.v
 src/trie.v
-src/huffman.v
+src/quadtree.v
 src/priority.v
 src/leftist.v
 src/braun_queue.v
 src/binom_heap.v
+src/dynprog.v
+src/huffman.v
