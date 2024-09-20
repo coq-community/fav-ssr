@@ -124,22 +124,6 @@ Definition modify (f : qtree A -> qtree A) (x y : bool) (t0 t1 t2 t3 : qtree A) 
   else
     if y then Qc t0 t1 (f t2) t3 else Qc t0 t1 t2 (f t3).
 
-(*
-Equations put (i j : nat) (a : A) (n : nat) (t : qtree A) : qtree A :=
-put i j a 0      _              => L a;
-put i j a n'.+1 (L b)           => modify (put (i %% (2 ^ n')) (j %% (2 ^ n')) a n')
-                                          (i < 2 ^ n') (j < 2 ^ n')
-                                          (L b) (L b) (L b) (L b);
-put i j a n'.+1 (Q t0 t1 t2 t3) => modify (put (i %% (2 ^ n')) (j %% (2 ^ n')) a n')
-                                          (i < 2 ^ n') (j < 2 ^ n')
-                                          t0 t1 t2 t3.
-
-Lemma height_put i j a n t :
-  height t <= n -> height (put i j a n t) <= n.
-Proof.
-funelim (put i j a n t)=>/=; simp put=>//.
-*)
-
 Fixpoint put (i j : nat) (a : A) (n : nat) (t : qtree A) : qtree A :=
   match n, t with
   | 0, _ => L a
