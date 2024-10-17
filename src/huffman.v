@@ -1479,9 +1479,10 @@ move=>H10; case: leqP; rewrite !sortedByWeight_cons2.
 move=>H20; rewrite Hw /=.
 have Hm: maxn (height t2) (heightF l) = 0.
 - by apply/eqP; rewrite maxn_eq0 Hl andbT; apply/eqP.
-move: (H _ _ Ht erefl Hs Hm)=>/=.
+(move: (H _ _ Ht erefl Hs Hm)=>/=) || (move: (H t (t2 :: l) Ht erefl erefl Hs Hm)=>/=).
 by rewrite !height_0_cachedWeight // leqNgt H20 /=.
 Qed.
+
 
 (* minima *)
 

@@ -1,5 +1,5 @@
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import eqtype order ssrnat seq path prime.
+From mathcomp Require Import ssrnat eqtype order seq path prime.
 From favssr Require Import prelude bintree priority.
 
 Set Implicit Arguments.
