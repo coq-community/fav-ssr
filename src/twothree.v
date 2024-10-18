@@ -1,6 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import eqtype order ssrnat seq path.
+From mathcomp Require Import ssrnat eqtype order seq path.
 From favssr Require Import prelude bst adt.
 
 Set Implicit Arguments.

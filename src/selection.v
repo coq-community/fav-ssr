@@ -323,7 +323,7 @@ Qed.
 Lemma chop_size n xs :
   0 < n -> size (chop n xs) = up_div (size xs) n.
 Proof.
-funelim (chop n xs)=>// /H /= {H}IH.
+funelim(chop n xs); try rewrite Heqcall; move=> // /H /= {H}IH.
 case/boolP: (n <= size l)%N; last first.
 - rewrite -ltnNge=>Hk; move: (ltn_trans Hk (ltnSn n))=>{}Hk.
   by rewrite chop_ge_length_eq //= up_divS divn_small.

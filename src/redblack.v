@@ -188,7 +188,7 @@ Lemma invc_baliL l a r :
   invc2 l -> invc r -> invc (baliL l a r).
 Proof.
 rewrite /invc2.
-funelim (baliL l a r); simp baliL=>/= /[swap] ->; rewrite !andbT //.
+funelim (baliL l a r)=> //=; simp baliL=>/= /[swap] ->; rewrite !andbT //.
 - by case/and3P=>_->->.
 - by case/andP; case/and3P=>_->->->.
 by case/and4P; case/andP=>->->_->->.
@@ -761,7 +761,7 @@ Lemma invc_join l r :
   invc2 (join l r) &&
       ((color l == Black) && (color r == Black) ==> invc (join l r)).
 Proof.
-funelim (join l r); simp join=>/=.
+funelim (join l r); try clear Heqcall; simp join=>/=.
 - by move=>_ /[dup] /invc2I ->->/=; apply: implybT.
 - case: p=>a c; rewrite /invc2 /= =>/and3P [->->->] _; apply: implybT.
 - rewrite -!andbA andbT.
@@ -811,7 +811,7 @@ Lemma invh_join l r :
   invh l -> invh r -> bh l == bh r ->
   invh (join l r) && (bh (join l r) == bh l).
 Proof.
-funelim (join l r); simp join=>/=.
+funelim (join l r); try clear Heqcall; simp join=>/=.
 - by move=>_->; rewrite eq_sym.
 - by case: p=>_ c->; rewrite eq_refl.
 - case/and3P=>/eqP E12 H1 H2; case/and3P=>/eqP E34 H3 H4.

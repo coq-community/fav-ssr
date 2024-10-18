@@ -1,6 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import eqtype order ssrnat seq path.
+From mathcomp Require Import ssrnat eqtype order seq path.
 From favssr Require Import prelude bintree bst adt redblack.
 
 Set Implicit Arguments.
@@ -504,7 +504,7 @@ Lemma invc2_joinL l x r :
   invc l -> invc r -> (bh l <= bh r)%N ->
   invc2 (joinL l x r) && ((bh l != bh r) && (color r == Black) ==> invc (joinL l x r)).
 Proof.
-funelim (joinL l x r); simp joinL; rewrite {}Heq /=.
+funelim (joinL l x r); try rewrite Heqcall; simp joinL; rewrite {}Heq /=.
 - rewrite /invc2; rewrite {}e /= addn0 in i *.
   have/negbTE->: (Red != Black) by [].
   rewrite andbF /= andbT=> Hcl /and3P [/andP [Hlrb _] Hclr -> E]; rewrite andbT.
@@ -525,7 +525,7 @@ Lemma bh_joinL l x r :
   invh l -> invh r -> (bh l <= bh r)%N ->
   bh (joinL l x r) == bh r.
 Proof.
-funelim (joinL l x r); simp joinL; rewrite {}Heq /=.
+funelim (joinL l x r); try rewrite Heqcall; simp joinL; rewrite {}Heq /=.
 - move=>Hl; rewrite {}e /= !addn0 => /and3P [_ Hlr _] E.
   by apply: H.
 - move=>Hl; rewrite {}e /= in i *; case/and3P=>E1 Hlr _ _.
@@ -540,7 +540,7 @@ Lemma invh_joinL l x r :
   invh l -> invh r -> (bh l <= bh r)%N ->
   invh (joinL l x r).
 Proof.
-funelim (joinL l x r); simp joinL; rewrite {}Heq /=.
+funelim (joinL l x r); try rewrite Heqcall; simp joinL; rewrite {}Heq /=.
 - move=>Hl; rewrite {Heqcall r}e /= addn0 in i *.
   case/and3P=>/eqP<- Hlr -> E; rewrite andbT.
   by apply/andP; split; [apply: bh_joinL | apply: H].
@@ -555,7 +555,7 @@ Qed.
 Lemma joinL_inorder l a r :
   inorder_a (joinL l a r) = inorder_a l ++ a :: inorder_a r.
 Proof.
-funelim (joinL l a r); simp joinL; rewrite {}Heq //= e /=.
+funelim (joinL l a r); try rewrite Heqcall; simp joinL; rewrite {}Heq //= e /=.
 - by rewrite H -catA.
 by rewrite inorder_baliL H -catA.
 Qed.
@@ -599,7 +599,7 @@ Lemma bst_joinL l a r :
   (bh l <= bh r)%N ->
   bst_a (joinL l a r).
 Proof.
-funelim (joinL l a r); simp joinL; rewrite {}Heq /=; last by move=>->->->->.
+funelim (joinL l a r); try rewrite Heqcall; simp joinL; rewrite {}Heq /=; last by move=>->->->->.
 - rewrite {}e /= addn0 all_cat /= => Hal /and3P [Halr Hx _] Hbl /and4P [Halr' -> Hblr ->] E /=.
   rewrite andbT; apply/andP; split; last by apply: H.
   rewrite joinL_inorder all_cat /= Hx Halr' /= andbT.
@@ -618,7 +618,7 @@ Lemma invc2_joinR l x r :
   invc l -> invc r -> invh l -> invh r -> (bh r <= bh l)%N ->
   invc2 (joinR l x r) && ((bh l != bh r) && (color l == Black) ==> invc (joinR l x r)).
 Proof.
-funelim (joinR l x r); simp joinR; rewrite {}Heq /=.
+funelim (joinR l x r); try rewrite Heqcall; simp joinR; rewrite {}Heq /=.
 - rewrite /invc2; rewrite {}e /= in i *.
   have/negbTE->: (Red != Black) by [].
   rewrite andbF /= andbT => /and3P [/andP [_ Hrlb] -> Hcrl] Hcr /and3P [/eqP E1 Hhll Hhrl] Hhr E /=.
@@ -641,7 +641,7 @@ Lemma bh_joinR l x r :
   invh l -> invh r -> (bh r <= bh l)%N ->
   bh (joinR l x r) == bh l.
 Proof.
-funelim (joinR l x r); simp joinR; rewrite {}Heq /= ?addn0 //.
+funelim (joinR l x r); try rewrite Heqcall; simp joinR; rewrite {}Heq /= ?addn0 //.
 - by rewrite {}e /= addn0.
 rewrite {}e /= in i *; case/and3P=>/eqP E1 Hll Hrl Hr ?.
 move: i; rewrite {1}addn1 ltnS E1=>E.
@@ -653,7 +653,7 @@ Lemma invh_joinR l x r :
   invh l -> invh r -> (bh r <= bh l)%N ->
   invh (joinR l x r).
 Proof.
-funelim (joinR l x r); simp joinR; rewrite {}Heq /=.
+funelim (joinR l x r); try rewrite Heqcall; simp joinR; rewrite {}Heq /=.
 - rewrite {Heqcall l i}e /=; case/and3P=>/eqP E1 -> Hrl Hr E /=; rewrite E1 addn0 in E *.
   by rewrite eq_sym; apply/andP; split; [apply: bh_joinR | apply: H].
 - rewrite {Heqcall l}e /= in i *; case/and3P=>/eqP E1 Hll Hrl ? ?.
@@ -667,7 +667,7 @@ Qed.
 Lemma joinR_inorder l a r :
   inorder_a (joinR l a r) = inorder_a l ++ a :: inorder_a r.
 Proof.
-funelim (joinR l a r); simp joinR; rewrite {}Heq //= e /=.
+funelim (joinR l a r); try rewrite Heqcall; simp joinR; rewrite {}Heq //= e /=.
 - by rewrite H -catA.
 by rewrite inorder_baliR H -catA.
 Qed.
@@ -707,7 +707,7 @@ Lemma bst_joinR l a r :
   bst_a l -> bst_a r ->
   bst_a (joinR l a r).
 Proof.
-funelim (joinR l a r); simp joinR; rewrite {}Heq /=; last by move=>->->->->.
+funelim (joinR l a r); try rewrite Heqcall; simp joinR; rewrite {}Heq /=; last by move=>->->->->.
 - rewrite {}e /= all_cat /= => /and3P [_ Hx Harl] Har /and4P [-> Harl' -> Hbrl] Hbr /=.
   apply/andP; split; last by apply: H.
   rewrite joinR_inorder all_cat /= Hx Harl' /=.

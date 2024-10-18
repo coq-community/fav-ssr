@@ -1,6 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
-From mathcomp Require Import eqtype order ssrnat seq.
+From mathcomp Require Import ssrnat eqtype order seq.
 From favssr Require Import prelude bintree braun priority.
 
 Set Implicit Arguments.
@@ -185,7 +185,7 @@ Lemma braun_sift_down (l : tree T) a r :
   braun l -> braun r ->
   braun (sift_down l a r).
 Proof.
-funelim (sift_down l a r); simp sift_down=>/=.
+funelim (sift_down l a r)=> //=; simp sift_down=>/=.
 - by move=>_ _ _; case: ifP.
 rewrite !eqn_add2r=>E; case/and3P=>E1 Hl1 Hr1; case/and3P=>E2 Hl2 Hr2.
 case: ifP=>/=.
@@ -222,7 +222,7 @@ Lemma heap_sift_down (l : tree T) a r :
   heap l -> heap r ->
   heap (sift_down l a r).
 Proof.
-funelim (sift_down l a r); simp sift_down=>/=.
+funelim (sift_down l a r)=> //=; simp sift_down=>/=.
 - case/orP; first by rewrite addn1.
   rewrite eqn_add2r addn_eq0; case/andP=>/eqP/size0leaf->/eqP/size0leaf->/= _ _ _ _.
   by case: ifP=>/=; rewrite !andbT // =>/negbT; rewrite -ltNge=>/ltW.
