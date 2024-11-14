@@ -1061,7 +1061,7 @@ Definition list_fast {T} (t : tree T) : seq T :=
 Lemma list_fast_rec_all_leaf {T} (ts : seq (tree T)) :
   all (fun t => ~~ is_node t) ts -> list_fast_rec ts = [::].
 Proof.
-funelim (list_fast_rec ts); rewrite -Heqcall //= => Ha.
+funelim (list_fast_rec ts); try rewrite -Heqcall; move=> //= Ha.
 move: {H H0}Hv; suff: omap value xs = [::] by move=>->.
 by apply/omap_empty/sub_all/Ha; case.
 Qed.
