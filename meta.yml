@@ -32,8 +32,8 @@ license:
   identifier: MIT
 
 supported_coq_versions:
-  text: 8.15 to 8.19
-  opam: '{>= "8.15" & < "8.20"}'
+  text: 8.15 to 8.20
+  opam: '{>= "8.15" & < "8.21"}'
 
 tested_coq_opam_versions:
 - version: '1.19.0-coq-8.19'
