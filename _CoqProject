@@ -5,19 +5,19 @@
 src/prelude.v
 src/basics.v
 src/sorting.v
-src/selection.v
-src/bintree.v
-src/bst.v
-src/adt.v
-src/twothree.v
-src/redblack.v
-src/avl.v
-src/beyond.v
-src/braun.v
-src/trie.v
-src/quadtree.v
-src/priority.v
-src/leftist.v
-src/braun_queue.v
-src/binom_heap.v
-src/huffman.v
+# src/selection.v
+# src/bintree.v
+# src/bst.v
+# src/adt.v
+# src/twothree.v
+# src/redblack.v
+# src/avl.v
+# src/beyond.v
+# src/braun.v
+# src/trie.v
+# src/quadtree.v
+# src/priority.v
+# src/leftist.v
+# src/braun_queue.v
+# src/binom_heap.v
+# src/huffman.v

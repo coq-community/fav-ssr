@@ -11,7 +11,7 @@ Import Order.TotalTheory.
 Open Scope order_scope.
 
 Section InsertionSort.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 Implicit Types (xs ys : seq T).
 
 (* Definition *)
@@ -111,7 +111,7 @@ Admitted.
 End InsertionSortNat.
 
 Section QuickSort.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 Implicit Types (xs ys : seq T).
 
 (* Definition *)
@@ -221,7 +221,7 @@ Admitted.
 End QuickSort.
 
 Section TopDownMergeSort.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 Implicit Types (xs ys : seq T).
 
 (* reusing `merge` from mathcomp.path *)
@@ -332,7 +332,7 @@ Admitted.
 End TopDownMergeSort.
 
 Section BottomUpMergeSort.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 Implicit Types (xs ys : seq T).
 
 Equations merge_adj : seq (seq T) -> seq (seq T) :=
@@ -459,7 +459,7 @@ Qed.
 End BottomUpMergeSort.
 
 Section NaturalMergeSort.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 Implicit Types (xs ys : seq T) (xss : seq (seq T)).
 
 Fixpoint runs_fix a xs : seq (seq T) :=
@@ -699,7 +699,7 @@ Qed.
 End NaturalMergeSort.
 
 Section UniquenessOfSorting.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 Implicit Types (xs ys : seq T).
 
 (* this already exists in path.v as sorted_eq *)
@@ -738,7 +738,7 @@ Qed.
 End UniquenessOfSorting.
 
 Section Stability.
-Context {disp : unit} {T : eqType} {K : orderType disp}.
+Context {disp : Order.disp_t} {T : eqType} {K : orderType disp}.
 Implicit Types (xs ys : seq T).
 
 (* Definition *)

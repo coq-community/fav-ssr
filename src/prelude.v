@@ -337,7 +337,7 @@ Proof. by case: xs=>//=x s; rewrite size_belast. Qed.
 End Butlast.
 
 Section Mins.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 Variable (x0 : T).
 
 Import Order.POrderTheory.
@@ -351,7 +351,7 @@ Proof.
 case: xs=>//=x xs _; elim/last_ind: xs=>/=.
 - by rewrite lexx inE eq_refl.
 move=>xs y /andP [/andP [IH1 IH2]]; rewrite !inE=>IH3.
-rewrite foldl_rcons le_minl IH1 /= mem_rcons inE eq_minr all_rcons le_minl lexx orbT /=.
+rewrite foldl_rcons ge_min IH1 /= mem_rcons inE eq_minr all_rcons ge_min lexx orbT /=.
 rewrite {1 3 6}/Order.min; case: ifP.
 - by rewrite IH2 /= =>H; case/orP: IH3=>[/eqP->|->]; rewrite ?eqxx ?orbT.
 move/negbT; rewrite -leNgt=>Hy; rewrite Hy /= orbT andbT.
@@ -366,7 +366,7 @@ Lemma all_foldl_le (x : T) xs y :
 Proof.
 move=>Hyx; elim/last_ind: xs=>//=t h IH.
 rewrite all_rcons foldl_rcons; case/andP=>Hy Ha.
-by rewrite le_minr Hy IH.
+by rewrite le_min Hy IH.
 Qed.
 
 Lemma all_foldl_eq (x : T) xs :
@@ -426,8 +426,8 @@ case/andP: (mins_min_in Hx)=>Hax Hix.
 case/andP: (mins_min_in Hy)=>Hay Hiy.
 apply/andP; split.
 - rewrite all_cat; apply/andP; split.
-  - by apply/sub_all/Hax=>z Hz; rewrite le_minl Hz.
-  by apply/sub_all/Hay=>z Hz; rewrite le_minl Hz orbT.
+  - by apply/sub_all/Hax=>z Hz; rewrite ge_min Hz.
+  by apply/sub_all/Hay=>z Hz; rewrite ge_min Hz orbT.
 rewrite minElt; case: ifP=>_; rewrite mem_cat.
 - by rewrite Hix.
 by rewrite Hiy orbT.
