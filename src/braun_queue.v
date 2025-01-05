@@ -12,7 +12,7 @@ Import Order.TotalTheory.
 Open Scope order_scope.
 
 Section Implementation.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Fixpoint insert (a : T) (t : tree T) : tree T :=
   if t is Node l x r then
@@ -59,7 +59,7 @@ Definition del_min (t : tree T) : tree T :=
 End Implementation.
 
 Section Correctness.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Lemma size_insert (x : T) t : size_tree (insert x t) = size_tree t + 1.
 Proof.

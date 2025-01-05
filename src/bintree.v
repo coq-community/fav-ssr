@@ -1,5 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
+From HB Require Import structures.
 From mathcomp Require Import eqtype ssrnat seq prime.
 From favssr Require Import prelude.
 Set Implicit Arguments.
@@ -157,8 +158,10 @@ apply: (iffP andP).
 by case=><-<-; split; [apply/IHl|apply/IHr].
 Qed.
 
-Canonical tree_eqMixin := EqMixin eqtreeP.
-Canonical tree_eqType := Eval hnf in EqType (tree T) tree_eqMixin.
+HB.instance Definition _ := hasDecEq.Build (tree T) eqtreeP.
+
+(* Canonical tree_eqMixin := EqMixin eqtreeP.
+Canonical tree_eqType := Eval hnf in EqType (tree T) tree_eqMixin. *)
 
 Lemma perm_pre_in (t : tree T) : perm_eq (inorder t) (preorder t).
 Proof.
@@ -609,13 +612,13 @@ Admitted.
 
 (* Exercise 4.6 *)
 
-Context {disp : unit} {P : orderType disp}.
+Context {disp : Order.disp_t} {P : orderType disp}.
 Variable (x0 : P) (lmin : left_id x0 Order.max).
 
 Lemma rmin : right_id x0 Order.max.
 Proof. by move=>x; rewrite maxC lmin. Qed.
 
-Canonical max_monoid := Monoid.Law maxA lmin rmin.
+HB.instance Definition _ := Monoid.isLaw.Build P x0 Order.max maxA lmin rmin.
 
 Definition max_seq (xs : seq P) : P :=
   \big[Order.max/x0]_(x<-xs) x.

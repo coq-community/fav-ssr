@@ -1,5 +1,6 @@
 From Coq Require Import ssreflect ssrbool ssrfun.
 From mathcomp Require Import ssrnat eqtype order seq path bigop prime binomial.
+From HB Require Import structures.
 From favssr Require Import prelude basics priority.
 
 Set Implicit Arguments.
@@ -68,8 +69,7 @@ rewrite {}H12; case: H2.
 by move=>H12; apply: ReflectF; case=>E; rewrite E in H12.
 Qed.
 
-Canonical tree_eqMixin := EqMixin eqtreeP.
-Canonical tree_eqType := Eval hnf in EqType (tree A) tree_eqMixin.
+HB.instance Definition _ := hasDecEq.Build (tree A) eqtreeP.
 
 Lemma tree_ind_eq (P : tree A -> Prop) :
   (forall r a l, (forall x, x \in l -> P x) -> P (Node r a l)) ->
@@ -83,7 +83,7 @@ Qed.
 End TreeEq.
 
 Section TreeOrd.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Fixpoint invar_btree (t : tree T) : bool :=
   let: Node r _ ts := t in
@@ -116,7 +116,7 @@ Qed.
 End TreeOrd.
 
 Section Size.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Fixpoint mset_tree (t : tree T) : seq T :=
   let: Node _ a ts := t in
@@ -226,7 +226,7 @@ Qed.
 End Size.
 
 Section PriorityQueueImplementation.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 (* insert *)
 
@@ -431,7 +431,7 @@ elim: h t=>/=.
 - move=>t Ht _ _; rewrite mset_heap_nil in_nil orbF=>Hx.
   by apply: invar_tree_root_min.
 move=>t1 ts IH t Ht _.
-rewrite invar_cons; case/and3P=>Ht1 Ha1 Hs; rewrite le_minl; case/orP.
+rewrite invar_cons; case/and3P=>Ht1 Ha1 Hs; rewrite ge_min; case/orP.
 - by move=>Hx; rewrite invar_tree_root_min.
 rewrite mset_heap_cons mem_cat=>Hx.
 by rewrite IH // orbT.
@@ -597,7 +597,7 @@ Definition BHeapPQM :=
 End PriorityQueueImplementation.
 
 Section RunningTimeAnalysis.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Definition T_link (t1 t2 : tree T) : nat := 1.
 
@@ -749,7 +749,7 @@ Qed.
 End RunningTimeAnalysis.
 
 Section Exercises.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 (* Exercise 17.1 *)
 

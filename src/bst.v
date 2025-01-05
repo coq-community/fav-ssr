@@ -1,5 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
+From HB Require Import structures.
 From mathcomp Require Import eqtype choice ssrnat seq order path.
 From favssr Require Import prelude bintree.
 Set Implicit Arguments.
@@ -11,7 +12,7 @@ Import Order.TotalTheory.
 Open Scope order_scope.
 
 Section Intro.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Fixpoint bst (t : tree T) : bool :=
   if t is Node l a r
@@ -51,7 +52,7 @@ Admitted.
 End Intro.
 
 Module ASet.
-Structure ASet (disp : unit) (T : orderType disp): Type :=
+Structure ASet (disp : Order.disp_t) (T : orderType disp): Type :=
   make {tp :> Type;
         empty : tp;
         insert : T -> tp -> tp;
@@ -61,7 +62,7 @@ Structure ASet (disp : unit) (T : orderType disp): Type :=
 End ASet.
 
 Section Unbalanced.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Variant cmp_val := LT | EQ | GT.
 
@@ -179,7 +180,7 @@ Admitted.
 End Unbalanced.
 
 Section Correctness.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 (* Exercise 5.3 *)
 
@@ -238,7 +239,7 @@ Admitted.
 End Correctness.
 
 Section CorrectnessProofs.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 (* sorted list library *)
 
@@ -459,7 +460,7 @@ Definition LASet := ASet.make [::] ins_list del_list (@mem_seq T).
 End CorrectnessProofs.
 
 Section TreeRotations.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Fixpoint is_list (t : tree T) : bool :=
   if t is Node l _ r then ~~ is_node l && is_list r else true.
@@ -630,7 +631,7 @@ Proof.
 Admitted.
 
 Section Augmented.
-Context {disp : unit} {T : orderType disp} {A : Type}.
+Context {disp : Order.disp_t} {T : orderType disp} {A : Type}.
 Implicit Types (t : tree (T*A)).
 
 Fixpoint isin_a t x : bool :=
@@ -690,18 +691,15 @@ Qed.
 End Augmented.
 
 Section IntervalTrees.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 (* intervals *)
 
 Structure ivl : Type := Interval {ival :> T * T; _ : ival.1 <= ival.2}.
 
-Canonical interval_subType := Eval hnf in [subType for ival].
-
-Definition interval_eqMixin := Eval hnf in [eqMixin of ivl by <:].
-Canonical interval_eqType := Eval hnf in EqType ivl interval_eqMixin.
-Definition interval_choiceMixin := [choiceMixin of ivl by <:].
-Canonical interval_choiceType := Eval hnf in ChoiceType ivl interval_choiceMixin.
+HB.instance Definition _ := [isSub for ival].
+HB.instance Definition _ := [Equality of ivl by <:].
+HB.instance Definition _ := [Choice of ivl by <:].
 
 Definition low: ivl -> T := fst \o ival.
 Definition high: ivl -> T := snd \o ival.
@@ -754,9 +752,7 @@ rewrite H11 H12 ltxx eq_refl /=.
 by apply/le_trans/H22.
 Qed.
 
-Definition ivl_porderMixin : lePOrderMixin interval_eqType :=
-  LePOrderMixin lt_def_ivl refl_ivl anti_ivl trans_ivl.
-Canonical ivl_porderType := Eval hnf in POrderType tt ivl ivl_porderMixin.
+HB.instance Definition _ := Order.isPOrder.Build disp ivl lt_def_ivl refl_ivl anti_ivl trans_ivl.
 
 Fact total_ivl : total le_ivl.
 Proof.
@@ -765,14 +761,7 @@ case: (ltgtP (low x) (low y))=>//= _.
 by apply: le_total.
 Qed.
 
-Definition ivl_totalPOrderMixin :
-  totalPOrderMixin ivl_porderType := total_ivl.
-Canonical ivl_latticeType :=
-  Eval hnf in LatticeType ivl ivl_totalPOrderMixin.
-Canonical ivl_distrLatticeType :=
-  Eval hnf in DistrLatticeType ivl ivl_totalPOrderMixin.
-Canonical ivl_orderType :=
-  Eval hnf in OrderType ivl ivl_totalPOrderMixin.
+HB.instance Definition _ := Order.POrder_isTotal.Build disp ivl total_ivl.
 
 Definition overlap (x y : ivl) := (low y <= high x) && (low x <= high y).
 
@@ -811,12 +800,12 @@ elim: t=>/=; first by rewrite in_nil.
 move=>l IHl [a m] r IHr /and3P [/eqP -> /IHl Hl /IHr Hr] {IHl IHr}.
 rewrite mem_cat inE /max3; case/or3P.
 - move/Hl=>H.
-  apply/(le_trans H)/(le_trans (y:=Order.max (max_hi l) (max_hi r)));
-  by rewrite le_maxr lexx ?orbT.
-- by move/eqP=>->; rewrite le_maxr lexx.
+  apply/(le_trans H)/(le_trans (y:=Order.max (max_hi l) (max_hi r))) ;
+  by rewrite le_max lexx ?orbT.
+- by move/eqP=>->; rewrite le_max lexx.
 move/Hr=>H.
 apply/(le_trans H)/(le_trans (y:=Order.max (max_hi l) (max_hi r)));
-by rewrite le_maxr lexx ?orbT.
+by rewrite le_max lexx ?orbT.
 Qed.
 
 Lemma max_hi_mem t :

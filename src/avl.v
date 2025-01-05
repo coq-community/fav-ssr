@@ -1,5 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
+From HB Require Import structures.
 From mathcomp Require Import eqtype ssrnat ssrint ssralg ssrnum order seq path.
 From favssr Require Import prelude bintree bst adt.
 Set Implicit Arguments.
@@ -149,15 +150,15 @@ Lemma fib_bound n : phi ^+ n <= (fib (n + 2)) %:R.
 Proof.
 funelim (fib n); simp fib=>//.
 - rewrite add0n; simp fib=>//; rewrite addn0 expr1 addn1 /phi.
-  rewrite -(@ler_pmul2r _ 2%:R) // mulfVK; last by rewrite pnatr_eq0.
-  rewrite -natrM (_ : (2*2 = 1+3)%N) // natrD mulr1n ler_add2l.
-  rewrite -(@ler_pexpn2r _ 2) //; first last.
+  rewrite -(@ler_pM2r _ 2%:R) // mulfVK; last by rewrite pnatr_eq0.
+  rewrite -natrM (_ : (2*2 = 1+3)%N) // natrD mulr1n lerD2l.
+  rewrite -(@ler_pXn2r _ 2) //; first last.
   - by rewrite nnegrE.
   - by rewrite nnegrE sqrtC_ge0; apply: ler0n.
   by rewrite sqrtCK expr2 -natrM ler_nat.
 rewrite -addn2 (addn2 (n + 2)); simp fib.
 rewrite exprD phi_sq mulrDr mulr1 natrD.
-by apply: ler_add=>//; move: H; rewrite exprD expr1 -!addnA.
+by apply: lerD=>//; move: H; rewrite exprD expr1 -!addnA.
 Qed.
 
 Corollary height_bound (t : tree_ht A) : avl t -> phi ^+ (height t) <= (size1_tree t)%:R.
@@ -174,7 +175,7 @@ Qed.
 End LogarithmicHeight.
 
 Section SetImplementation.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 (* rebalancing *)
 
@@ -741,7 +742,7 @@ Admitted.
 End Exercises.
 
 Section Optimization.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Variant bal := Lh | Bal | Rh.
 
@@ -756,8 +757,7 @@ Definition eqbal (b1 b2 : bal) :=
 Lemma eqbalP : Equality.axiom eqbal.
 Proof. by move; case; case; constructor. Qed.
 
-Canonical bal_eqMixin := EqMixin eqbalP.
-Canonical bal_eqType := Eval hnf in EqType bal bal_eqMixin.
+HB.instance Definition _ := hasDecEq.Build bal eqbalP.
 
 Definition tree_bal A := tree (A * bal).
 
@@ -1135,7 +1135,7 @@ Admitted.
 
 (* Exercise 9.7 *)
 
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Inductive tree4 A := Leaf
                    | Lh4 of (tree4 A) & A & (tree4 A)

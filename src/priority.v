@@ -11,7 +11,7 @@ Import Order.TotalTheory.
 Open Scope order_scope.
 
 Module APQ.
-Structure APQ (disp : unit) (T : orderType disp): Type :=
+Structure APQ (disp : Order.disp_t) (T : orderType disp): Type :=
   make {tp :> Type;
         empty : tp;
         insert : T -> tp -> tp;
@@ -39,7 +39,7 @@ Structure APQ (disp : unit) (T : orderType disp): Type :=
 End APQ.
 
 Module APQM.
-Structure APQ (disp : unit) (T : orderType disp): Type :=
+Structure APQ (disp : Order.disp_t) (T : orderType disp): Type :=
   make {tp :> Type;
         empty : tp;
         insert : T -> tp -> tp;
@@ -73,7 +73,7 @@ End APQM.
 
 (* Exercise 14.1 *)
 Section Exercise.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Definition empty_list : seq T := [::].
 
@@ -99,7 +99,7 @@ Definition ListPQM :=
 End Exercise.
 
 Section Heaps.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Fixpoint heap (t : tree T) : bool :=
   if t is Node l m r

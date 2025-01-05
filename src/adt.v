@@ -37,7 +37,7 @@ Structure ASetM (T : eqType): Type :=
 End ASetM.
 
 Section Specification.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Corollary inorder_empty_pred : inorder (@Leaf T) =i pred0.
 Proof. by []. Qed.
@@ -187,7 +187,7 @@ End ASetI.
 (* Exercise 6.3 *)
 
 Section MapUnbalanced.
-Context {disp : unit} {K : orderType disp} {V : Type}.
+Context {disp : Order.disp_t} {K : orderType disp} {V : Type}.
 
 Notation kvtree := (tree (K*V)).
 

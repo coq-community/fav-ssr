@@ -1,5 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
+From HB Require Import structures.
 From mathcomp Require Import eqtype ssrnat seq bigop ssrAC.
 From favssr Require Import prelude.
 
@@ -69,9 +70,7 @@ have [<-/=|neqx] := w1 =P w2; last by apply: ReflectF; case.
 by case=><-<-; split; [apply/IHl|apply/IHr].
 Qed.
 
-Canonical tree_eqMixin := EqMixin eqtreeP.
-Canonical tree_eqType := Eval hnf in EqType (tree T) tree_eqMixin.
-
+HB.instance Definition _ := hasDecEq.Build (tree T) eqtreeP.
 End EqTree.
 
 Section BasicAuxiliaryFunctions.
