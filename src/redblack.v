@@ -1,5 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
+From HB Require Import structures.
 From mathcomp Require Import eqtype ssrnat prime order seq path.
 From favssr Require Import prelude bintree bst adt.
 Set Implicit Arguments.
@@ -25,8 +26,7 @@ Definition eqcol (c1 c2 : col) :=
 Lemma eqcolP : Equality.axiom eqcol.
 Proof. by move; case; case; constructor. Qed.
 
-Canonical col_eqMixin := EqMixin eqcolP.
-Canonical col_eqType := Eval hnf in EqType col col_eqMixin.
+HB.instance Definition _ := hasDecEq.Build col eqcolP.
 
 Definition rbt A := tree (A * col).
 
@@ -146,7 +146,7 @@ End Invariants.
 Arguments invch_ind [A P].
 
 Section SetImplementation.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 (* insertion *)
 
