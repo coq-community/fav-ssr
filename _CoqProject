@@ -5,7 +5,7 @@
 src/prelude.v
 src/basics.v
 src/sorting.v
-# src/selection.v
+src/selection.v
 # src/bintree.v
 # src/bst.v
 # src/adt.v

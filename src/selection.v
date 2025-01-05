@@ -11,7 +11,7 @@ Import Order.TotalTheory.
 Open Scope order_scope.
 
 Section Intro.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 Implicit Types (xs ys : seq T) (k : nat).
 Variable x0 : T.
 
@@ -154,7 +154,7 @@ End IntroInt.
 
 Section DivideAndConquer.
 
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 Implicit Types (xs ys zs : seq T) (k : nat).
 Variable x0 : T.
 
@@ -225,7 +225,7 @@ End DivideAndConquer.
 
 Section MedianOfMedians.
 
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 Implicit Types (xs ys zs : seq T) (k : nat).
 Variable x0 : T.
 
@@ -485,7 +485,7 @@ Qed.
 End MedianOfMedians.
 
 Section SelectionInLinearTime.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 Implicit Types (xs ys zs : seq T) (k : nat).
 Variable x0 : T.
 
@@ -600,7 +600,7 @@ Proof. by rewrite mom_select_correct; apply: is_selection_select. Qed.
 End SelectionInLinearTime.
 
 Section TimeFunctions.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 Implicit Types (xs ys zs : seq T) (k : nat).
 Variable x0 : T.
 
