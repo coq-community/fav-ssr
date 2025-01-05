@@ -1,5 +1,6 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect ssrbool ssrfun.
+From HB Require Import structures.
 From mathcomp Require Import ssrnat eqtype order seq path.
 From favssr Require Import prelude bst adt.
 
@@ -134,8 +135,7 @@ apply: (iffP and3P).
 by case=><-<-<-; split; [apply/IHl|apply/IHm|apply/IHr].
 Qed.
 
-Canonical tree23_eqMixin := EqMixin eqtree23P.
-Canonical tree23_eqType := Eval hnf in EqType (tree23 T) tree23_eqMixin.
+HB.instance Definition _ := hasDecEq.Build (tree23 T) eqtree23P.
 
 End EqType.
 
@@ -152,7 +152,7 @@ Proof.
 Admitted.
 
 Section SetImplementation.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Fixpoint isin23 (t : tree23 T) x : bool :=
   match t with
@@ -441,7 +441,7 @@ Definition delete (x : T) (t : tree23 T) : tree23 T :=
 End SetImplementation.
 
 Section PreservationOfCompleteness.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Definition hI {A} (u : upI A) : nat :=
   match u with
@@ -802,7 +802,7 @@ Proof. by exact: complete_treeD. Qed.
 End PreservationOfCompleteness.
 
 Section FunctionalCorrectness.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Definition bst_list (t : tree23 T) : bool := sorted <%O (inorder23 t).
 

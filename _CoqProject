@@ -9,7 +9,7 @@ src/selection.v
 src/bintree.v
 src/bst.v
 src/adt.v
-# src/twothree.v
+src/twothree.v
 # src/redblack.v
 # src/avl.v
 # src/beyond.v
