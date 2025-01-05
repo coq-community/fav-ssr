@@ -20,4 +20,4 @@ src/priority.v
 src/leftist.v
 src/braun_queue.v
 src/binom_heap.v
-# src/huffman.v
+src/huffman.v
