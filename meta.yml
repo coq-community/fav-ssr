@@ -32,27 +32,27 @@ license:
   identifier: MIT
 
 supported_coq_versions:
-  text: 8.15 to 8.20
-  opam: '{>= "8.15" & < "8.21"}'
+  text: 8.16 to 8.20
+  opam: '{>= "8.16" & < "8.21"}'
 
 tested_coq_opam_versions:
-- version: '1.19.0-coq-8.19'
+- version: '2.3.0-coq-8.20'
   repo: 'mathcomp/mathcomp'
-- version: '1.18.0-coq-8.18'
+- version: '2.3.0-coq-8.19'
   repo: 'mathcomp/mathcomp'
-- version: '1.17.0-coq-8.17'
+- version: '2.3.0-coq-8.18'
   repo: 'mathcomp/mathcomp'
-- version: '1.17.0-coq-8.16'
+- version: '2.2.0-coq-8.17'
   repo: 'mathcomp/mathcomp'
-- version: '1.17.0-coq-8.15'
+- version: '2.2.0-coq-8.16'
   repo: 'mathcomp/mathcomp'
 
 dependencies:
 - opam:
     name: coq-mathcomp-ssreflect
-    version: '{>= "1.17" & < "2.0"}'
+    version: '{>= "2.2" & < "2.4"}'
   description: |-
-    [MathComp ssreflect](https://math-comp.github.io) 1.17.0 to 1.19.0
+    [MathComp ssreflect](https://math-comp.github.io) 2.2 to 2.3
 - opam:
     name: coq-mathcomp-algebra
   description: |-

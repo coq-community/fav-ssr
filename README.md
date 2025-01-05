@@ -34,9 +34,9 @@ The book was previously called "Functional Algorithms Verified", hence the FAV a
 - Coq-community maintainer(s):
   - Alex Gryzlov ([**@clayrat**](https://github.com/clayrat))
 - License: [MIT license](LICENSE)
-- Compatible Coq versions: 8.15 to 8.19
+- Compatible Coq versions: 8.16 to 8.20
 - Additional dependencies:
-  - [MathComp ssreflect](https://math-comp.github.io) 1.17.0 to 1.19.0
+  - [MathComp ssreflect](https://math-comp.github.io) 2.2 to 2.3
   - [MathComp algebra](https://math-comp.github.io)
   - [Equations](https://github.com/mattam82/Coq-Equations) 1.3 or later
 - Coq namespace: `favssr`
