@@ -7,7 +7,7 @@ src/basics.v
 src/sorting.v
 src/selection.v
 src/bintree.v
-# src/bst.v
+src/bst.v
 # src/adt.v
 # src/twothree.v
 # src/redblack.v
