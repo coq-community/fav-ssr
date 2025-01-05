@@ -11,7 +11,7 @@ Import Order.TotalTheory.
 Open Scope order_scope.
 
 Section Intro.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Definition lheap T := tree (T * nat).
 
@@ -43,7 +43,7 @@ Admitted.
 End Intro.
 
 Section ImplementationPQM.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Definition empty_lheap : lheap T := leaf.
 
@@ -76,7 +76,7 @@ Definition del_min (t : lheap T) : lheap T :=
 End ImplementationPQM.
 
 Section Correctness.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Definition mset_lheap (h : lheap T) : seq T := preorder_a h.
 
@@ -244,7 +244,7 @@ Definition LHeapPQM :=
 End Correctness.
 
 Section RunningTimeAnalysis.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Fixpoint T_merge (h1 : lheap T) : lheap T -> nat :=
   if h1 is Node l1 (a1,_) r1 then
