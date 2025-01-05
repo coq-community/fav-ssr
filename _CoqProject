@@ -12,7 +12,7 @@ src/adt.v
 src/twothree.v
 src/redblack.v
 src/avl.v
-# src/beyond.v
+src/beyond.v
 # src/braun.v
 # src/trie.v
 # src/quadtree.v

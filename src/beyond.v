@@ -13,7 +13,7 @@ Open Scope order_scope.
 
 (* TODO switch to packed structures to reuse ASetM *)
 Module ASetM2.
-Structure ASetM2 (disp : unit) (T : orderType disp): Type :=
+Structure ASetM2 (disp : Order.disp_t) (T : orderType disp): Type :=
   make {tp :> Type;
         empty : tp;
         insert : T -> tp -> tp;
@@ -54,7 +54,7 @@ Structure ASetM2 (disp : unit) (T : orderType disp): Type :=
 End ASetM2.
 
 (* TODO use a canonical structure? *)
-Structure JoinSig (disp : unit) (X : orderType disp) (Y : Type) : Type :=
+Structure JoinSig (disp : Order.disp_t) (X : orderType disp) (Y : Type) : Type :=
   mkjoin {
     join : tree (X*Y) -> X -> tree (X*Y) -> tree (X*Y);
     inv : tree (X*Y) -> bool;
@@ -70,7 +70,7 @@ Structure JoinSig (disp : unit) (X : orderType disp) (Y : Type) : Type :=
 }.
 
 Section JustJoin.
-Context {disp : unit} {X : orderType disp} {Y : Type} {j : JoinSig X Y}.
+Context {disp : Order.disp_t} {X : orderType disp} {Y : Type} {j : JoinSig X Y}.
 
 Fixpoint split (t : tree (X*Y)) (x : X) : (tree (X*Y) * bool * tree (X*Y)) :=
   if t is Node l (a,_) r then
@@ -465,7 +465,7 @@ Admitted.
 End JustJoin.
 
 Section JoiningRedBlackTrees.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Lemma ne_bhgt (t1 t2 : rbt T) : non_empty_if (bh t1 < bh t2)%N t2.
 Proof.
@@ -773,7 +773,7 @@ Definition JoinRBT :=
 End JoiningRedBlackTrees.
 
 Section RBTSetJoin.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Definition invariant' (t : rbt T) := bst_list_a t && invch t.
 
@@ -888,7 +888,7 @@ End RBTSetJoin.
 From favssr Require Import twothree.
 
 Section Joining23Trees.
-Context {disp : unit} {T : orderType disp}.
+Context {disp : Order.disp_t} {T : orderType disp}.
 
 Equations? join23L (l : tree23 T) (x : T) (r : tree23 T) : upI T by wf (size23 r) lt :=
 join23L l x r => TI l. (* FIXME *)
